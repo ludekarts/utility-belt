@@ -1,0 +1,17 @@
+{
+  "name": "utility-belt",
+  "version": "0.1.0-alpha.1",
+  "description": "JS Utilities Collection",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "utilities"
+  ],
+  "author": "Wojciech Ludwin @ludekarts",
+  "license": "ISC"
+}

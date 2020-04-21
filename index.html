@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Utility Belt Docs</title>
+  <link rel="stylesheet" href="./styles/reset.css">
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body id="ubd">
+
+  <aside>
+    <div class="scroller">
+      <span class="version">
+        <a href="#ubd">v 0.1.0</a>
+        <div id="searchbox" class="searchbox">
+          <input type="text">
+          <button id="search-toggle" class="search-btn"></button>
+        </div>
+      </span>
+
+      <span class="header">Utilities</span>
+
+      <a href="#override-doc">deepOverride</a>
+      <a href="#hyphenate-doc">hyphenate</a>
+      <a href="#fuzzy-doc">fuzzySearch</a>
+      <a href="#is-object-doc">isObject</a>
+      <a href="#in-polygon-doc">inPolygon</a>
+      <a href="#word-case-doc">plWordCase</a>
+      <a href="#range-random-doc">rangeRandomInt</a>
+      <a href="#uid-doc">uid</a>
+
+      <span class="header">Abstractions</span>
+
+      <a href="#clipboard-doc">clipboard</a>
+      <a href="#event-handler-doc">createEventHandler</a>
+      <a href="#dom-filter-doc">domFilter</a>
+      <a href="#events-doc">events</a>
+      <a href="#loopstack-doc">loopstack</a>
+
+      <span class="header">Arrays</span>
+
+      <a href="#array-to-object-doc">arrayToObject</a>
+      <a href="#array-chunks-doc">chunksArray</a>
+      <a href="#array-compare-doc">compareArrays</a>
+      <a href="#array-random-doc">getRandomSubarray</a>
+      <a href="#array-nodelist-doc">nodeListToArray</a>
+      <a href="#array-reduce-doc">reduce</a>
+      <a href="#array-remove-doc">removeFromArray</a>
+      <a href="#array-shuffle-doc">shuffleArray</a>
+      <a href="#array-sort-by-phrase-doc">sortByPhraseIndex</a>
+
+      <span class="header">Componets</span>
+
+      <a href="#highlight-doc">highlight</a>
+      <a href="#xxxx-doc">customSelect</a>
+      <a href="#xxxx-doc">revealContent</a>
+
+      <span class="header">Delay events</span>
+
+      <a href="#xxxxxxx-doc">debounce</a>
+      <a href="#xxxxxxx-doc">debouncePromise</a>
+      <a href="#xxxxxxx-doc">throttle</a>
+      <a href="#xxxxxxx-doc">inDeltaTime</a>
+
+      <span class="header">DOM helpers</span>
+
+      <a href="#attach-style-doc">attachStyle</a>
+      <a href="#create-element-doc">createElement</a>
+      <a href="#el-from-str-doc">elFromString</a>
+      <a href="#get-nodes-path-doc">getNodesPath</a>
+      <a href="#import-html-doc">importHtml</a>
+      <a href="#include-script-doc">includeScript</a>
+      <a href="#memo-element-doc">memoElement</a>
+      <a href="#template-doc">template</a>
+
+      <span class="header">DOM manipulations</span>
+      <a href="#xxxxxxx-doc">copyAttrs</a>
+      <a href="#xxxxxxx-doc">extractNodes</a>
+      <a href="#xxxxxxx-doc">insertNodeAfter</a>
+      <a href="#xxxxxxx-doc">insertNodeBefore</a>
+      <a href="#xxxxxxx-doc">moveNodes</a>
+
+      <span class="header">Hashing</span>
+
+      <a href="#hash32-doc">base64</a>
+      <a href="#hash-code-doc">hashCode</a>
+      <a href="#hash32-doc">hash32</a>
+
+      <span class="header">Query</span>
+      <a href="#update-query-doc">updateQuery</a>
+      <a href="#query-to-object-doc">queryToObject</a>
+
+      <span class="header">Request</span>
+
+      <a href="#request-abort-doc">abort</a>
+      <a href="#request-body-doc">objectToFetchBody</a>
+      <a href="#request-parse-doc">parseResponse</a>
+      <a href="#request-default-doc">request</a>
+
+      <span class="header">Schema</span>
+      <a href="#schema-types-doc">schemaTypes</a>
+      <a href="#schema-check-doc">checkSchema</a>
+
+
+      <span class="header">Strings</span>
+
+      <a href="#xxxxxxx-doc">splitAtIndex</a>
+      <a href="#xxxxxxx-doc">placeBetween</a>
+
+    </div>
+  </aside>
+
+  <main>
+    <h1>Utility Belt Docs</h1>
+    <div class="stack">
+      <!-- Utilities -->
+      <section id="override-doc" data-import="./docs/deep-override.html"></section>
+      <div class="stack" data-import="./docs/utils.html"></div>
+
+      <!-- Abstractions -->
+      <section id="clipboard-doc" data-import="./docs/clipboard.html"></section>
+      <section id="event-handler-doc" data-import="./docs/event-handler.html"></section>
+      <section id="dom-filter-doc" data-import="./docs/dom-filter/index.html" data-script="./docs/dom-filter/index.js"></section>
+      <section id="events-doc" data-import="./docs/events.html"></section>
+      <section id="loopstack-doc" data-import="./docs/loopstack/index.html" data-script="./docs/loopstack/index.js"></section>
+
+      <!-- Arrays -->
+      <div class="stack" data-import="./docs/arrays.html"></div>
+
+      <!-- Components -->
+      <section id="highlight-doc" data-import="./docs/highlight.html"></section>
+
+      <!-- Delay events -->
+      <div class="stack" data-import="./docs/delay-events.html"></div>
+
+      <!-- DOM Helpers -->
+      <section id="template-doc" data-import="./docs/template/index.html"></section>
+      <section id="create-element-doc" data-import="./docs/create-element.html"></section>
+      <section id="import-html-doc" data-import="./docs/import-html.html"></section>
+
+      <!-- DOM manipulations -->
+      <div data-import="./docs/nodes.html"></div>
+
+      <!-- Hashing -->
+      <div data-import="./docs/hashing.html"></div>
+
+      <!-- Query -->
+      <section id="update-query-doc" data-import="./docs/query.html"></section>
+
+      <!-- Request -->
+      <section id="request-default-doc" data-import="./docs/request/index.html"></section>
+
+      <!-- Schema -->
+      <section id="schema-types-doc" data-import="./docs/schema.html"></section>
+
+      <!-- Strings -->
+      <div data-import="./docs/strings.html"></div>
+
+    </div>
+  </main>
+
+  <script type="module">
+    import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "./utilities/index.js";
+
+    importHtml(() => {
+      nodeListToArray(document.querySelectorAll("pre"))
+        .forEach(function transformCode(node) {
+          node.innerHTML = node.innerHTML
+            .replace(/</g, "&lt;")
+            .replace(/(?!=>)>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;")
+            .replace(/\\\\(.*?)\\\\/g, (m, g) => `<em>${g}</em>`)
+            .replace(/-\\([\s\S]*?)\\-/gm, (m, g) => `<em class="fade">${g}</em>`)
+        });
+      });
+
+      // Load scripts associated with doc html files.
+      const main = document.querySelector("main");
+      main.addEventListener("htmlLoaded", event => {
+        event.target.dataset.script
+          && includeScriptTag(event.target.dataset.script, {isModule: true});
+      });
+
+      // Filter main menu.
+      const filter = domFilter ({
+        selector: ".scroller > a",
+        uiRender: (entry, phrase) => {
+          entry.ref.innerHTML = highlight(entry.text, phrase);
+        },
+      });
+      const searchbox = document.getElementById("searchbox");
+      const serach = searchbox.firstElementChild;
+      const searchToggle = document.getElementById("search-toggle");
+
+      searchToggle.addEventListener("click", event => {
+        if (searchbox.classList.toggle("active")) {
+          serach.focus();
+        } else {
+          serach.value = "";
+          serach.dispatchEvent(new Event("input", {
+            bubbles: true,
+            cancelable: true,
+          }));
+        }
+      });
+
+      serach.addEventListener("input", event => {
+        filter(event.target.value);
+      });
+
+      document.addEventListener("keydown", event => {
+        if (event.key === "/") {
+          searchbox.classList.add("active");
+          event.preventDefault();
+          serach.focus();
+        }
+      });
+  </script>
+</body>
+</html>
