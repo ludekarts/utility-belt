@@ -1,4 +1,5 @@
-import { attachStyle, nodeListToArray } from "./index.js";
+import { attachStyle } from "./general.js";
+import { nodeListToArray } from "./arrays.js";
 
 function defaultMatch(entry, phrase) {
   return entry.toLowerCase().includes(phrase.toLowerCase());

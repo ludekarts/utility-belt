@@ -161,7 +161,7 @@
   </main>
 
   <script type="module">
-    import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "../src/index.js";
+    import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "./utility-belt/index.module.js";
 
     importHtml(() => {
       nodeListToArray(document.querySelectorAll("pre"))

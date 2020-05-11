@@ -1,3 +1,5 @@
+import { isObject } from "./general.js";
+
 // NOTE:
 //
 // - fallback: when provided response from all failed requests will be supplied with
@@ -86,18 +88,6 @@ export function objectToFetchBody(objectBody) {
 
   // Pass whatewer objectBody is.
   return objectBody;
-}
-
-function isObject(object) {
-  return (
-    object !== null &&
-    object !== undefined &&
-    typeof object !== "symbol" &&
-    typeof object !== "string" &&
-    typeof object !== "number" &&
-    typeof object !== "boolean" &&
-    !Array.isArray(object)
-  );
 }
 
 // ---- Helpers ----------------

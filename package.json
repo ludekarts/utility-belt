@@ -4,22 +4,28 @@
   "description": "JavaScript Utilities Collection",
   "source": "src/index.js",
   "main": "dist/index.js",
-  "module": "dist/utility-belt.js",
+  "unpkg": "dist/utility-belt.umd.js",
+  "module": "dist/utility-belt.module.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "microbundle",
-    "dev": "microbundle watch"
+    "watch": "microbundle watch",
+    "cp": "copyfiles -f \"./dist/index.module.js\" ./docs/utility-belt",
+    "publish": "npm run build && copyfiles -f \"./dist/index.module.js\" ./docs/utility-belt ./ && gh-pages -d docs"
   },
   "keywords": [
     "utilities"
   ],
   "author": "Wojciech Ludwin @ludekarts, ludekarts@gmail.com",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+  },
   "devDependencies": {
+    "copyfiles": "^2.2.0",
+    "gh-pages": "^2.2.0",
     "microbundle": "^0.12.0"
   }
 }

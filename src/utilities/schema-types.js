@@ -1,4 +1,4 @@
-import { isObject } from "./index.js";
+import { isObject } from "./general.js";
 
 // ---- Schema Types Validators ----------------
 

@@ -1,4 +1,5 @@
-import { uid, nodeListToArray } from "./index.js";
+import { uid } from "./general.js";
+import { nodeListToArray } from "./arrays.js";
 
 export default function template(strings, ...inserts) {
 
