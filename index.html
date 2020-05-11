@@ -157,11 +157,13 @@
       <!-- Strings -->
       <div data-import="./utilities/strings.html"></div>
 
+      <!-- About -->
+      <div class="footer">by <a href="https://github.com/ludekarts">@ludekarts</a> 2020</div>
     </div>
   </main>
 
   <script type="module">
-    import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "./utility-belt/index.module.js";
+    import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "./lib/utility-belt.module.js";
 
     importHtml(() => {
       nodeListToArray(document.querySelectorAll("pre"))
