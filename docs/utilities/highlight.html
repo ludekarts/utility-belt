@@ -1,0 +1,28 @@
+<h2>highlight(<span class="gray">text</span>, <span class="gray">phrases</span>)</h2>
+<p>Wrap parts of text with &lt;strong&gt; tags that matches with given phrases.</p>
+<h3>Usage</h3>
+<pre>
+  import { highlight } from "utility-belt";
+  ...
+
+  const result = highlight("Good and goofy", "\\go\\, \\fy\\");
+  -\// &lt;strong&gt;\\Go\\&lt;/strong&gt;od and &lt;strong&gt;\\go\\&lt;/strong&gt;o&lt;strong&gt;\\fy\\&lt;/strong&gt; \-
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>text</td>
+    <td>String</td>
+    <td>Text that contains words to be highlighted.</td>
+  </tr>
+  <tr>
+    <td>phrases</td>
+    <td>String</td>
+    <td>Coma-separated phrases to highlight.</td>
+  </tr>
+</table>

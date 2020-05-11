@@ -1,1 +1,3 @@
-utility-belt
+# Utility Belt
+
+JavaScript Utilities Collection

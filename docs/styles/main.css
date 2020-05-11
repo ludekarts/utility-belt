@@ -284,12 +284,12 @@ ul.food-items > li strong {
   background-size: 60%;
   background-position: center;
   background-repeat: no-repeat;
-  background-image: url(../docs/icons/search.svg);
+  background-image: url(../icons/search.svg);
 }
 
 .searchbox.active button.search-btn {
   background-size: 50%;
-  background-image: url(../docs/icons/close.svg);
+  background-image: url(../icons/close.svg);
 }
 
 .searchbox button.search-btn:focus {

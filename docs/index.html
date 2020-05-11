@@ -50,7 +50,7 @@
       <a href="#array-shuffle-doc">shuffleArray</a>
       <a href="#array-sort-by-phrase-doc">sortByPhraseIndex</a>
 
-      <span class="header">Componets</span>
+      <span class="header">Components</span>
 
       <a href="#highlight-doc">highlight</a>
       <a href="#xxxx-doc">customSelect</a>
@@ -115,53 +115,53 @@
     <h1>Utility Belt Docs</h1>
     <div class="stack">
       <!-- Utilities -->
-      <section id="override-doc" data-import="./docs/deep-override.html"></section>
-      <div class="stack" data-import="./docs/utils.html"></div>
+      <section id="override-doc" data-import="./utilities/deep-override.html"></section>
+      <div class="stack" data-import="./utilities/utils.html"></div>
 
       <!-- Abstractions -->
-      <section id="clipboard-doc" data-import="./docs/clipboard.html"></section>
-      <section id="event-handler-doc" data-import="./docs/event-handler.html"></section>
-      <section id="dom-filter-doc" data-import="./docs/dom-filter/index.html" data-script="./docs/dom-filter/index.js"></section>
-      <section id="events-doc" data-import="./docs/events.html"></section>
-      <section id="loopstack-doc" data-import="./docs/loopstack/index.html" data-script="./docs/loopstack/index.js"></section>
+      <section id="clipboard-doc" data-import="./utilities/clipboard.html"></section>
+      <section id="event-handler-doc" data-import="./utilities/event-handler.html"></section>
+      <section id="dom-filter-doc" data-import="./utilities/dom-filter/index.html" data-script="./utilities/dom-filter/index.js"></section>
+      <section id="events-doc" data-import="./utilities/events.html"></section>
+      <section id="loopstack-doc" data-import="./utilities/loopstack/index.html" data-script="./utilities/loopstack/index.js"></section>
 
       <!-- Arrays -->
-      <div class="stack" data-import="./docs/arrays.html"></div>
+      <div class="stack" data-import="./utilities/arrays.html"></div>
 
       <!-- Components -->
-      <section id="highlight-doc" data-import="./docs/highlight.html"></section>
+      <section id="highlight-doc" data-import="./utilities/highlight.html"></section>
 
       <!-- Delay events -->
-      <div class="stack" data-import="./docs/delay-events.html"></div>
+      <div class="stack" data-import="./utilities/delay-events.html"></div>
 
       <!-- DOM Helpers -->
-      <section id="template-doc" data-import="./docs/template/index.html"></section>
-      <section id="create-element-doc" data-import="./docs/create-element.html"></section>
-      <section id="import-html-doc" data-import="./docs/import-html.html"></section>
+      <section id="template-doc" data-import="./utilities/template/index.html"></section>
+      <section id="create-element-doc" data-import="./utilities/create-element.html"></section>
+      <section id="import-html-doc" data-import="./utilities/import-html.html"></section>
 
       <!-- DOM manipulations -->
-      <div data-import="./docs/nodes.html"></div>
+      <div data-import="./utilities/nodes.html"></div>
 
       <!-- Hashing -->
-      <div data-import="./docs/hashing.html"></div>
+      <div data-import="./utilities/hashing.html"></div>
 
       <!-- Query -->
-      <section id="update-query-doc" data-import="./docs/query.html"></section>
+      <section id="update-query-doc" data-import="./utilities/query.html"></section>
 
       <!-- Request -->
-      <section id="request-default-doc" data-import="./docs/request/index.html"></section>
+      <section id="request-default-doc" data-import="./utilities/request/index.html"></section>
 
       <!-- Schema -->
-      <section id="schema-types-doc" data-import="./docs/schema.html"></section>
+      <section id="schema-types-doc" data-import="./utilities/schema.html"></section>
 
       <!-- Strings -->
-      <div data-import="./docs/strings.html"></div>
+      <div data-import="./utilities/strings.html"></div>
 
     </div>
   </main>
 
   <script type="module">
-    import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "./utilities/index.js";
+    import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "../src/index.js";
 
     importHtml(() => {
       nodeListToArray(document.querySelectorAll("pre"))
