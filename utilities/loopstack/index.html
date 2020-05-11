@@ -1,0 +1,84 @@
+<h2>loopstack(<span class="gray">length</span>)</h2>
+<p>
+  Provides you an array-like structure that can store only certain amount of data.
+  If given <em>length</em> is exceaded loopstck starts to overrite data form the begining.
+  This may be handy for implememnting simple undo functionality where system can remmember for example only
+  last 10 actions.
+</p>
+<h3>Usage</h3>
+<pre>
+  import { loopstack } from "utility-belt";
+  ...
+
+  const \\history\\ = loopstack(5);
+
+  \\history\\.push("Apple");
+
+  \\history\\.push("Banana");
+
+  \\history\\.pull(); -\// Banana\-
+
+  \\history\\.get(0); -\// Apple\-
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>length</td>
+    <td>Number</td>
+    <td>Size of the data structure.</td>
+  </tr>
+</table>
+<h3>Api description</h3>
+<table>
+  <tr>
+    <th>Method</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>push(<span class="gray">value</span>)</td>
+    <td>Pushes value into the data structure.</td>
+  </tr>
+  <tr>
+    <td>pull()</td>
+    <td>Pulls last value from the data structure. Value is removed from the structure.</td>
+  </tr>
+  <tr>
+    <td>get(<span class="gray">index</span>)</td>
+    <td>Get value from the structure at given index. Value is NOT removed from the structure.</td>
+  </tr>
+  <tr>
+    <td>head()</td>
+    <td>Get currrent HEAD value from the structure. Value is NOT removed from the structure.</td>
+  </tr>
+  <tr>
+    <td>dump()</td>
+    <td>Returns whole data structure as an array.</td>
+  </tr>
+</table>
+
+<h3>Example</h3>
+<hr class="space">
+<div id="loopstack-example">
+  <ul>
+    <li class="display">Basket: [ ⚪️ ⚪️ ⚪️ ⚪️ ⚪️ ] </li>
+    <li class="pulled">Pulled:</li>
+  </ul>
+  <hr class="space">
+  <div>
+    <button data-click="addItem">🍋</button>
+    <button data-click="addItem">🍊</button>
+    <button data-click="addItem">🍓</button>
+    <button data-click="pullItem">Pull out 🛒</button>
+    <button data-click="getIndex">Pull index 3</button>
+    <button data-click="pullHead">Pull head</button>
+  </div>
+</div>
+<div>
+  <hr class="space">
+  <a href="./docs/loopstack/index.js" target="_blank" noopener>⌨️ Show code</a>
+</div>

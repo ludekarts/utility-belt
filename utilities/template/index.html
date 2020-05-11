@@ -1,0 +1,58 @@
+<h2>template``</h2>
+<p>Creates DOM nodes base on given template. Allows for inserting DOM nodes directly into the template and retriveing references to selected nodes.</p>
+<h3>Usage</h3>
+<pre>
+  import { template } from "utility-belt";
+  ...
+
+  const \\element\\ = template`
+    -\<div>
+      <h1>Hello world</h1>
+      <p>This is some text</p>
+    </div>\-
+  `;
+</pre>
+<p>If we wan to get a reference to any node in he template we can use <strong>ref</strong> attribute to acheive that:</p>
+<pre>
+  ...
+
+  const [\\element\\, \\refs\\] = template`
+    -\<div>
+      <h1>Hello world</h1>
+      <p ref="\\text\\">This is some text</p>
+    </div>\-
+  `;
+
+  console.log(\\refs.text\\.textContent); -\// This is some text\-
+</pre>
+<p>
+  One of the hadny features of temapte tag function is ability to include DOM nodes directly into the template:
+</p>
+<pre>
+  ...
+
+  const \\myHeadline\\ = document.createElement("h1");
+  \\myHeadline\\.textContent = "Hello world";
+
+  const element = template`
+    -\<div>
+      ${\\myHeadline\\}
+      <p>This is some text</p>
+    </div>\-
+  `;
+</pre>
+<p>You can also insert an array of DOM nodes or a NodeList:</p>
+<pre>
+  ...
+
+  const \\grocceryList\\ = document.querySelectorAll("li.groccery-item");
+
+  const element = template`
+    -\<div>
+      <p>This is my groccery list</p>
+      <ul>
+        ${\\grocceryList\\}
+      </ul>
+    </div>\-
+  `;
+</pre>

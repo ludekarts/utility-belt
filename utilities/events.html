@@ -1,0 +1,45 @@
+<h2>events(<span class="gray">root</span>, <span class="gray">event</span>, <span class="gray">...</span>)</h2>
+<p>Enables stright forward event delegation system in vanilla JS.</p>
+<h3>Usage</h3>
+<pre>
+  import { events } from "utility-belt";
+  ...
+
+  const handlers = events(\\document.body\\, "\\click\\", "\\dblclick\\");
+
+  handlers.add("\\actionAname\\", event => {
+    -\// Handle action\-
+  });
+
+  handlers.callHandler("\\actionAname\\", {});
+</pre>
+<p>Now in HTML you need to declare which elementc can trigger events:</p>
+<pre>
+  <div>
+    <button data-click="\\actionAname\\">OK</button>
+  </div>
+</pre>
+
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>root</td>
+    <td>HTMLElement</td>
+    <td>Reference to the DOM element that will hanle event delegation</td>
+  </tr>
+  <tr>
+    <td>event</td>
+    <td>String</td>
+    <td>Name of event that will be handled</td>
+  </tr>
+  <tr>
+    <td>...</td>
+    <td>String</td>
+    <td>More event names</td>
+  </tr>
+</table>
