@@ -1,4 +1,4 @@
-import { loopstack, events } from "../../utility-belt/index.module.js";
+import { loopstack, events } from "../../lib/utility-belt.module.js";
 
 (function() {
   const loopstackExample = document.getElementById("loopstack-example");

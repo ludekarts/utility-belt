@@ -22,6 +22,12 @@ export default function domFilter({
       return acc;
     }, []);
 
+  attachStyle(`
+    .dom-filter-match {
+      display: none;
+    }
+  `);
+
   const store = {};
   const itemsLength = items.length;
 
@@ -40,9 +46,3 @@ export default function domFilter({
     return items;
   };
 }
-
-attachStyle(`
-  .dom-filter-match {
-    display: none;
-  }
-`);

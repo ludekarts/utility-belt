@@ -1,9 +1,9 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "JavaScript Utilities Collection",
   "source": "src/index.js",
-  "main": "dist/index.js",
+  "main": "dist/utility-belt.js",
   "unpkg": "dist/utility-belt.umd.js",
   "module": "dist/utility-belt.module.js",
   "homepage": "https://ludekarts.github.io/utility-belt",
@@ -12,9 +12,9 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "microbundle",
     "watch": "microbundle watch",
-    "publish": "npm run build && copyfiles -f \"./dist/index.module.js\" ./docs/utility-belt ./ && gh-pages -d docs"
+    "build": "microbundle --no-sourcemap",
+    "deploy": "npm run build && copyfiles -f \"./dist/utility-belt.module.js\" ./docs/lib && gh-pages -d docs"
   },
   "keywords": [
     "utilities"

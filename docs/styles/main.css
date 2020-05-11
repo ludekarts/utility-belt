@@ -343,3 +343,12 @@ img {
   margin-top: 1em;
   margin-left: 1em;
 }
+
+.footer {
+  padding: 1em;
+  color: #232323;
+  background: #eee;
+  font-size: 0.9em;
+  text-align: center;
+  margin: 1em -1.5em -1.5em;
+}

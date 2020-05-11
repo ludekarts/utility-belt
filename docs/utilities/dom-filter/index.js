@@ -1,4 +1,4 @@
-import { highlight, domFilter, fuzzySearch } from "../../utility-belt/index.module.js";
+import { highlight, domFilter, fuzzySearch } from "../../lib/utility-belt.module.js";
 
 (function() {
   let mode = "default";
