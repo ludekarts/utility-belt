@@ -13,11 +13,38 @@ JavaScript Utilities Collection see [full documentation](https://ludekarts.githu
 With NPM
 
 ```
-npm install @ludekarts/utility-belt
+npm install @ludekarts/utility-belt;
 ```
 
-With Unpkg (browser)
+With Browser (unpkg)
 
 ```
-<script src="https://unpkg.com/@ludekarts/utility-belt@0.1.0-alpha.2/dist/utility-belt.umd.js"></script>
+<script src="https://unpkg.com/@ludekarts/utility-belt@latest/dist/utility-belt.umd.js"></script>
 ```
+
+
+## Usage
+
+With bundler
+
+```
+import { clipboard } from "@ludekarts/utility-belt";
+
+const copy = clipboard();
+
+copy("Hello! I'm copied text.");
+
+```
+
+With browser
+
+```
+const { clipboard } = window.utilityBelt;
+
+const copy = clipboard();
+
+copy("Hello! I'm copied text.");
+
+```
+
+See methods [full documentation](https://ludekarts.github.io/utility-belt).

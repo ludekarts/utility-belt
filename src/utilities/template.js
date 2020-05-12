@@ -38,13 +38,12 @@ export default function template(strings, ...inserts) {
   wrapper.insertAdjacentHTML("beforeend", html);
 
   // Get node references. This will skip the insert nodes since they alreay have external referenes.
-  const refs = nodeListToArray(wrapper.querySelectorAll("[ref]"))
-    .reduce((acc, ref) => {
-      acc[ref.getAttribute("ref")] = ref;
-      ref.removeAttribute("ref");
-      return acc;
-    },
-  {});
+  const refsNodes = nodeListToArray(wrapper.querySelectorAll("[ref]"));
+  const refs = refsNodes.reduce((acc, ref) => {
+    acc[ref.getAttribute("ref")] = ref;
+    ref.removeAttribute("ref");
+    return acc;
+  }, {});
 
   // Replace inserts hooks.
   nodeListToArray(wrapper.querySelectorAll("i._hook_"))
@@ -67,5 +66,5 @@ export default function template(strings, ...inserts) {
     ? wrapper.children[0]
     : wrapper;
 
-  return refs.length ? [element, refs] : element;
+  return refsNodes.length ? [element, refs] : element;
 }
