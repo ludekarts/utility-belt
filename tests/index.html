@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Utility Belt Tests (Mocha)</title>
+    <link href="https://unpkg.com/mocha/mocha.css" rel="stylesheet" />
+    <script src="https://unpkg.com/chai/chai.js"></script>
+    <script src="https://unpkg.com/mocha/mocha.js"></script>
+  </head>
+  <body>
+    <div id="mocha"></div>
+
+    <script type="module" class="mocha-init">
+      mocha.setup("bdd");
+    </script>
+    <script type="module" class="mocha-exec">
+      import "./template.test.js";
+      mocha.checkLeaks();
+      mocha.run();
+    </script>
+  </body>
+</html>
+
