@@ -12,24 +12,6 @@ export function debounce (callback, delay, immediate) {
   };
 };
 
-// Debounce callback fn as promise.
-export function debouncePromise (func, wait, immediate) {
-  let timeout;
-  return (...args) => {
-    const context = this;
-    return new Promise(resolve => {
-      const later = () => {
-        timeout = null;
-        if (!immediate) resolve(func.apply(context, args));
-      };
-      const callNow = immediate && !timeout;
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-      if (callNow) resolve(func.apply(context, args));
-    });
-  };
-};
-
 // Call callback function if it is called within delta time range.
 export const inDeltaTime = (callback, delta) => {
   let startTime, currentTime = 0;
@@ -44,16 +26,16 @@ export const inDeltaTime = (callback, delta) => {
 };
 
 // Call callback function on firt call & wait for given amount of time, to call it again.
-// export function pause (callback, wait) {
-//   let timeout, block = false;
-//   return (...args) => {
-//     if (!block) {
-//       clearTimeout(timeout);
-//       callback.apply(this, args);
-//       block = true;
-//       timeout = setTimeout(() => block = false, wait);
-//     }
-//   };
-// };
+export function throttle (callback, wait) {
+  let timeout, block = false;
+  return (...args) => {
+    if (!block) {
+      clearTimeout(timeout);
+      callback.apply(this, args);
+      block = true;
+      timeout = setTimeout(() => block = false, wait);
+    }
+  };
+};
 
 

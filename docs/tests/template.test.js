@@ -1,5 +1,5 @@
 // import { template } from "../../src/index.js" // Development;
-import { template } from "../../docs/lib/utility-belt.module.js" // Production;
+import { template } from "../lib/utility-belt.module.js" // Production;
 
 describe("template", () => {
   it("should be a function", () => {

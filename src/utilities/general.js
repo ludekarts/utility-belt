@@ -60,14 +60,11 @@ export function rangeRandomInt (min, max) {
 }
 
 // Generates unique ID.
+// From: https://stackoverflow.com/questions/105034/how-to-create-guid-uuid
 export function uid() {
-  return ((+new Date) + Math.random()* 100).toString(32);
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  );
 }
 
 
-// Adds styles tag into <head/> element.
-export function attachStyle(style) {
-  document.head.appendChild(
-    document.createElement("style")
-  ).textContent = style;
-}

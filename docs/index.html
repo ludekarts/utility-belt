@@ -53,15 +53,15 @@
       <span class="header">Components</span>
 
       <a href="#highlight-doc">highlight</a>
-      <a href="#xxxx-doc">customSelect</a>
-      <a href="#xxxx-doc">revealContent</a>
+      <a href="#custom-select-doc"><del>customSelect</del></a>
+      <a href="#reveal-content-doc"><del>revealContent</del></a>
+      <a href="#pubsub-doc"><del>pubsub</del></a>
 
       <span class="header">Delay events</span>
 
-      <a href="#xxxxxxx-doc">debounce</a>
-      <a href="#xxxxxxx-doc">debouncePromise</a>
-      <a href="#xxxxxxx-doc">throttle</a>
-      <a href="#xxxxxxx-doc">inDeltaTime</a>
+      <a href="#debounce-doc">debounce</a>
+      <a href="#throttle-doc">throttle</a>
+      <a href="#delta-time-doc">inDeltaTime</a>
 
       <span class="header">DOM helpers</span>
 
@@ -112,7 +112,7 @@
   </aside>
 
   <main>
-    <h1>Utility Belt Docs</h1>
+    <h1>Utility Belt Docs <a href="./tests/index.html">Run tests</a></h1>
     <div class="stack">
       <!-- Utilities -->
       <section id="override-doc" data-import="./utilities/deep-override.html"></section>
@@ -166,59 +166,61 @@
     import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "./lib/utility-belt.module.js";
 
     importHtml(() => {
-      nodeListToArray(document.querySelectorAll("pre"))
-        .forEach(function transformCode(node) {
-          node.innerHTML = node.innerHTML
-            .replace(/</g, "&lt;")
-            .replace(/(?!=>)>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;")
-            .replace(/\\\\(.*?)\\\\/g, (m, g) => `<em>${g}</em>`)
-            .replace(/-\\([\s\S]*?)\\-/gm, (m, g) => `<em class="fade">${g}</em>`)
-        });
-      });
+      nodeListToArray(document.querySelectorAll("pre")).forEach(transformCode);
+    });
 
-      // Load scripts associated with doc html files.
-      const main = document.querySelector("main");
-      main.addEventListener("htmlLoaded", event => {
-        event.target.dataset.script
-          && includeScriptTag(event.target.dataset.script, {isModule: true});
-      });
+    // Transformt <pre> tags.
+    function transformCode(node) {
+      node.innerHTML = node.innerHTML
+        .replace(/</g, "&lt;")
+        .replace(/(?!=>)>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/\\\\(.*?)\\\\/g, (m, g) => `<em>${g}</em>`)
+        .replace(/-\\([\s\S]*?)\\-/gm, (m, g) => `<em class="fade">${g}</em>`);
+    }
 
-      // Filter main menu.
-      const filter = domFilter ({
-        selector: ".scroller > a",
-        uiRender: (entry, phrase) => {
-          entry.ref.innerHTML = highlight(entry.text, phrase);
-        },
-      });
-      const searchbox = document.getElementById("searchbox");
-      const serach = searchbox.firstElementChild;
-      const searchToggle = document.getElementById("search-toggle");
+    // Load scripts associated with doc html files.
+    const main = document.querySelector("main");
+    main.addEventListener("htmlLoaded", event => {
+      event.target.dataset.script
+        && includeScriptTag(event.target.dataset.script, {isModule: true});
+    });
 
-      searchToggle.addEventListener("click", event => {
-        if (searchbox.classList.toggle("active")) {
-          serach.focus();
-        } else {
-          serach.value = "";
-          serach.dispatchEvent(new Event("input", {
-            bubbles: true,
-            cancelable: true,
-          }));
-        }
-      });
+    // Filter main menu.
+    const filter = domFilter ({
+      selector: ".scroller > a",
+      uiRender: (entry, phrase) => {
+        entry.ref.innerHTML = highlight(entry.text, phrase);
+      },
+    });
+    const searchbox = document.getElementById("searchbox");
+    const serach = searchbox.firstElementChild;
+    const searchToggle = document.getElementById("search-toggle");
 
-      serach.addEventListener("input", event => {
-        filter(event.target.value);
-      });
+    searchToggle.addEventListener("click", event => {
+      if (searchbox.classList.toggle("active")) {
+        serach.focus();
+      } else {
+        serach.value = "";
+        serach.dispatchEvent(new Event("input", {
+          bubbles: true,
+          cancelable: true,
+        }));
+      }
+    });
 
-      document.addEventListener("keydown", event => {
-        if (event.key === "/") {
-          searchbox.classList.add("active");
-          event.preventDefault();
-          serach.focus();
-        }
-      });
+    serach.addEventListener("input", event => {
+      filter(event.target.value);
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "/") {
+        searchbox.classList.add("active");
+        event.preventDefault();
+        serach.focus();
+      }
+    });
   </script>
 </body>
 </html>

@@ -1,0 +1,53 @@
+<section>
+  <h2 id="el-from-str-doc">elFromString(<span class="gray">HTMLString</span>)</h2>
+  <p>Creates HTML element from given string.</p>
+  <h3>Usage</h3>
+  <pre>
+    import { elFromString } from "utility-belt";
+    ...
+
+    document.body.appendChild(
+      elFromString("<div>Hello</div>")
+    );
+
+  </pre>
+  <h3>Props</h3>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>HTMLString</td>
+      <td>String</td>
+      <td>HTML code in string format that will be transformed into document-fragment</td>
+    </tr>
+  </table>
+
+  <h2 id="el-from-str-doc">getNodesPath(<span class="gray">stopSelector</span>)</h2>
+  <p>Returns list of parent nodes</p>
+  <h3>Usage</h3>
+  <pre>
+    import { getNodesPath } from "utility-belt";
+    ...
+
+    document.body.appendChild(
+      elFromString("<div>Hello</div>")
+    );
+
+  </pre>
+  <h3>Props</h3>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>stopSelector</td>
+      <td>String</td>
+      <td>CSS selector that stop path traversing when met.</td>
+    </tr>
+  </table>
+</section>

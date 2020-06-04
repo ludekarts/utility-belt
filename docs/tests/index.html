@@ -7,10 +7,18 @@
     <link href="https://unpkg.com/mocha/mocha.css" rel="stylesheet" />
     <script src="https://unpkg.com/chai/chai.js"></script>
     <script src="https://unpkg.com/mocha/mocha.js"></script>
+    <style>
+      #mocha h1.header {
+        font-weight: bold;
+        margin: 1em 0 0;
+        font-family: "Lato", sans-serif;
+      }
+    </style>
   </head>
   <body>
-    <div id="mocha"></div>
-
+    <div id="mocha">
+      <h1 class="header">Utility Belt Tests</h1>
+    </div>
     <script type="module" class="mocha-init">
       mocha.setup("bdd");
     </script>
