@@ -1,6 +1,6 @@
 // Transfrom array of objects in to JS object,
 // stores each entry under the key pulled from the object.
-export function arrayToObject (array, key) {
+export function arrayToObject(array, key) {
   return array.reduce((result, object) => {
     result[object[key]] = object;
     return result;
@@ -8,7 +8,7 @@ export function arrayToObject (array, key) {
 }
 
 // Slice array in chunks with given size.
-export function chunksArray (array, size) {
+export function chunksArray(array, size) {
   let index = 0;
   const arrayLength = array.length;
   const chunks = [];
@@ -19,7 +19,7 @@ export function chunksArray (array, size) {
 };
 
 // Compare two arrays and returns comparation object.
-export function compareArrays (arrayA, arrayB) {
+export function compareArrays(arrayA, arrayB) {
   return {
     added: arrayB.filter(el => !~arrayA.indexOf(el)),
     removed: arrayA.filter(el => !~arrayB.indexOf(el))
@@ -45,12 +45,12 @@ export function getRandomSubarray(arr, size) {
 // Fasterst way to convert NodeList into Array.
 export function nodeListToArray(nodelist) {
   const array = [];
-  for(let i = -1, l = nodelist.length; ++i !== l; array[i] = nodelist[i]);
+  for (let i = -1, l = nodelist.length; ++i !== l; array[i] = nodelist[i]);
   return array;
 }
 
- // Reduces provided array with given reducer.
- export function reduce(array, reducer, results) {
+// Reduces provided array with given reducer.
+export function reduce(array, reducer, results) {
   let index = -1;
   const length = array.length;
   const last = length - 1;
@@ -60,19 +60,29 @@ export function nodeListToArray(nodelist) {
   return results;
 }
 
+// Loop through array.
+export function loop(array, callback) {
+  let index = 0;
+  let stop = array.length;
+  while (index < stop) {
+    callback(array[index], index, array);
+    index++;
+  }
+}
+
 // Revmoe element from array by predicate. Creates new array.
-export function removeFromArray (array, predicate) {
+export function removeFromArray(array, predicate) {
   let index = -1;
   const result = [];
   const length = array.length;
-  while(++index < length) {
-  	!predicate(array[index], index) && result.push(array[index]);
+  while (++index < length) {
+    !predicate(array[index], index) && result.push(array[index]);
   }
   return result;
 };
 
 // Shuffle elements in the array.
-export function shuffleArray (array) {
+export function shuffleArray(array) {
   let currentIndex = array.length;
   let temporaryValue;
   let randomIndex;
@@ -91,7 +101,7 @@ export function shuffleArray (array) {
   return array;
 };
 
-export function sortByPhraseIndex (array, phrase, selector = x => x) {
+export function sortByPhraseIndex(array, phrase, selector = x => x) {
   const lowerPhrase = phrase.toLowerCase();
   return array.sort((a, b) => {
     const indexA = selector(a).indexOf(lowerPhrase);
@@ -100,5 +110,5 @@ export function sortByPhraseIndex (array, phrase, selector = x => x) {
     const ia = indexA < 0 ? Infinity : indexA;
     const ib = indexB < 0 ? Infinity : indexB;
     return ia - ib;
- });
+  });
 }
