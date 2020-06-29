@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Utility Belt Docs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles/reset.css">
   <link rel="stylesheet" href="./styles/main.css">
 </head>
+
 <body id="ubd">
 
   <aside>
     <div class="scroller">
       <span class="version">
-        <a href="#ubd">v 0.1.0</a>
+        <a href="#ubd">v 0.2.0</a>
         <div id="searchbox" class="searchbox">
           <input type="text">
           <button id="search-toggle" class="search-btn"></button>
@@ -53,9 +56,7 @@
       <span class="header">Components</span>
 
       <a href="#highlight-doc">highlight</a>
-      <a href="#custom-select-doc"><del>customSelect</del></a>
-      <a href="#reveal-content-doc"><del>revealContent</del></a>
-      <a href="#pubsub-doc"><del>pubsub</del></a>
+      <a href="#pubsub-doc">pubsub</a>
 
       <span class="header">Delay events</span>
 
@@ -67,12 +68,12 @@
 
       <a href="#attach-style-doc">attachStyle</a>
       <a href="#create-element-doc">createElement</a>
+      <a href="#create-template-doc">createTemplate</a>
       <a href="#el-from-str-doc">elFromString</a>
       <a href="#get-nodes-path-doc">getNodesPath</a>
       <a href="#import-html-doc">importHtml</a>
       <a href="#include-script-doc">includeScript</a>
       <a href="#memo-element-doc">memoElement</a>
-      <a href="#template-doc">template</a>
 
       <span class="header">DOM manipulations</span>
       <a href="#xxxxxxx-doc">copyAttrs</a>
@@ -83,9 +84,9 @@
 
       <span class="header">Hashing</span>
 
-      <a href="#hash32-doc">base64</a>
+      <a href="#base64-doc">base64</a>
       <a href="#hash-code-doc">hashCode</a>
-      <a href="#hash32-doc">hash32</a>
+      <a href="#hash53-doc">hash52</a>
 
       <span class="header">Query</span>
       <a href="#update-query-doc">updateQuery</a>
@@ -121,22 +122,26 @@
       <!-- Abstractions -->
       <section id="clipboard-doc" data-import="./utilities/clipboard.html"></section>
       <section id="event-handler-doc" data-import="./utilities/event-handler.html"></section>
-      <section id="dom-filter-doc" data-import="./utilities/dom-filter/index.html" data-script="./utilities/dom-filter/index.js"></section>
+      <section id="dom-filter-doc" data-import="./utilities/dom-filter/index.html"
+        data-script="./utilities/dom-filter/index.js"></section>
       <section id="events-doc" data-import="./utilities/events.html"></section>
-      <section id="loopstack-doc" data-import="./utilities/loopstack/index.html" data-script="./utilities/loopstack/index.js"></section>
+      <section id="loopstack-doc" data-import="./utilities/loopstack/index.html"
+        data-script="./utilities/loopstack/index.js"></section>
 
       <!-- Arrays -->
       <div class="stack" data-import="./utilities/arrays.html"></div>
 
       <!-- Components -->
       <section id="highlight-doc" data-import="./utilities/highlight.html"></section>
+      <section id="pubsub-doc" data-import="./utilities/pubsub/index.html" data-script="./utilities/pubsub/index.js">
+      </section>
 
       <!-- Delay events -->
       <div class="stack" data-import="./utilities/delay-events.html"></div>
 
       <!-- DOM Helpers -->
-      <section id="template-doc" data-import="./utilities/template/index.html"></section>
       <section id="create-element-doc" data-import="./utilities/create-element.html"></section>
+      <section id="create-template-doc" data-import="./utilities/template/index.html"></section>
       <section id="import-html-doc" data-import="./utilities/import-html.html"></section>
 
       <!-- DOM manipulations -->
@@ -184,11 +189,11 @@
     const main = document.querySelector("main");
     main.addEventListener("htmlLoaded", event => {
       event.target.dataset.script
-        && includeScriptTag(event.target.dataset.script, {isModule: true});
+        && includeScriptTag(event.target.dataset.script, { isModule: true });
     });
 
     // Filter main menu.
-    const filter = domFilter ({
+    const filter = domFilter({
       selector: ".scroller > a",
       uiRender: (entry, phrase) => {
         entry.ref.innerHTML = highlight(entry.text, phrase);
@@ -223,4 +228,5 @@
     });
   </script>
 </body>
+
 </html>

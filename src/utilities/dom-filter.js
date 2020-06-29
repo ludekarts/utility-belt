@@ -1,4 +1,4 @@
-import { attachStyle } from "./general.js";
+import { attachStyle } from "./dom-helpers.js";
 import { nodeListToArray } from "./arrays.js";
 
 function defaultMatch(entry, phrase) {
@@ -32,7 +32,7 @@ export default function domFilter({
   const itemsLength = items.length;
 
   return phrase => {
-    for(let i = 0; i < itemsLength; i++) {
+    for (let i = 0; i < itemsLength; i++) {
       const entry = items[i];
       if (!phrase.length && !matchIfEmptyPhrase) {
         entry.ref.classList.add("dom-filter-match");

@@ -1,6 +1,6 @@
-import { insertNodeAfter } from "./dom-manipulations.js";
-import { nodeListToArray, loop } from "./arrays.js";
 import { placeStrBetween } from "./strings.js"
+import { nodeListToArray, loop } from "./arrays.js";
+import { insertNodeAfter } from "./dom-manipulations.js";
 
 // Global references store.
 const references = (function () {

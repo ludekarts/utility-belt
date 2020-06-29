@@ -24,6 +24,7 @@ export * from "./utilities/arrays.js";
 
 // Components.
 export { default as highlight } from "./utilities/highlight.js";
+export { default as PubSub } from "./utilities/pubsub.js";
 
 // Delay Events.
 export * from "./utilities/delay-events.js";

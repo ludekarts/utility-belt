@@ -16,11 +16,12 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "microbundle watch --no-compress --external none -f es",
+    "start": "microbundle watch -o docs/lib --no-sourcemap --no-pkg-main -f es ",
     "build": "microbundle --no-sourcemap && copyfiles -f ./dist/utility-belt.module.js ./docs/lib",
-    "deploy": "npm run build && gh-pages -d docs"
+    "deploy": "gh-pages -d docs"
   },
   "keywords": [
+    "JavaScript",
     "utilities"
   ],
   "author": "Wojciech Ludwin @ludekarts, ludekarts@gmail.com",

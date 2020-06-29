@@ -21,6 +21,7 @@
     import("./importer.js").then(async module => {
       window.utilityBelt = await module.default;
       await import("./template.test.js");
+      await import("./pubsub.test.js");
       mocha.run();
     })
   </script>
