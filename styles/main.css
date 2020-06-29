@@ -24,7 +24,14 @@ main {
 }
 
 main > h1 {
+  display: flex;
   margin-bottom: 1em;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+main > h1 a {
+  font-size: 0.65em;
 }
 
 aside {
@@ -74,6 +81,13 @@ h1 {
   font-size: 1.5em;
   font-weight: 500;
   margin: 1em 0 0;
+  display: flex;
+  max-width: 54rem;
+  justify-content: space-between;
+}
+
+h1 > a {
+  font-size: 0.6em;
 }
 
 h2 {
@@ -135,6 +149,10 @@ hr {
 
 hr.space {
   border: none;
+}
+
+del {
+  text-decoration: line-through;
 }
 
 table {
@@ -203,6 +221,7 @@ span.header {
   margin-top: 0.5em;
 }
 
+span.g,
 span.gray {
   color: #666;
 }
@@ -215,6 +234,26 @@ input {
 
 li {
   margin: 0.3em 0;
+}
+
+.info {
+  display: flex;
+  padding: 0.4em;
+  border-radius: 2px;
+  align-items: center;
+  background-color: #FFC107;
+}
+
+.info:before {
+  content: "";
+  width: 1em;
+  height: 1em;
+  margin-right: 0.3em;
+  display: inline-block;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-image: url(../icons/info.svg);
+  background-size: 100%;
 }
 
 /* domFilter */

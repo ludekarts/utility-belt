@@ -1,28 +1,54 @@
-<h2>template``</h2>
-<p>Creates DOM nodes base on given template. Allows for inserting DOM nodes directly into the template and retriveing references to selected nodes.</p>
+<h2>createTemplate()</h2>
+<p>
+  Creates template function which returns DOM nodes based on HTML markup provided with data that can
+  be re-called with updated set of data and only nodes related to changed data will be re-rendered.
+</p>
 <h3>Usage</h3>
 <pre>
-  import { template } from "utility-belt";
+  import { createTemplate } from "utility-belt";
+  ...
+  const \\template\\ = createTemplate();
+
+  document.body.appedChild(
+    \\template\\`
+      -\<div>
+        <h1>Hello world</h1>
+        <p>This is some text</p>
+      </div>\-
+    `
+  );
+</pre>
+<p>It is trivial to changed <em>template</em> tag function into component that renders data.</p>
+<pre>
+  ...
+
+  const render = \\name\\ => template`
+    -\<div>
+      <h1>Hello ${\\name\\}</h1>      
+      <p>This text will not change</p>
+    </div>\-
+  `;
+
+  -\// Render component with name set to Bob.\-
+  document.body.appedChild(render(\\"Bob"\\));
+
+  -\// Re-render only H1 tag with new name ALice.\-
+  render(\\"Alice"\\);
+</pre>
+<p>If we wan to get a reference to any node in he template we can use <strong>ref</strong> attribute to acheive that:
+</p>
+<pre>
+  import { createTemplate, getRefs } from "utility-belt";
   ...
 
   const \\element\\ = template`
-    -\<div>
-      <h1>Hello world</h1>
-      <p>This is some text</p>
-    </div>\-
-  `;
-</pre>
-<p>If we wan to get a reference to any node in he template we can use <strong>ref</strong> attribute to acheive that:</p>
-<pre>
-  ...
-
-  const [\\element\\, \\refs\\] = template`
     -\<div>
       <h1>Hello world</h1>
       <p ref="\\text\\">This is some text</p>
     </div>\-
   `;
 
+  const refs = getRefs(\\element\\);
   console.log(\\refs.text\\.textContent); -\// This is some text\-
 </pre>
 <p>
