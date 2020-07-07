@@ -57,7 +57,7 @@ export default function PubSub(config) {
 
     publish(n, e, m) {
 
-      const { namespace, event, message } = getPublichParams(n, e, m);
+      const { namespace, event, message } = getPublishParams(n, e, m);
 
       if (namespaces.has(namespace)) {
         const currentNamespace = namespaces.get(namespace);
@@ -130,7 +130,7 @@ function getParams(n, e, o) {
   return { namespace, event, observer };
 }
 
-function getPublichParams(n, e, m) {
+function getPublishParams(n, e, m) {
   let namespace;
   let event;
   let message;

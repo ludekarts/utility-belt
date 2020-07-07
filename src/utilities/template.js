@@ -136,13 +136,13 @@ function createInstance(stringsCache, setCache) {
             // Process value for non-boolean attributes.
             value = `%#${index}#%`;
           }
-        } else if (value instanceof HTMLElement) {
+        } else if (isDomNode(value)) {
           // HTML Elements
           value = `<i data-hook="${index}" data-hte="true"></i>`;
         } else if (Array.isArray(value)) {
           // Array of nodes.
           value = `<i data-hook="${index}" data-lst="true"></i>`;
-        } else if (notExcluded(value)) {
+        } else if (isNumberOrString(value)) {
           // Numbers & Strings.
           value = `<i data-hook="${index}" data-ref="true"></i>`;
         } else {
@@ -174,16 +174,11 @@ function createInstance(stringsCache, setCache) {
               currentElement.type = "node";
               hook.parentNode.replaceChild(currentElement.value, hook);
             } else if (hook.dataset.lst) {
-              // NodeList.            
+              // NodeList.    
               const parent = hook.parentNode;
               currentElement.type = "list";
               currentElement.parent = parent;
-              loop(currentElement.value, entry => {
-                if (entry instanceof HTMLElement) {
-                  parent.insertBefore(entry, hook);
-                }
-              });
-              hook.remove();
+              insertNodeList(currentElement.value, hook, parent);
             } else {
               currentElement.ref = hook;
               currentElement.type = "attribute";
@@ -191,7 +186,7 @@ function createInstance(stringsCache, setCache) {
               // Handle non-boolean attributes.
               if (!currentElement.bool) {
                 // Only Number and string in attinutes.
-                if (notExcluded(currentElement.value)) {
+                if (isNumberOrString(currentElement.value)) {
                   const attribute = getAttribute(index, hook);
                   currentElement.attribute = attribute;
                   hook.setAttribute(
@@ -224,7 +219,6 @@ function createInstance(stringsCache, setCache) {
       );
 
     }
-
     return htmlResult;
   }
 }
@@ -238,21 +232,35 @@ function isAttribute(html) {
 }
 
 // Allow Strings and Numbers.
-function notExcluded(value) {
+function isNumberOrString(value) {
   return value !== undefined && (typeof value === "number" || typeof value === "string");
+}
+
+function isDomNode(node) {
+  return node instanceof HTMLElement || node instanceof Text;
+}
+
+function insertNodeList(nodeList, pointer, parent) {
+  loop(nodeList, entry => {
+    if (isDomNode(entry)) {
+      parent.insertBefore(entry, pointer);
+    }
+  });
+  pointer.remove();
 }
 
 // On re-render update value's references.
 function updateReference(element, newValue) {
   if (!element) return;
 
+  // Update attributes.
   if (element.type === "attribute") {
     if (element.bool) {
       !!newValue
         ? element.ref.setAttribute(element.bool, element.bool)
         : element.ref.removeAttribute(element.bool);
     } else {
-      if (notExcluded(newValue)) {
+      if (isNumberOrString(newValue)) {
         element.ref.setAttribute(
           element.attribute.name,
           element.attribute.template.replace(new RegExp(`%#${element.index}#%`), newValue)
@@ -261,44 +269,80 @@ function updateReference(element, newValue) {
         throw new Error(`Only String and Numbers can be passedt to the attributes, got: "${typeof newValue}" at "${element.index}" value.`);
       }
     }
+    // Update text values.
   } else if (element.type === "text") {
-    element.ref.textContent = newValue;
+    if (isNumberOrString(newValue)) {
+      element.ref.textContent = newValue;
+    } else if (isDomNode(newValue)) {
+      element.type = "node";
+      element.ref.parentNode.replaceChild(newValue, element.ref);
+    } else if (Array.isArray(newValue)) {
+      const parent = element.ref.parentNode;
+      element.type = "list";
+      element.parent = parent;
+      insertNodeList(newValue, element.ref, parent);
+    }
+    // Update DOM nodes.
   } else if (element.type === "node") {
-    element.value.parentNode.replaceChild(newValue, element.value);
-    element.value = newValue;
-  } else if (element.type === "list" && Array.isArray(newValue)) {
+    if (isNumberOrString(newValue)) {
+      const textNode = document.createTextNode(newValue);
+      element.type = "text";
+      element.ref = textNode;
+      element.value.parentNode.replaceChild(textNode, element.value);
+    } else if (isDomNode(newValue)) {
+      element.value.parentNode.replaceChild(newValue, element.value);
+    } else if (Array.isArray(newValue)) {
+      const parent = element.value.parentNode;
+      element.type = "list";
+      element.parent = parent;
+      insertNodeList(newValue, element.value, parent);
+    }
+    // Update Nodes List.
+  } else if (element.type === "list") {
+    if (isNumberOrString(newValue)) {
+      const textNode = document.createTextNode(newValue);
+      element.type = "text";
+      element.ref = textNode;
+      element.parent.insertBefore(textNode, element.value[0]);
+      loop(element.value, node => node.remove());
+      element.parent = undefined;
+    } else if (isDomNode(newValue)) {
+      element.type = "node";
+      element.parent.insertBefore(newValue, element.value[0]);
+      loop(element.value, node => node.remove());
+      element.parent = undefined;
+    } else if (Array.isArray(newValue)) {
 
-    // Remove removed nodes.
-    let notRemoved = [];
-    loop(element.value, node => {
-      if (!newValue.includes(node)) {
-        node.remove();
-      } else {
-        notRemoved.push(node);
-      }
-    });
+      // Delete removed nodes.
+      let notRemoved = [];
+      loop(element.value, node => {
+        newValue.includes(node)
+          ? notRemoved.push(node)
+          : node.remove();
+      });
 
-    // Update elements list.
-    element.value = notRemoved;
+      // Update elements list.
+      element.value = notRemoved;
 
-    // Append new children, skip existing.      
-    loop(newValue, (newNode, index) => {
-      const oldNode = element.value[index];
-      if (oldNode !== newNode) {
-        if (oldNode === undefined) {
-          // Append node.
-          if (element.value[index - 1]) {
-            element.value[index] = insertNodeAfter(newNode, element.value[index - 1]);
+      // Append new children (skip existing).
+      loop(newValue, (newNode, index) => {
+        const oldNode = element.value[index];
+        if (oldNode !== newNode) {
+          if (oldNode === undefined) {
+            // Append node.
+            if (element.value[index - 1]) {
+              element.value[index] = insertNodeAfter(newNode, element.value[index - 1]);
+            } else {
+              // In case all items in the list were removed and we need to insert new ones.
+              element.parent.appendChild(newNode);
+            }
           } else {
-            // In case all items in the liest were removed and we need to insert new ones.
-            element.parent.appendChild(newNode);
+            // Replace node.
+            oldNode.parentNode.replaceChild(newNode, oldNode);
           }
-        } else {
-          // Replace node.
-          oldNode.parentNode.replaceChild(newNode, oldNode);
         }
-      }
-    });
+      });
+    }
   }
   element.value = newValue;
 }
@@ -320,4 +364,3 @@ function stripWrapper(wrapper) {
     ? wrapper.children[0]
     : wrapper;
 }
-
