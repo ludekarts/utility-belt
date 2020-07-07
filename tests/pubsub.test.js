@@ -54,7 +54,6 @@ describe("PubSub", () => {
     pubsub.subscribe("custom", "hello", fn);
     pubsub.subscribe("custom", "greetings", fn);
     pubsub.unsubscribe("custom", "greetings", fn);
-    console.log(pubsub.getNamespace("custom"));
     chai.expect(pubsub.getNamespace("custom").has("greetings")).to.be.false;
   });
 

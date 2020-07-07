@@ -1,12 +1,10 @@
 async function utilityBeltImport() {
   let module;
   try {
-    // Development.
-    console.log("Dev");
-
+    console.log("Env::Development");
     module = await import("../../src/index.js");
   } catch (error) {
-    // Production.
+    console.log("Env::Production");
     module = await import("../../docs/lib/utility-belt.module.js");
   }
   return module;
