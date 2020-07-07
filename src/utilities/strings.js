@@ -5,6 +5,8 @@ export function splitAtIndex(str, index) {
 
 // Place 'value' inside 'source' sctring at given 'position'.
 export function placeStrBetween(source, value, position) {
-  return source.slice(0, position) + value + source.slice(position + value.length - 1, source.length);
+  const head = source.slice(0, position);
+  const tail = source.slice(position, source.length)
+  return `${head}${value}${tail}`;
 }
 

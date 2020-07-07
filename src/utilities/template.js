@@ -10,7 +10,7 @@ const references = (function () {
       if (!host instanceof HTMLElement) {
         throw new Error("getRefs argument error: Helper expects HTMLElement as an argument.");
       }
-      return refs.get(host);
+      return refs.get(host) || {};
     },
     set(host, name, ref) {
       const container = refs.get(host) || {};
@@ -122,7 +122,7 @@ function createInstance(stringsCache, setCache) {
             // Update data-hook attribute.
             html = head + element.replace(/data-hook="(.+?)"/, (_, refs) => `data-hook="${refs} ${index}"`);
           } else {
-            // Create new data-hook attribute.
+            // Create new data-hook attribute.            
             html = head + placeStrBetween(element, ` data-hook="${index}"`, element.indexOf(" "));
           }
 
@@ -137,10 +137,13 @@ function createInstance(stringsCache, setCache) {
             value = `%#${index}#%`;
           }
         } else if (value instanceof HTMLElement) {
+          // HTML Elements
           value = `<i data-hook="${index}" data-hte="true"></i>`;
         } else if (Array.isArray(value)) {
+          // Array of nodes.
           value = `<i data-hook="${index}" data-lst="true"></i>`;
         } else if (notExcluded(value)) {
+          // Numbers & Strings.
           value = `<i data-hook="${index}" data-ref="true"></i>`;
         } else {
           value = "";
@@ -187,12 +190,17 @@ function createInstance(stringsCache, setCache) {
 
               // Handle non-boolean attributes.
               if (!currentElement.bool) {
-                const attribute = getAttribute(index, hook);
-                currentElement.attribute = attribute;
-                hook.setAttribute(
-                  attribute.name,
-                  attribute.template.replace(new RegExp(`%#${index}#%`), currentElement.value),
-                );
+                // Only Number and string in attinutes.
+                if (notExcluded(currentElement.value)) {
+                  const attribute = getAttribute(index, hook);
+                  currentElement.attribute = attribute;
+                  hook.setAttribute(
+                    attribute.name,
+                    attribute.template.replace(new RegExp(`%#${index}#%`), currentElement.value),
+                  );
+                } else {
+                  throw new Error(`Only String and Numbers can be passedt to the attributes, got: "${typeof currentElement.value}" at "${index}" value.`);
+                }
               } else {
                 !!currentElement.value
                   ? hook.setAttribute(currentElement.bool, currentElement.bool)
@@ -224,14 +232,17 @@ function createInstance(stringsCache, setCache) {
 
 // ---- Helpers ----------------
 
+// Check if current provessing value in HTML is for attribute.
 function isAttribute(html) {
   return html.lastIndexOf("<") > html.lastIndexOf(">");
 }
 
+// Allow Strings and Numbers.
 function notExcluded(value) {
-  return value && (typeof value === "number" || typeof value === "string");
+  return value !== undefined && (typeof value === "number" || typeof value === "string");
 }
 
+// On re-render update value's references.
 function updateReference(element, newValue) {
   if (!element) return;
 
@@ -241,10 +252,14 @@ function updateReference(element, newValue) {
         ? element.ref.setAttribute(element.bool, element.bool)
         : element.ref.removeAttribute(element.bool);
     } else {
-      element.ref.setAttribute(
-        element.attribute.name,
-        element.attribute.template.replace(new RegExp(`%#${element.index}#%`), newValue)
-      );
+      if (notExcluded(newValue)) {
+        element.ref.setAttribute(
+          element.attribute.name,
+          element.attribute.template.replace(new RegExp(`%#${element.index}#%`), newValue)
+        );
+      } else {
+        throw new Error(`Only String and Numbers can be passedt to the attributes, got: "${typeof newValue}" at "${element.index}" value.`);
+      }
     }
   } else if (element.type === "text") {
     element.ref.textContent = newValue;
@@ -288,6 +303,7 @@ function updateReference(element, newValue) {
   element.value = newValue;
 }
 
+// Pull out attribute's template and name for given index.
 function getAttribute(index, node) {
   const attribute = Array.prototype.slice.call(node.attributes).find(
     attr => new RegExp(`%#${index}#%`).test(attr.value)
@@ -298,6 +314,7 @@ function getAttribute(index, node) {
   };
 }
 
+// Remove element wrapper if not needed.
 function stripWrapper(wrapper) {
   return wrapper.children.length === 1
     ? wrapper.children[0]

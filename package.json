@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "description": "JavaScript Utilities Collection",
   "source": "src/index.js",
   "main": "dist/utility-belt.js",
@@ -18,7 +18,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "microbundle watch -o docs/lib --no-sourcemap --no-pkg-main -f es ",
     "build": "microbundle --no-sourcemap && copyfiles -f ./dist/utility-belt.module.js ./docs/lib",
-    "deploy": "gh-pages -d docs"
+    "deploy": "npm run build && gh-pages -d docs"
   },
   "keywords": [
     "JavaScript",
