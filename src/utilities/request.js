@@ -58,14 +58,14 @@ function checkResponse(fallback, freepass) {
       );
       return fallback;
     }
+
     throw RequestError(response);
   };
 }
 
 function RequestError(response) {
-  const error = Error();
-  error.code = response.status;
-  error.message = response.statusText;
+  const error = Error(response.statusText);
+  error.status = response.status;
   return error;
 }
 
@@ -81,7 +81,11 @@ export function objectToFetchBody(objectBody) {
   if (isObject(objectBody)) {
     const body = new FormData();
     Object.keys(objectBody).forEach(name =>
-      body.append(name, JSON.stringify(objectBody[name])),
+      body.append(name,
+        isBasicType(objectBody[name]) // Do not stringify basic data types.
+          ? objectBody[name]
+          : JSON.stringify(objectBody[name])
+      ),
     );
     return body;
   }
@@ -131,4 +135,8 @@ export function parseResponse(response) {
       );
       return response;
   }
+}
+
+function isBasicType(value) {
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 }

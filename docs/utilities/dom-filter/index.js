@@ -1,6 +1,6 @@
 import { highlight, domFilter, fuzzySearch } from "../../lib/utility-belt.module.js";
 
-(function() {
+(function () {
   let mode = "default";
   const input = document.getElementById("food-search");
   const switchMode = document.querySelector(".switch-mode");
