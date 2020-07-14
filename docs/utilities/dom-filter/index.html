@@ -40,6 +40,7 @@
         <li><strong>item</strong> - reference to currently prcess list element</li>
         <li><strong>index</strong> - current item index</li>
       </ul>
+      Fn should return <em>string</em> that can be matched against the <em>search phrase</em>
     </td>
   </tr>
   <tr>
@@ -49,9 +50,11 @@
       Provides a custom render function for the element.
       Fn takes three arguments:
       <ul>
-        <li><strong>entry</strong> - current entry <em>{ <strong>text</strong>: "item text" <strong>ref</strong>: "element reference" }</em></li>
+        <li><strong>entry</strong> - current entry <em>{ <strong>text</strong>: "item text" <strong>ref</strong>:
+            "element reference" }</em></li>
         <li><strong>phrase</strong> - current phrase</li>
-        <li><strong>store</strong> - mutable object that is preserved though entire list processing. Can be used as cache or temporary storage</li>
+        <li><strong>store</strong> - mutable object that is preserved though entire list processing. Can be used as
+          cache or temporary storage</li>
       </ul>
     </td>
   </tr>

@@ -64,7 +64,11 @@ function checkResponse(fallback, freepass) {
 }
 
 function RequestError(response) {
-  const error = Error(response.statusText);
+  const error = Error(
+    !response.statusText || !response.statusText.length
+      ? `RequestError: Code ${response.status}. Response was not OK`
+      : response.statusText
+  );
   error.status = response.status;
   return error;
 }
