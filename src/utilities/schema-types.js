@@ -14,8 +14,8 @@ export default {
   boolean: value => typeof value === "boolean",
   // HOF validators.
   matches: regex => value => regex.test(value),
-  objectOf: schema => value => isObject(value) && {value: value, schema: schema},
-  arrayOf: schema => value => Array.isArray(value) && {value: value, schema: schema},
+  objectOf: schema => value => isObject(value) && { value: value, schema: schema },
+  arrayOf: schema => value => Array.isArray(value) && { value: value, schema: schema },
 };
 
 
@@ -50,6 +50,7 @@ export function checkSchema(value, schema, options = {}) {
       if (options.silent) {
         return false;
       } else {
+        console.error(`Mismatch value:`, value);
         throw new Error(`Value "${value}" does not match schema type.`);
       }
     }
