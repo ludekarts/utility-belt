@@ -1,5 +1,5 @@
 // Remove Polish diacritics and hyphenate name.
-export function hyphenate (value) {
+export function hyphenate(value) {
   const dict = {
     ą: "a",
     ć: "c",
@@ -25,11 +25,12 @@ export function isObject(object) {
     typeof object !== "string" &&
     typeof object !== "number" &&
     typeof object !== "boolean" &&
+    typeof object !== "function" &&
     !Array.isArray(object);
 }
 
 // Check if piont [x,y] is in polygon [[x,y],...].
-export function inPolygon (point, vs) {
+export function inPolygon(point, vs) {
   let [x, y] = point
   let inside = false
   for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
@@ -55,14 +56,14 @@ export function plWordCase(options) {
 }
 
 // Get random Integer number from min-max range.
-export function rangeRandomInt (min, max) {
+export function rangeRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 // Generates unique ID.
 // From: https://stackoverflow.com/questions/105034/how-to-create-guid-uuid
 export function uid() {
-  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+  return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
     (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
   );
 }

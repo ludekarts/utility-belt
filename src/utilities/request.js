@@ -2,14 +2,14 @@ import { isObject } from "./general.js";
 
 // NOTE:
 //
-// - fallback: when provided response from all failed requests will be supplied with
-//             given fallback value. No erroe will be thrown just warning in the
-//             console.
+// - fallback:                when provided response from all failed requests will be supplied with
+//                            given fallback value. No erroe will be thrown just warning in the
+//                            console.
 //
-// - freepass: allows to pass through response even if it contains error messages.
-//             This is usefull when server returns error pages with some additional
-//             content e.g. JSON data.
-
+// - notThrowOnResponseError: allows to pass through response even if it contains error messages.
+//                            This is usefull when server returns error pages with some additional
+//                            content e.g. JSON data.
+// 
 //
 // ABORTING REQUESTS:
 //
@@ -20,23 +20,26 @@ import { isObject } from "./general.js";
 // abort(myRequest);
 //
 
-// Container for all panding requests.
+// Container for all pending requests.
 const requestQueue = new Map();
 
 export default function request(url, configuration = {}) {
-  const { fallback, freepass = false, ...config } = configuration;
+  const { fallback, notThrowOnResponseError = false, ...config } = configuration;
 
   const controller = new AbortController();
   const { signal } = controller;
 
+  const requestCleanup = response => {
+    requestQueue.delete(fetchPromise);
+    return response;
+  };
+
   const fetchPromise = fetch(url, { ...config, signal })
     // Remove from requests queue.
-    .then(response => {
-      requestQueue.delete(fetchPromise);
-      return response;
-    })
+    .then(requestCleanup)
     // Check responde.
-    .then(checkResponse(fallback, freepass));
+    .then(checkResponse(fallback, notThrowOnResponseError))
+    .catch(requestCleanup);
 
   // Add request to the queue for cancelation.
   requestQueue.set(fetchPromise, () => {
@@ -48,9 +51,9 @@ export default function request(url, configuration = {}) {
 
 // ---- Utilities ----------------
 
-function checkResponse(fallback, freepass) {
+function checkResponse(fallback, notThrowOnResponseError) {
   return response => {
-    if (response.ok || freepass) return response;
+    if (response.ok || notThrowOnResponseError) return response;
 
     if (fallback) {
       console.warn(
@@ -64,11 +67,10 @@ function checkResponse(fallback, freepass) {
 }
 
 function RequestError(response) {
-  const error = Error(
-    !response.statusText || !response.statusText.length
-      ? `RequestError: Code ${response.status}. Response was not OK`
-      : response.statusText
-  );
+  const message = response.statusText || !response.statusText.length
+    ? `RequestError: Code ${response.status}. Response was not OK`
+    : response.statusText;
+  const error = new Error(message);
   error.status = response.status;
   return error;
 }

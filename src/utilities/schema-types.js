@@ -58,5 +58,5 @@ export function checkSchema(value, schema, options = {}) {
     return true;
   }
 
-  throw new Error(`Incorrect schema type. Got "${typeof schema}" instead of ptop-type function.`);
+  throw new Error(`Incorrect schema type. Got "${typeof schema}" instead of schema-type function.`);
 }
