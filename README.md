@@ -1,6 +1,6 @@
 # Utility Belt
 
-JavaScript Utilities Collection see [full documentation](https://ludekarts.github.io/utility-belt). When on docs press `?` key to enable index seach.
+JavaScript Utilities Collection see [full documentation](https://ludekarts.github.io/utility-belt). Press `?` key to enable index seach.
 
 ### Note
 

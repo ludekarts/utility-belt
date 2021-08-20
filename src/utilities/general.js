@@ -1,4 +1,4 @@
-// Remove Polish diacritics and hyphenate name.
+// Remove Polish diacritics, lowercase word and hyphenate the value.
 export function hyphenate(value) {
   const dict = {
     ą: "a",
@@ -42,7 +42,7 @@ export function inPolygon(point, vs) {
 }
 
 // Allow to pick proper word case based on passed value.
-export function plWordCase(options) {
+export function wordCase(options) {
   const mods = [2, 3, 4];
   const mtpval = [11, 12, 13, 14];
   return value => {
@@ -55,12 +55,12 @@ export function plWordCase(options) {
   };
 }
 
-// Get random Integer number from min-max range.
-export function rangeRandomInt(min, max) {
+// Get random number (int) from min-max range.
+export function rangeRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Generates unique ID.
+// Generates unique ID in `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` format.
 // From: https://stackoverflow.com/questions/105034/how-to-create-guid-uuid
 export function uid() {
   return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
