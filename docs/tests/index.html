@@ -20,9 +20,9 @@
   <script type="module" class="mocha-exec">
     import("./importer.js").then(async module => {
       window.utilityBelt = await module.default;
-      await import("./template.test.js");
-      await import("./pubsub.test.js");
       await import("./general.test.js");
+      await import("./pubsub.test.js");
+      await import("./template.test.js");
       mocha.run();
     })
   </script>

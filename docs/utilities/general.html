@@ -67,14 +67,15 @@
     ...
 
     console.log(
-      isObject(true),     -\ // false\-
-      isObject("object"), -\ // false\-
-      isObject([]),       -\ // false\-
-      isObject(\\{}\\),       -\ // \\true\\ \-
-      isObject(1),        -\ // false\-
-      isObject(null),     -\ // false\-
-      isObject(Symbol()), -\ // false\-
-      isObject(undefined),-\ // false\-
+      isObject(\\{}\\),            -\// \\true\\ \-
+      isObject(true),          -\// false\-
+      isObject("object"),      -\// false\-
+      isObject([]),            -\// false\-
+      isObject(1),             -\// false\-
+      isObject(null),          -\// false\-
+      isObject(Symbol()),      -\// false\-
+      isObject(function(){ }), -\// false\-
+      isObject(undefined),     -\// false\-
     );
   </pre>
   <h3>Props</h3>
@@ -174,15 +175,15 @@
   </table>
 </section>
 
-<section id="range-random-doc">
-  <h2>rangeRandomNumber(<span class="gray">min</span>, <span class="gray">max</span>)</h2>
+<section id="get-random-doc">
+  <h2>getRandomNumber(<span class="gray">min</span>, <span class="gray">max</span>)</h2>
   <p>Get random number from <em>min</em> to <em>max</em> range.</p>
   <h3>Usage</h3>
   <pre>
-    import { rangeRandomNumber } from "utility-belt";
+    import { getRandomNumber } from "utility-belt";
     ...
 
-    const \\randomNumber\\ = rangeRandomNumber(2, 5);
+    const \\randomNumber\\ = getRandomNumber(2, 5);
   </pre>
   <h3>Props</h3>
   <table>

@@ -56,7 +56,7 @@ export function wordCase(options) {
 }
 
 // Get random number (int) from min-max range.
-export function rangeRandomNumber(min, max) {
+export function getRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
