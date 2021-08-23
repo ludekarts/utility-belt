@@ -1,0 +1,88 @@
+<h2>deepOverride(<span class="gray">target</span>, <span class="gray">source</span>)</h2>
+<p>Allows to deep override <em>target</em> object with <em>source</em> config. </p>
+<br>
+<p class="info">
+  Helper always prefers <strong>source object over target</strong>, except the case when the source property is undefined.</p>
+</p>
+
+<h3>Usage</h3>
+<pre>
+  import { deepOverride } from "utility-belt";
+  ...
+
+  const \\target\\ = {
+    user : {
+      name: "John",
+      age: 22,
+      gender: "male",
+      metadata: {
+        ststus: "Admin",
+      }
+    }
+  };
+
+  const \\source\\ = {
+    user: {
+      name: "Marry",
+      age: 21,
+      gender: "female",
+      metadata: {
+        auth: true,
+      }
+    }
+  };
+
+  console.log(deepOverride(\\target\\, \\source\\));
+
+  -\/* {
+    user: {
+      name: "Marry",
+      age: 21,
+      gender: "female",
+      metadata: {
+        auth: true,
+        ststus: "Admin"
+      }
+    }
+  } */\-
+</pre>
+<p class="info">When overriding arrays in order to update specific values the structure of the array <strong>need to be preserved</strong> e.g.:</p>
+<pre>
+  deepOverride(
+    [1, 2, \\3\\],
+    [undefined, undefined, \\4\\]
+  );
+  -\--> [1, 2, 4]\-
+
+  deepOverride(
+    [1, 2, \\3\\],
+    [\\4\\, \\5\\]
+  );
+  -\--> [4, 5, 3]\-
+</pre>
+<p class="info"><strong>null</strong> is treated as a value. Below example of overriding whole array:</p>
+<pre>
+  deepOverride(
+    [1, 2, 3],
+    \\null\\
+  );
+  -\--> null\-
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>target</td>
+    <td>Any</td>
+    <td>An instance that values will be copied <strong>to</strong></td>
+  </tr>
+  <tr>
+    <td>source</td>
+    <td>Any</td>
+    <td>An instance that values will be copied <strong>from</strong></td>
+  </tr>
+</table>

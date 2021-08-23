@@ -1,0 +1,46 @@
+<h2>createEventHandler(<span class="gray">element</span>, <span class="gray">eventName</span>, <span class="gray">callback</span>, <span class="gray">useCapture</span>)</h2>
+<p></p>
+<h3>Usage</h3>
+<pre>
+  import { createEventHandler } from "utility-belt";
+  ...
+
+  const \\destroyMyElementClick\\ = createEventHandler(
+    document.getElementById("myElement"),
+    "click",
+    event => {
+      console.log(event.target.textContent);
+    }
+  );
+
+  destroyMyElementClick(); -\// Remove event listener\-
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>element</td>
+    <td>HTMLElement</td>
+    <td>Referecnr to the HTML element.</td>
+  </tr>
+  <tr>
+    <td>eventName</td>
+    <td>String</td>
+    <td>Event name.</td>
+  </tr>
+  <tr>
+    <td>callback</td>
+    <td>Function</td>
+    <td>Event callback.</td>
+  </tr>
+  <tr>
+    <td>useCapture</td>
+    <td>Boolean</td>
+    <td>Set event capture flag.</td>
+  </tr>
+
+</table>

@@ -1,0 +1,147 @@
+<h2>request(<span class="gray">url</span>, <span class="gray">config</span>)</h2>
+<p>Enhance default fetch API</p>
+<h3>Usage</h3>
+<pre>
+  import { request } from "utility-belt";
+  ...
+
+  const config = {
+    method: "post",
+    \\freepass\\: true,
+    \\fallback\\: "Some value",
+  };
+
+  request("https://url/to/api", config)
+    .then(response => response.json())
+    .then(console.log);
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>url</td>
+    <td>String</td>
+    <td>Link to requested resource.</td>
+  </tr>
+  <tr>
+    <td>config</td>
+    <td>Object</td>
+    <td>Request configuration object.</td>
+  </tr>
+</table>
+<h3>Custom config props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>freepass</td>
+    <td>Boolean</td>
+    <td>
+      Prevents from throwing an error when <strong>response.ok</strong> is <strong>false</strong>.
+      This is usefull when server returns error codes with some additional content e.g. JSON data.
+    </td>
+  </tr>
+  <tr>
+    <td>fallback</td>
+    <td>Any</td>
+    <td>
+      When provided response from all failed requests will be supplied with given fallback value.
+      No error will be thrown instead warning in the console will be displayed.
+    </td>
+  </tr>
+</table>
+
+<h2 id="request-abort-doc">abort(<span class="gray">request</span>)</h2>
+<p>Abort pending request. It is important that <em>abort</em> method recieves reference to the direct value of <em>request()</em>, not the <em>.then()</em> chain which points to the different value (see usage below).</p>
+<h3>Usage</h3>
+<pre>
+  import { request, abort } from "utility-belt";
+  ...
+
+  const \\getData\\ = request("https://url/to/api");
+
+  \\getData\\
+    .then(response => response.json())
+    .then(console.log);
+
+  abort(\\getData\\);
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>request</td>
+    <td>Promise</td>
+    <td>Reference to request promise value.</td>
+  </tr>
+</table>
+
+<h2 id="request-parse-doc">parseResponse(<span class="gray">response</span>)</h2>
+<p>Parses some of the common response types. e.g: <em>text/...</em>, <em>image/...</em>, <em>application/json</em>, <em>multipart/form-data</em></p>
+<h3>Usage</h3>
+<pre>
+  import { request, parseResponse } from "utility-belt";
+  ...
+
+  request("https://url/to/api")
+    .then(\\parseResponse\\)
+    .then(console.log);
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>response</td>
+    <td>Object</td>
+    <td>Reponse object.</td>
+  </tr>
+</table>
+
+<h2 id="request-body-doc">objectToFetchBody(<span class="gray">body</span>)</h2>
+<p>
+  Transform plain JS object into fetch body. All keys at the first level will be turned into form fields.
+  Deeper level of object will be stringified under parent key.
+</p>
+<h3>Usage</h3>
+<pre>
+  import { request, objectToFetchBody } from "utility-belt";
+  ...
+
+  const \\config\\ = {
+    \\body\\: objectToFetchBody({
+      user: "John",
+      status: "online",
+    }),
+  };
+
+  request("https://url/to/api", \\config\\)
+    .then(console.log);
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>object</td>
+    <td>Object</td>
+    <td>Object taht need to be send as request body.</td>
+  </tr>
+</table>

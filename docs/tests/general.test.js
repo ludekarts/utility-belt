@@ -1,4 +1,4 @@
-const { deepOverride, hyphenate, fuzzySearch, isObject, inPolygon, wordCase, getRandomNumber } = window.utilityBelt;
+const { deepOverride, hyphenate, fuzzySearch, isObject, inPolygon, wordCase, getRandomNumber, uid } = window.utilityBelt;
 
 
 describe("Deep Override", () => {
@@ -175,6 +175,7 @@ describe("Word Case", () => {
 });
 
 
+
 describe("Random number form a range", () => {
 
   it("Should exist an be a function", () => {
@@ -186,15 +187,33 @@ describe("Random number form a range", () => {
     chai.expect(result > 2 && result < 5).to.be.true;
   });
 
-  it("Should generate a collection of random numbers", () => {
+  it("Should generate a set of numbers with repeating ratio < 50%", () => {
     let preValue;
     let counter = 0;
+    let totalTrials = 50;
+    let numbersRange = [0, 20];
 
-    for (let i = 0; i < 10; i++) {
-      getRandomNumber(1, 50)
+    for (let i = 0; i < totalTrials; i++) {
+      const currentValue = getRandomNumber(numbersRange[0], numbersRange[1]);
+      preValue === currentValue && counter++;
+      preValue = currentValue;
     }
-    chai.expect(result > 2 && result < 5).to.be.true;
+
+    chai.expect(counter < totalTrials / 2).to.be.true;
   });
 
 });
 
+
+
+describe("Generate UUID", () => {
+
+  it("Should exist an be a function", () => {
+    chai.expect(uid).to.be.a("function");
+  });
+
+  it("Generates valid UUID v4", () => {
+    const uuidRegex = /^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i;
+    chai.expect(uuidRegex.test(uid())).to.be.true;
+  });
+});
