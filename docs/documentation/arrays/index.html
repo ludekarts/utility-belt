@@ -1,0 +1,166 @@
+<section id="array-to-object-doc">
+  <h3>arrayToObject(<span class="gray">array</span>, <span class="gray">key</span>)</h3>
+  <p>Transfrom array of objects into JS object and stores each item from the array under the key pulled from the object.</p>
+  <h4>Usage</h4>
+  <pre>
+    import { arrayToObject } from "utility-belt";
+    ...
+
+    const \\array\\ = [{ name: "John", age: 22 }, { name: "Marry", age: 21 }];
+
+    console.log(arrayToObject(array, "\\name\\"));
+    -\/*
+    {
+       John: { name: "John", age: 22 },
+       Marry: { name: "Marry", age: 21 }
+    }
+    */\-
+  </pre>
+</section>
+
+<section id="array-chunks-doc">
+  <h3>chunksArray(<span class="gray">array</span>, <span class="gray">size</span>)</h3>
+  <p>Slice array in chunks with given size.</p>
+  <h4>Usage</h4>
+  <pre>
+    import { chunksArray } from "utility-belt";
+    ...
+
+    const \\array\\ = [1, 2, 3, 4, 5];
+
+    console.log(chunksArray(array, \\2\\));
+    -\/*
+    [
+      [1, 2], [3, 4], [5]
+    ]
+    */\-
+  </pre>
+</section>
+
+<section id="array-compare-doc">
+  <h3>compareArrays(<span class="gray">arrayA</span>, <span class="gray">arrayB</span>)</h3>
+  <p>Compares two arrays and returns an object with <em>added</em> and <em>removed</em> properties.</p>
+  <h4>Usage</h4>
+  <pre>
+    import { compareArrays } from "utility-belt";
+    ...
+
+    const \\A\\ = [1, 2, 3, 4, 5];
+    const \\B\\ = [1, 3, 4, 5, 7, 8];
+
+    console.log(compareArrays(\\A\\, \\B\\));
+    -\/*
+    {
+      added: [7, 8],
+      removed: [2],
+    }
+    */\-
+  </pre>
+</section>
+
+<section id="array-random-doc">
+  <h3>getRandomSubarray(<span class="gray">array</span>, <span class="gray">size</span>)</h3>
+  <p>Returns a subarray of given size with randomly picked items form source array.</p>
+  <h4>Usage</h4>
+  <pre>
+    import { getRandomSubarray } from "utility-belt";
+    ...
+
+    const \\randomSubarray\\ = getRandomSubarray([1, 2, 3, 4, 5, 6], \\3\\);
+
+    console.log(randomSubarray.length) -\// 3\-
+  </pre>
+</section>
+
+<section id="array-nodelist-doc">
+  <h3>nodeListToArray(<span class="gray">nodeList</span>)</h3>
+  <p>Similar to <em>Array.from()</em>. Should work faster for large nodes collections</p>
+  <h4>Usage</h4>
+  <pre>
+    import { nodeListToArray } from "utility-belt";
+    ...
+
+    const \\list\\ = nodeListToArray(document.\\querySelectorAll\\(".list-item"));
+  </pre>
+</section>
+
+<section id="array-reduce-doc">
+  <h3>reduce(<span class="gray">array</span>, <span class="gray">reducer</span>, <span class="gray">init</span>)</h3>
+  <p>
+    Custom implementation of <em>Array.reduce()</em> method. One significant difference is that reduce function
+    receive the <strong>fourth parameter</strong> that tells if the current item is the last one.
+    <strong>isLast</strong> flag can be useful for example to perform a cleanup at the last step of reduction.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+    import { reduce } from "utility-belt";
+    ...
+
+    const reduced = reduce(
+      array,
+      (\\acc\\, \\current\\, \\index\\, \\isLast\\) => {},
+      []
+    );
+  </pre>
+</section>
+
+<section id="array-shuffle-doc">
+  <h3>shuffleArray(<span class="gray">array</span>)</h3>
+  <p>Shuffle elements in the array. Returns new array.</p>
+  <h4>Usage</h4>
+  <pre>
+    import { shuffleArray } from "utility-belt";
+    ...
+
+    const \\shuffled\\ = shuffleArray([1, 2, 3, 4, 5]);
+  </pre>
+</section>
+
+<section id="array-sort-by-phrase-doc">
+  <h3>sortByPhraseIndex(<span class="gray">array</span>, <span class="gray">phrase</span>, <span class="gray">selector</span>)</h3>
+  <p>
+    Sorts itmes in array according to apperance (the index) of given phrase.
+    Lower index (closer to the begin of the string), better the score.
+  </p>
+  <br>
+  <p class="info">This fn will sort only the items that contains the phrase. Rest of the items
+    will stay in the order they're in the source array thus in case you want them to be in certain order (e.g. alphabetically)
+    you need to do it up front by yourself (see usage below).</p>
+  <h4>Usage</h4>
+  <pre>
+    import { sortByPhraseIndex } from "utility-belt";
+    ...
+
+    const \\array\\ = ["zero", "big", "deep", "deer", "bolder", "older"];
+
+    array.sort(); -\// Sort array alphabetically\-
+
+    console.log(
+      sortByPhraseIndex(\\array\\, "\\de\\")
+    );
+    -\// ["\\de\\ep", "\\de\\er", "ol\\de\\r", "bol\\de\\r", "big", "zero"]\-
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>array</td>
+      <td>Array</td>
+      <td>Array to be processed.</td>
+    </tr>
+    <tr>
+      <td>phrase</td>
+      <td>String</td>
+      <td>Phrase that should apear in array items.</td>
+    </tr>
+    <tr>
+      <td>selector</td>
+      <td>Function</td>
+      <td>Function that allows to select a filed for sorting if we're dealing with an array of objects e.g. <code>item => item.name</em></td>
+    </tr>
+  </table>
+</section>

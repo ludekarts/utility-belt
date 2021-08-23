@@ -184,7 +184,7 @@ describe("Random number form a range", () => {
 
   it("Should return a number from a range 2 - 5", () => {
     const result = getRandomNumber(2, 5);
-    chai.expect(result > 2 && result < 5).to.be.true;
+    chai.expect(result >= 2 && result <= 5).to.be.true;
   });
 
   it("Should generate a set of numbers with repeating ratio < 50%", () => {

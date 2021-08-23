@@ -77,8 +77,9 @@ nav .version {
 
 
 h1 {
-  font-size: 1.5em;
+  font-size: 1.8em;
   font-weight: bold;  
+  margin-bottom: 2em;
   
   display: flex;
   justify-content: space-between;
@@ -89,19 +90,42 @@ h1 > a {
 }
 
 h2 {
-  font-size: 1.2em;
-  font-weight: 600;
-  margin: 0 0 1.5em;
+  padding: 0.5em;
+  font-size: 1.6em;
+  overflow: hidden;
+  font-weight: 900;  
+  margin-top: 1.5em;
+  position: relative;
+  border-radius: 0.2em;
+  color: var(--ub-dark-blue);
+  background: var(--ub-yellow);
+}
+
+h2::before {
+  top: -10px;
+  right: 0;
+  bottom: 0;
+  left: 40%;
+  content: "";
+  position: absolute;
+  border-top-left-radius: 100px 60px;
+  background-image: url(../icons/stripes.svg);
 }
 
 h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0 0 1.5em;  
+}
+
+h4 {
   font-size: 1em;
   font-weight: 700;
   margin: 1.5em 0 0;
   text-transform: uppercase;
 }
 
-h4 {
+h5 {
   font-size: 1.1em;
 }
 
@@ -124,6 +148,9 @@ li {
   margin: 0.3em 0;
 }
 
+p {
+  line-height: 1.4em;
+}
 
 /* Colors */
 
@@ -213,7 +240,7 @@ section em::after {
 
 .info {  
   font-size: 0.9em;
-  line-height: 1.3em;
+  line-height: 1.4em;
   border-radius: 0.2em;
   position: relative;
   align-items: center;

@@ -70,22 +70,12 @@ export function loop(array, callback) {
   }
 }
 
-// Revmoe element from array by predicate. Creates new array.
-export function removeFromArray(array, predicate) {
-  let index = -1;
-  const result = [];
-  const length = array.length;
-  while (++index < length) {
-    !predicate(array[index], index) && result.push(array[index]);
-  }
-  return result;
-};
-
 // Shuffle elements in the array.
 export function shuffleArray(array) {
   let currentIndex = array.length;
   let temporaryValue;
   let randomIndex;
+  let result = [...array];
 
   // While there remain elements to shuffle...
   while (currentIndex !== 0) {
@@ -93,17 +83,18 @@ export function shuffleArray(array) {
     randomIndex = Math.floor(Math.random() * currentIndex);
     currentIndex -= 1;
     // And swap it with the current element.
-    temporaryValue = array[currentIndex];
-    array[currentIndex] = array[randomIndex];
-    array[randomIndex] = temporaryValue;
+    temporaryValue = result[currentIndex];
+    result[currentIndex] = result[randomIndex];
+    result[randomIndex] = temporaryValue;
   }
 
-  return array;
+  return result;
 };
 
 export function sortByPhraseIndex(array, phrase, selector = x => x) {
   const lowerPhrase = phrase.toLowerCase();
-  return array.sort((a, b) => {
+  const result = [...array];
+  return result.sort((a, b) => {
     const indexA = selector(a).indexOf(lowerPhrase);
     const indexB = selector(b).indexOf(lowerPhrase);
     // Make sure that -1 (not found) goes at the very end of the array.
