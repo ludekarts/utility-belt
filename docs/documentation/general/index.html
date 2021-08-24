@@ -7,7 +7,7 @@
     ...
 
     console.log(
-      hyphenate("\\Cześć wam wszystkim! - mówi John\\") -\// czesc-wam-wszystkim-mowi-john\-
+      hyphenate("\\Cześć wam wszystkim! - mówi John!\\") -\// czesc-wam-wszystkim-mowi-john\-
     );
   </pre>
   <h4>Props</h4>
@@ -102,9 +102,9 @@
     ...
 
     console.log(
-      inPolygon(\\[-1, 1]\\, [\\[-1, 3], [-3, 0], [-2, 1], [3, 1], [1, 1], [1, 3]\\])
+      inPolygon(\\[-1, 1]\\, [\\[-1, 3], [-3, 0], [-2, 1], [3, 1], [1, 1], [1, 3]\\]) -\// true\-
     );
-    -\// true\-
+    
   </pre>
   <h4>Props</h4>
   <table>
@@ -215,4 +215,38 @@
 
     const \\uniqueId\\ = uid();
   </pre>
+</section>
+
+<section id="clipboard-doc">
+  <h3>clipboard()(<span class="gray">valueToCopy</span>)</h3>
+  <p>
+    Create utility enables copying values into the clipboard.
+    Copy function returns <code>true</code> if action succeded and <code>false</code> if action failed.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+  import { clipboard } from "utility-belt";
+  ...
+
+  const copy = clipboard();
+
+  copy("\\Put this text in clipboard\\") 
+    ? alert("Copy succeded")    
+    : alert("Copy failed");
+  
+</pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>valueToCopy</td>
+      <td>String</td>
+      <td>Value that will be copied to the clipboard.</td>
+    </tr>
+  </table>
+
 </section>

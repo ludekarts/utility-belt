@@ -1,4 +1,4 @@
-import { PubSub } from "../../lib/utility-belt.module.js";
+import { PubSub } from "../../../assets/ubm/utility-belt.js";
 
 (function () {
   const pubsub = PubSub(logger);

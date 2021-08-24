@@ -27,7 +27,7 @@ export default function loopstack(length) {
       return head;
     },
 
-    dump() {
+    getAll() {
       return stack;
     }
 

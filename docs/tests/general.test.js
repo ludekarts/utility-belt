@@ -1,4 +1,4 @@
-const { deepOverride, hyphenate, fuzzySearch, isObject, inPolygon, wordCase, getRandomNumber, uid } = window.utilityBelt;
+const { deepOverride, hyphenate, fuzzySearch, isObject, inPolygon, wordCase, getRandomNumber, uid, loopstack } = window.utilityBelt;
 
 
 describe("Deep Override", () => {
@@ -205,7 +205,6 @@ describe("Random number form a range", () => {
 });
 
 
-
 describe("Generate UUID", () => {
 
   it("Should exist an be a function", () => {
@@ -216,4 +215,67 @@ describe("Generate UUID", () => {
     const uuidRegex = /^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i;
     chai.expect(uuidRegex.test(uid())).to.be.true;
   });
+});
+
+
+
+describe("Loopstack", () => {
+
+  it("Should exist an be a function", () => {
+    chai.expect(loopstack).to.be.a("function");
+  });
+
+  it("Should create stack with 5 elements", () => {
+    const stack = loopstack(5);
+    chai.expect(stack.getAll().length).to.equal(5);
+  });
+
+  it("Should push elements onto stack", () => {
+    const stack = loopstack(5);
+
+    stack.push("Banana");
+    stack.push("Apple");
+    stack.push("Cherry");
+    stack.push("Lime");
+
+    chai.expect(stack.get(2)).to.equal("Cherry");
+  });
+
+  it("Should loop pushed values onto the stack", () => {
+    const stack = loopstack(3);
+
+    stack.push("Banana");
+    stack.push("Apple");
+    stack.push("Cherry");
+    stack.push("Lime");
+
+    chai.expect(stack.get(0)).to.equal("Lime");
+  });
+
+  it("Should get proper head value from the stack", () => {
+    const stack = loopstack(3);
+
+    stack.push("Banana");
+    stack.push("Apple");
+    stack.push("Cherry");
+    stack.push("Lime");
+    stack.push("Orange");
+
+    chai.expect(stack.head()).to.equal("Orange");
+  });
+
+  it("Should pull out value fronthe stack", () => {
+    const stack = loopstack(3);
+
+    stack.push("Banana");
+    stack.push("Apple");
+    stack.push("Cherry");
+    stack.push("Lime");
+    stack.push("Orange");
+
+    const lastOne = stack.pull();
+    chai.expect(lastOne).to.equal("Orange");
+    chai.expect(stack.getAll().includes("Orange")).to.be.false;
+  });
+
 });

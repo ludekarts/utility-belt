@@ -1,4 +1,4 @@
-const { arrayToObject, chunksArray, compareArrays, getRandomSubarray, nodeListToArray, createElement, reduce, shuffleArray, sortByPhraseIndex } = window.utilityBelt;
+const { arrayToObject, chunksArray, compareArrays, getRandomSubarray, nodeListToArray, createElement, loop, reduce, shuffleArray, sortByPhraseIndex } = window.utilityBelt;
 
 
 
@@ -92,6 +92,24 @@ describe("NodeList to array", () => {
 
     chai.expect(Array.isArray(list)).to.be.true;
     chai.expect(list).to.have.lengthOf(4);
+  });
+
+});
+
+
+
+describe("Loop array", () => {
+
+  it("Should exist an be a function", () => {
+    chai.expect(loop).to.be.a("function");
+  });
+
+  it("Should loop though array and update items to n+1", () => {
+    const source = [1, 2, 3, 4, 5];
+    const expected = [2, 3, 4, 5, 6];
+
+    loop(source, (item, index, array) => array[index] = item + 1);
+    chai.expect(source).to.eql(expected);
   });
 
 });

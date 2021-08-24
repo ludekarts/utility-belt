@@ -84,6 +84,23 @@
   </pre>
 </section>
 
+<section id="array-loop-doc">
+  <h3>loop(<span class="gray">array</span>, <span class="gray">callback</span>)</h3>
+  <p>
+    Custom implementation of <em>Array.forEach()</em> method. Should be slighty faster on large arrays.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+    import { loop } from "utility-belt";
+    ...
+
+    const reduced = loop(
+      array,
+      (\\current\\, \\index\\, \\array\\) => {}
+    );
+  </pre>
+</section>
+
 <section id="array-reduce-doc">
   <h3>reduce(<span class="gray">array</span>, <span class="gray">reducer</span>, <span class="gray">init</span>)</h3>
   <p>
@@ -136,9 +153,9 @@
     array.sort(); -\// Sort array alphabetically\-
 
     console.log(
-      sortByPhraseIndex(\\array\\, "\\de\\")
+      sortByPhraseIndex(\\array\\, "\\de\\")  -\// ["\\de\\ep", "\\de\\er", "ol\\de\\r", "bol\\de\\r", "big", "zero"]\-
     );
-    -\// ["\\de\\ep", "\\de\\er", "ol\\de\\r", "bol\\de\\r", "big", "zero"]\-
+   
   </pre>
   <h4>Props</h4>
   <table>

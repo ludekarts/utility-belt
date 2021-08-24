@@ -1,6 +1,6 @@
-import { loopstack, events } from "../../lib/utility-belt.module.js";
+import { loopstack, events } from "../../../assets/ubm/utility-belt.js";
 
-(function() {
+(function () {
   const loopstackExample = document.getElementById("loopstack-example");
   const display = loopstackExample.querySelector(".display");
   const pulled = loopstackExample.querySelector(".pulled");
@@ -29,8 +29,8 @@ import { loopstack, events } from "../../lib/utility-belt.module.js";
 
   function drawBasket() {
     let basket = "";
-    for(let i = 0; i < 5; i++) {
-      const item = card.dump()[i];
+    for (let i = 0; i < 5; i++) {
+      const item = card.getAll()[i];
       basket += ` ${item || "⚪️"}`;
     }
     display.innerHTML = `Basket: [ ${basket} ]`;

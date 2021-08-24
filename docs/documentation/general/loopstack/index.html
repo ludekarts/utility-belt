@@ -1,11 +1,11 @@
-<h2>loopstack(<span class="gray">length</span>)</h2>
+<h3>loopstack(<span class="gray">length</span>)</h3>
 <p>
   Provides you an array-like structure that can store only certain amount of data.
   If given <em>length</em> is exceaded loopstck starts to overrite data form the begining.
   This may be handy for implememnting simple undo functionality where system can remmember for example only
   last 10 actions.
 </p>
-<h3>Usage</h3>
+<h4>Usage</h4>
 <pre>
   import { loopstack } from "utility-belt";
   ...
@@ -20,7 +20,7 @@
 
   \\history\\.get(0); -\// Apple\-
 </pre>
-<h3>Props</h3>
+<h4>Props</h4>
 <table>
   <tr>
     <th>Name</th>
@@ -33,7 +33,10 @@
     <td>Size of the data structure.</td>
   </tr>
 </table>
-<h3>Api description</h3>
+
+<hr class="--space">
+<h4>Api description</h4>
+
 <table>
   <tr>
     <th>Method</th>
@@ -56,20 +59,20 @@
     <td>Get currrent HEAD value from the structure. Value is NOT removed from the structure.</td>
   </tr>
   <tr>
-    <td>dump()</td>
+    <td>getAll()</td>
     <td>Returns whole data structure as an array.</td>
   </tr>
 </table>
 
-<h3>Example</h3>
-<hr class="space">
-<div id="loopstack-example">
-  <ul>
-    <li class="display">Basket: [ ⚪️ ⚪️ ⚪️ ⚪️ ⚪️ ] </li>
-    <li class="pulled">Pulled:</li>
-  </ul>
-  <hr class="space">
-  <div>
+<h4>Example</h4>
+<hr class="--space">
+
+<div id="loopstack-example" class="stack --small">
+  <div class="rail --small">
+    <span class="display">Basket: [ ⚪️ ⚪️ ⚪️ ⚪️ ⚪️ ] </span>
+    <span class="pulled">Pulled:</span>
+  </div>
+  <div class="rail --small">
     <button data-click="addItem">🍋</button>
     <button data-click="addItem">🍊</button>
     <button data-click="addItem">🍓</button>
@@ -78,7 +81,8 @@
     <button data-click="pullHead">Pull head</button>
   </div>
 </div>
+
+<hr class="--space">
 <div>
-  <hr class="space">
-  <a href="./docs/loopstack/index.js" target="_blank" noopener>⌨️ Show code</a>
+  <a href="./documentation/general/loopstack/index.js" target="_blank" noopener>⌨️ Show code</a>
 </div>
