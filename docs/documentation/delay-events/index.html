@@ -3,7 +3,7 @@
   <p>Does not allo to run callback fn before given <strong>delay</strong> elapse.</p>
   <h3>Usage</h3>
   <pre>
-    import { debounce } from "utility-belt";
+    import { debounce } from "@ludekarts/utility-belt";
     ...
 
     const handleScroll = \\debounce\\(event => console.log("scroll"), \\300\\);
@@ -33,7 +33,7 @@
   <p>Runs callback fn with given <strong>delay</strong>.</p>
   <h3>Usage</h3>
   <pre>
-    import { throttle } from "utility-belt";
+    import { throttle } from "@ludekarts/utility-belt";
     ...
 
     const handleScroll = \\throttle\\(event => console.log("scroll"), \\300\\);
@@ -63,7 +63,7 @@
   <p>Call callback function if it's called within delta time range.</p>
   <h3>Usage</h3>
   <pre>
-    import { inDeltaTime } from "utility-belt";
+    import { inDeltaTime } from "@ludekarts/utility-belt";
     ...
 
     const handleFastKeypress = \\inDeltaTime\\(event => console.log("It was fast!"), \\300\\);

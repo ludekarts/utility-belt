@@ -8,28 +8,28 @@ describe("PubSub", () => {
   });
 
   it("Should create new 'hello' subject in default namespace", () => {
-    pubsub.subscribe("hello", () => 0);
+    pubsub.on("hello", () => 0);
     chai.expect(pubsub.getNamespace("/").has("hello")).to.be.true;
   });
 
   it("Should create 'custom' namespace", () => {
-    pubsub.subscribe("custom", "x", () => 0);
+    pubsub.on("custom", "x", () => 0);
     chai.expect(pubsub.getNamespace().has("custom")).to.be.true;
   });
 
   it("Should create new 'hello' subject in 'custom' namespace", () => {
-    pubsub.subscribe("custom", "hello", () => 0);
+    pubsub.on("custom", "hello", () => 0);
     chai.expect(pubsub.getNamespace("custom").has("hello")).to.be.true;
   });
 
   it("Should publish message in 'hello' subject in default namespace", () => {
-    pubsub.subscribe("hello", m => chai.expect(m).to.equal("This is message"));
-    pubsub.publish("hello", "This is message");
+    pubsub.on("hello", m => chai.expect(m).to.equal("This is message"));
+    pubsub.dispatch("hello", "This is message");
   });
 
   it("Should publish message in 'hello' subject in 'custom' namespace", () => {
-    pubsub.subscribe("custom", "hello", m => chai.expect(m).to.equal("This is message"));
-    pubsub.publish("custom", "hello", "This is message");
+    pubsub.on("custom", "hello", m => chai.expect(m).to.equal("This is message"));
+    pubsub.dispatch("custom", "hello", "This is message");
   });
 
   it("Should not be able to remove default namespace", () => {
@@ -44,16 +44,16 @@ describe("PubSub", () => {
 
   it("Should unsubscribe from 'greetings' subject in default namespace", () => {
     const fn = m => 0
-    pubsub.subscribe("greetings", fn);
-    pubsub.unsubscribe("greetings", fn);
+    pubsub.on("greetings", fn);
+    pubsub.off("greetings", fn);
     chai.expect(pubsub.getNamespace("/").has("greetings")).to.be.false;
   });
 
   it("Should unsubscribe from 'greetings' subject in 'custom' namespace", () => {
     const fn = m => 0
-    pubsub.subscribe("custom", "hello", fn);
-    pubsub.subscribe("custom", "greetings", fn);
-    pubsub.unsubscribe("custom", "greetings", fn);
+    pubsub.on("custom", "hello", fn);
+    pubsub.on("custom", "greetings", fn);
+    pubsub.off("custom", "greetings", fn);
     chai.expect(pubsub.getNamespace("custom").has("greetings")).to.be.false;
   });
 

@@ -11,7 +11,7 @@ export { default as domFilter } from "./utilities/dom-filter.js";
 export { default as createEventHandler } from "./utilities/event-handler.js";
 
 // Request.
-export { default as request, objectToFetchBody, abort, parseResponse } from "./utilities/request.js";
+export { default as createRequest, RequestConfig, objectToFormData } from "./utilities/request.js";
 
 // Schema.
 export { default as schemaTypes, checkSchema } from "./utilities/schema-types.js";

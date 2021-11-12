@@ -1,147 +1,311 @@
 import { isObject } from "./general.js";
+import deepOverride from "./deep-override.js"
 
-// NOTE:
-//
-// - fallback:                when provided response from all failed requests will be supplied with
-//                            given fallback value. No erroe will be thrown just warning in the
-//                            console.
-//
-// - notThrowOnResponseError: allows to pass through response even if it contains error messages.
-//                            This is usefull when server returns error pages with some additional
-//                            content e.g. JSON data.
-// 
-//
-// ABORTING REQUESTS:
-//
-// import request, { abort } from "request";
-// ...
-//
-// const myRequest = request("https://get/data", config);
-// abort(myRequest);
-//
+export default function createRequest(config) {
 
-// Container for all pending requests.
-const requestQueue = new Map();
+  if (config && !(config instanceof RequestConfig)) {
+    throw new Error("Configuration object should be instace of RequestConfig");
+  }
 
-export default function request(url, configuration = {}) {
-  const { fallback, notThrowOnResponseError = false, ...config } = configuration;
+  // Container for all pending requests.
+  const requestQueue = new Map();
 
-  const controller = new AbortController();
-  const { signal } = controller;
+  // Container for all cached requests.
+  const requestCache = new Map();
 
-  const requestCleanup = response => {
-    requestQueue.delete(fetchPromise);
-    return response;
-  };
+  // Global configuration.
+  const globalConfiguration = config ? { ...config } : {};
 
-  const fetchPromise = fetch(url, { ...config, signal })
-    // Remove from requests queue.
-    .then(requestCleanup)
-    // Check responde.
-    .then(checkResponse(fallback, notThrowOnResponseError))
-    .catch(requestCleanup);
+  // Default request.
+  function request(url, config) {
 
-  // Add request to the queue for cancelation.
-  requestQueue.set(fetchPromise, () => {
-    controller.abort();
-  });
-
-  return fetchPromise;
-}
-
-// ---- Utilities ----------------
-
-function checkResponse(fallback, notThrowOnResponseError) {
-  return response => {
-    if (response.ok || notThrowOnResponseError) return response;
-
-    if (fallback) {
-      console.warn(
-        `Request rejected: ${response.statusText}. Fallback applied`,
-      );
-      return fallback;
+    if (config && !(config instanceof RequestConfig)) {
+      throw new Error("Configuration object should be instace of RequestConfig");
     }
 
-    throw RequestError(response);
-  };
-}
+    const controller = new AbortController();
+    const { signal } = controller;
+    const { native } = config;
 
-function RequestError(response) {
-  const message = response.statusText || !response.statusText.length
-    ? `RequestError: Code ${response.status}. Response was not OK`
-    : response.statusText;
-  const error = new Error(message);
-  error.status = response.status;
-  return error;
-}
-
-export function objectToFetchBody(objectBody) {
-  // Handle pure FormData.
-  if (objectBody instanceof FormData) {
-    return {
-      body: objectBody,
+    const requestCleanup = response => {
+      requestQueue.delete(fetchPromise);
+      return response;
     };
+
+    const requestHash = `${url}${native.requestHash}`;
+    const cachedResponse = native.cacheRequests && requestCache.has(requestHash)
+      ? getResponseFromCache(requestCache, requestHash)
+      : undefined;
+
+    const fetchPromise = cachedResponse ||
+      fetch(url, { ...config, signal })
+        // Remove from requests queue.
+        .then(requestCleanup)
+        // Parse response.
+        .then(response => !native.doNotParseResponse ? parseResponse(response, native.fallback, native.useErrorWrapper) : response)
+        // Cache request.
+        .then(response => native.cacheRequests ? cacheResponse(response, requestHash, requestCache, native.responseProcessor) : response)
+        // Remove from requests queue on failure.
+        .catch(handleError(requestCleanup));
+
+
+    // Add request to the queue for cancelation.
+    !cachedResponse && requestQueue.set(fetchPromise, () => controller.abort());
+
+    return fetchPromise;
   }
 
-  // Transform object into FormData
-  if (isObject(objectBody)) {
-    const body = new FormData();
-    Object.keys(objectBody).forEach(name =>
-      body.append(name,
-        isBasicType(objectBody[name]) // Do not stringify basic data types.
-          ? objectBody[name]
-          : JSON.stringify(objectBody[name])
-      ),
-    );
-    return body;
+  // -------------------------- 
+  // ---- GET -----------------
+  // -------------------------- 
+
+  function get(url, config) {
+    if (config && !(config instanceof RequestConfig)) {
+      throw new Error("Configuration object should be instace of RequestConfig");
+    }
+
+    const requestConfig = new RequestConfig({
+      ...deepOverride(globalConfiguration, config || {}),
+      method: "GET",
+    });
+
+    return request(url, requestConfig);
   }
 
-  // Pass whatewer objectBody is.
-  return objectBody;
+
+  // -------------------------- 
+  // ---- POST ----------------
+  // -------------------------- 
+
+  function post(url, config, body) {
+
+    const configuration = config instanceof RequestConfig ? config : body instanceof RequestConfig ? body : !body ? undefined : undefined;
+    const bodyContent = (body && !(body instanceof RequestConfig)) ? body : (config && !(config instanceof RequestConfig)) ? config : undefined;
+
+    if (configuration && !(configuration instanceof RequestConfig)) {
+      throw new Error("Configuration object should be instace of RequestConfig");
+    }
+
+    const requestConfig = new RequestConfig({
+      ...deepOverride(globalConfiguration, configuration || {}),
+      method: "POST",
+      body: encodeBody(bodyContent, configuration?.headers),
+    });
+
+    return request(url, requestConfig);
+  }
+
+  // Allows to abort given request.
+  function abort(requestToCancel) {
+    if (requestQueue.has(requestToCancel)) {
+      requestQueue.get(requestToCancel)();
+      requestQueue.delete(requestToCancel);
+    }
+  }
+
+  function releaseCache(url, requestHash = "") {
+
+    if (typeof requestHash !== "string") {
+      throw new Error(`RequestHash need to be a string`);
+    }
+
+    const key = !url ? null : url instanceof RegExp ? url : `${url}${requestHash}`;
+
+    // Remove by URL + HASH;
+    if (typeof key === "string") {
+      requestCache.delete(key);
+    }
+
+    // Remove by Reular Expression.
+    else if (key instanceof RegExp) {
+      for (let cacheKey of requestCache.keys()) {
+        key.test(cacheKey) && requestCache.delete(cacheKey);
+      }
+    }
+
+    // Remove all instances.
+    else {
+      requestCache.clear();
+    }
+  }
+
+  function updateConfig(config) {
+    for (const key in config) {
+      if (config.hasOwnProperty(key)) {
+        globalConfiguration[key] = config[key];
+      }
+    }
+  }
+
+  return {
+    get,
+    post,
+    abort,
+    request,
+    releaseCache,
+    updateConfig,
+  };
+};
+
+
+/*
+  Configuration options:
+  this.headers = {};   
+  this.method = "GET";                 // GET, POST, PUT, DELETE, etc.
+  this.redirect = "follow";            // manual, follow, error
+  this.mode = "no-cors";               // no-cors, cors, same-origin  
+  this.credentials = "omit";           // include, same-origin, omit
+  this.cache = false;                 // default, no-cache, reload, force-cache, only-if-cached 
+  this.referrerPolicy = "no-referrer"; // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+  this.native = {
+    cache: false,
+    fallback: false,
+    requestHash: "",
+    useErrorWrapper: false,
+    responseProcessor: false,
+    doNotParseResponse: false,
+  };
+*/
+
+const requestAllowProps = [
+  "mode",
+  "body",
+  "cache",
+  "method",
+  "headers",
+  "redirect",
+  "credentials",
+  "referrerPolicy",
+];
+
+const nativeAllowProps = [
+  "fallback",
+  "requestHash",
+  "cacheRequests",
+  "useErrorWrapper",
+  "responseProcessor",
+  "doNotParseResponse",
+];
+
+
+export class RequestConfig {
+  constructor(config) {
+
+    this.native = {};
+
+    for (const key in config) {
+      if (config.hasOwnProperty(key)) {
+        if (requestAllowProps.includes(key)) {
+          this[key] = config[key];
+        } else if (nativeAllowProps.includes(key)) {
+          this.native[key] = config[key];
+        }
+      }
+    }
+  };
+};
+
+
+
+// ---- helpers ----------------
+
+function cacheResponse(response, requestHash, cache, responseProcessor) {
+  cache.set(requestHash, responseProcessor ? responseProcessor(response) : response);
+  return response;
 }
 
-// ---- Helpers ----------------
-
-// Allows to abort given request.
-export function abort(requestToCancel) {
-  if (requestQueue.has(requestToCancel)) {
-    requestQueue.get(requestToCancel)();
-    requestQueue.delete(requestToCancel);
-  }
+function getResponseFromCache(requestCache, requestHash) {
+  return Promise.resolve(requestCache.get(requestHash));
 }
 
-// Parses some of the common response types. e.g:
-// text/...
-// image/...
-// application/json
-// multipart/form-data
-//
-export function parseResponse(response) {
+
+async function parseResponse(response, fallback, useErrorWrapper = false) {
+
+  let result;
+
   // Get Content Type.
   const contentType = response.headers.get("content-type").split(";")[0];
 
   // Handle various content types.
 
   if (/^text\//.test(contentType)) {
-    return response.text();
+    result = await response.text();
   }
 
-  if (/^image\//.test(contentType)) {
-    return response.blob();
+  else if (/^image\//.test(contentType)) {
+    result = await response.blob();
   }
 
-  switch (contentType) {
-    case "application/json":
-      return response.json();
-    case "multipart/form-data":
-      return response.formData();
-    default:
-      console.warn(
-        `Not recognized content-type: ${response.headers.get("content-type")}`,
-      );
-      return response;
+  else if (contentType === "application/json") {
+    result = await response.json();
+  }
+
+  else if (contentType === "multipart/form-data") {
+    result = await response.formData();
+  }
+
+  else {
+    console.warn(`Not recognized content-type: ${response.headers.get("content-type")}`);
+    result = response;
+  }
+
+  if (response.ok) {
+    return result;
+  }
+
+  else if (fallback) {
+    return fallback;
+  }
+
+  else {
+    if (useErrorWrapper) {
+      throw {
+        response: result,
+        status: response.status,
+        statusText: response.statusText,
+      };
+    } else {
+      throw result;
+    }
   }
 }
+
+function handleError(requestCleanup) {
+  return error => {
+    requestCleanup();
+    throw error;
+  };
+}
+
+function encodeBody(body, headers = {}) {
+  const contentType = headers["content-type"] || headers["Content-Type"];
+
+  if (contentType === "application/json") {
+    return JSON.stringify(body);
+  }
+
+  else if (contentType === "text/plain") {
+    return JSON.stringify(body);
+  }
+
+  else if (contentType === "application/x-www-form-urlencoded" && isObject(body)) {
+    return new URLSearchParams(body);
+  }
+
+  else {
+    return isObject(body) ? objectToFormData(body) : JSON.stringify(body);
+  }
+}
+
+export function objectToFormData(body) {
+  const formData = new FormData();
+  Object.keys(body).forEach(name => {
+    const data = isBasicType(body[name]) ? body[name] : JSON.stringify(body[name]);
+    formData.append(name, data);
+  });
+  return formData;
+}
+
 
 function isBasicType(value) {
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean";

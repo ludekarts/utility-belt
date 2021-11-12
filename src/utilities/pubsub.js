@@ -7,7 +7,7 @@ export default function PubSub(config) {
   namespaces.set("/", new Map());
 
   const API = Object.freeze({
-    subscribe(n, e, o) {
+    on(n, e, o) {
 
       const { namespace, event, observer } = getParams(n, e, o);
 
@@ -23,14 +23,14 @@ export default function PubSub(config) {
 
       currentNamespace.get(event).push(observer);
 
-      if (logger) {
+      if (debugMode && logger) {
         logger(`A new subscription "${event}" was added to namespace "${namespace}".`);
       }
 
       return API;
     },
 
-    unsubscribe(n, e, o) {
+    off(n, e, o) {
       const { namespace, event, observer } = getParams(n, e, o);
 
       if (namespaces.has(namespace)) {
@@ -55,7 +55,7 @@ export default function PubSub(config) {
       return API;
     },
 
-    publish(n, e, m) {
+    dispatch(n, e, m) {
 
       const { namespace, event, message } = getPublishParams(n, e, m);
 
@@ -68,9 +68,11 @@ export default function PubSub(config) {
             observersList[i](message, event);
           }
 
-          if (logger) {
+          if (debugMode && logger) {
             logger("published", { namespace, event, message, observersList });
           }
+        } else if (debugMode) {
+          console.warn(`Event "${event}" does not exist in "${namespace}" namespace.`);
         }
       }
 

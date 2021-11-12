@@ -1,147 +1,284 @@
-<h2>request(<span class="gray">url</span>, <span class="gray">config</span>)</h2>
-<p>Enhance default fetch API</p>
-<h3>Usage</h3>
-<pre>
-  import { request } from "utility-belt";
+<section>
+  <h3>createRequest(<span class="gray">config</span>)</h3>
+  <p>Request management utility with caching and aborting functionality</p>
+  <h4>Usage</h4>
+  <pre>
+  import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
   ...
 
-  const config = {
-    method: "post",
-    \\freepass\\: true,
-    \\fallback\\: "Some value",
+  const globalConfig = new \\RequestConfig\\({
+    mathod: "POST",
+    cacheRequests: true,
+    useErrorWrapper: true,   
+    fallback: "My global fallback value",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const {\\request\\, \\get\\, \\post\\, \\abort\\, \\releaseCache\\, \\updateConfig\\} = createRequest(globalConfig);
+    
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>config</td>
+      <td>RequestConfig</td>
+      <td>Request configuration object (see full description below).</td>
+    </tr>
+  </table>
+
+  <p class="info">
+    It is important to notice that all request errors (e.g.: 400, 404, 500) will <strong>reject</strong> the request promise. This can be handled in <strong>.catch()</strong>
+    section of the promise.
+  </p>
+
+
+  <!-- REQUEST -->
+
+  <h3 class="submethod">request(<span class="gray">url</span>, <span class="gray">config</span>)</h3>
+  <p>
+    Default <em>window.fetch</em> wrapper configured by the <em>globalConfig</em> object. You can always provide request specific configuration in second argument with new
+    RequestConfig object.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+  import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
+  ...
+
+  const { \\request\\ } = createRequest(globalConfig);
+
+  request("https://url/to/api", new RequestConfig({ \\fallback: { info: "Fallback object" }\\ }))
+    .then(console.log)
+    .catch(console.error); -\ // With "fallback" option this line never runs. \-
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>url</td>
+      <td>String</td>
+      <td>Request URL</td>
+    </tr>
+    <tr>
+      <td>config</td>
+      <td>RequestConfig</td>
+      <td>Request configuration object (see full description below).</td>
+    </tr>
+  </table>
+
+  <h4>Body encoding options</h4>
+  <table>
+    <tr>
+      <th>Content-Type / Body type</th>
+      <th>String</th>
+      <th>Number</th>
+      <th>Array</th>
+      <th>Object</th>
+    </tr>
+    <tr>
+      <td>none</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+      <td><em>FormData</em></td>
+    </tr>
+    <tr>
+      <td>text/plain</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+    </tr>
+    <tr>
+      <td>application/json</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+    </tr>
+    <tr>
+      <td>application/x-www-form-urlencoded</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+      <td>JSON.stringify</td>
+      <td><em>URLSearchParams</em></td>
+    </tr>
+  </table>
+
+  <!-- GET -->
+
+  <h3 class="submethod">get(<span class="gray">url</span>, <span class="gray">config</span>)</h3>
+  <p>
+    Shorthand for GET request.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+  import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
+  ...
+
+  const { \\get\\ } = createRequest(globalConfig);
+
+  get("https://url/to/api", new RequestConfig({ \\cacheRequests: true\\ }))
+    .then(console.log)
+    .catch(console.error);    
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>url</td>
+      <td>String</td>
+      <td>Request URL</td>
+    </tr>
+    <tr>
+      <td>config</td>
+      <td>RequestConfig</td>
+      <td>Request configuration object (see full description below).</td>
+    </tr>
+  </table>
+
+  <!-- POST -->
+
+  <h3 class="submethod">post(<span class="gray">url</span>, <span class="gray">body</span>, <span class="gray">config</span>)</h3>
+  <p>
+    Shorthand for POST request.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+  import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
+  ...
+
+  const { \\post\\ } = createRequest(globalConfig);
+  
+  const body = {
+    id: 84,
+    name: "John",
+    surname: "Wick",
   };
 
-  request("https://url/to/api", config)
-    .then(response => response.json())
-    .then(console.log);
-</pre>
-<h3>Props</h3>
-<table>
-  <tr>
-    <th>Name</th>
-    <th>Type</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>url</td>
-    <td>String</td>
-    <td>Link to requested resource.</td>
-  </tr>
-  <tr>
-    <td>config</td>
-    <td>Object</td>
-    <td>Request configuration object.</td>
-  </tr>
-</table>
-<h3>Custom config props</h3>
-<table>
-  <tr>
-    <th>Name</th>
-    <th>Type</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>freepass</td>
-    <td>Boolean</td>
-    <td>
-      Prevents from throwing an error when <strong>response.ok</strong> is <strong>false</strong>.
-      This is usefull when server returns error codes with some additional content e.g. JSON data.
-    </td>
-  </tr>
-  <tr>
-    <td>fallback</td>
-    <td>Any</td>
-    <td>
-      When provided response from all failed requests will be supplied with given fallback value.
-      No error will be thrown instead warning in the console will be displayed.
-    </td>
-  </tr>
-</table>
+  const localConfig = new RequestConfig({ 
+    \\requestHash: `${body.id}`\\ ,
+  });
 
-<h2 id="request-abort-doc">abort(<span class="gray">request</span>)</h2>
-<p>Abort pending request. It is important that <em>abort</em> method recieves reference to the direct value of <em>request()</em>, not the <em>.then()</em> chain which points to the different value (see usage below).</p>
-<h3>Usage</h3>
-<pre>
-  import { request, abort } from "utility-belt";
-  ...
+  post("https://url/to/api", body, localConfig) -\ // When no content-type header set, body will be sent as multipart/form \-
+    .then(console.log)
+    .catch(console.error);    
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>url</td>
+      <td>String</td>
+      <td>Request URL</td>
+    </tr>
+    <tr>
+      <td>config</td>
+      <td>RequestConfig</td>
+      <td>Request configuration object (see full description below).</td>
+    </tr>
+  </table>
 
-  const \\getData\\ = request("https://url/to/api");
+  <p class="info">Arguments <strong>body</strong> and <strong>config</strong> can be used interchangeably. Order does not matter.</p>
 
-  \\getData\\
-    .then(response => response.json())
-    .then(console.log);
 
-  abort(\\getData\\);
-</pre>
-<h3>Props</h3>
-<table>
-  <tr>
-    <th>Name</th>
-    <th>Type</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>request</td>
-    <td>Promise</td>
-    <td>Reference to request promise value.</td>
-  </tr>
-</table>
+  <!-- ABORT -->
 
-<h2 id="request-parse-doc">parseResponse(<span class="gray">response</span>)</h2>
-<p>Parses some of the common response types. e.g: <em>text/...</em>, <em>image/...</em>, <em>application/json</em>, <em>multipart/form-data</em></p>
-<h3>Usage</h3>
-<pre>
-  import { request, parseResponse } from "utility-belt";
-  ...
+  <h3 class="submethod">abort(<span class="gray">requestRef</span>)</h3>
+  <p>
+    Aborts pending request.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+   import { createRequest } from "@ludekarts/utility-belt";
+   ...
+ 
+   const { \\get\\, \\abort\\ } = createRequest(globalConfig);
+   
+   const \\getRequest\\ = get("https://url/to/api");
+   
+   abort(\\getRequest\\); -\ // Make sure that request reference is only for the "main method" without ".then" and ".catch" part.\-
 
-  request("https://url/to/api")
-    .then(\\parseResponse\\)
-    .then(console.log);
-</pre>
-<h3>Props</h3>
-<table>
-  <tr>
-    <th>Name</th>
-    <th>Type</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>response</td>
-    <td>Object</td>
-    <td>Reponse object.</td>
-  </tr>
-</table>
+   \\getRequest\\.then(console.log).catch(console.error);     
+   </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>requestRef</td>
+      <td>Promise</td>
+      <td>Reference to the specific request.</td>
+    </tr>
+  </table>
 
-<h2 id="request-body-doc">objectToFetchBody(<span class="gray">body</span>)</h2>
-<p>
-  Transform plain JS object into fetch body. All keys at the first level will be turned into form fields.
-  Deeper level of object will be stringified under parent key.
-</p>
-<h3>Usage</h3>
-<pre>
-  import { request, objectToFetchBody } from "utility-belt";
-  ...
 
-  const \\config\\ = {
-    \\body\\: objectToFetchBody({
-      user: "John",
-      status: "online",
-    }),
-  };
+  <!-- RELEASE CACHE -->
 
-  request("https://url/to/api", \\config\\)
-    .then(console.log);
-</pre>
-<h3>Props</h3>
-<table>
-  <tr>
-    <th>Name</th>
-    <th>Type</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>object</td>
-    <td>Object</td>
-    <td>Object taht need to be send as request body.</td>
-  </tr>
-</table>
+  <h3 class="submethod">releaseCache(<span class="gray">key</span>, <span class="gray">requestHash</span>)</h3>
+  <p>
+    Removes cached request responses form the cache.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+   import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
+   ...
+ 
+   const globalConfig = new RequestConfig({
+     \\cacheRequests: true\\,
+   });
+
+   const { \\get\\, \\releaseCache\\ } = createRequest(globalConfig);
+   
+   const makeRequest = \\endpoint\\ => 
+    get(`https://url/to/api/${\\endpoint\\}`)
+      .then(console.log)
+      .catch(console.error);
+   
+   makeRequest("user");
+   makeRequest("user");
+   makeRequest("admin");
+   
+   releaseCache(\\/user$/g\\); -\// Use Reular Expression to find instances to remove\-
+   </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>key</td>
+      <td>String / RegExp / Undefined</td>
+      <td>Matcher for the request to remove. If undefined then all cache is cleared.</td>
+    </tr>
+    <tr>
+      <td>requestHash</td>
+      <td>String</td>
+      <td>Unique indentifier for given KEY (mainly for POST-like requests)</td>
+    </tr>
+  </table>
+
+</section>

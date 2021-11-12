@@ -3,7 +3,7 @@
   <p>Transfrom array of objects into JS object and stores each item from the array under the key pulled from the object.</p>
   <h4>Usage</h4>
   <pre>
-    import { arrayToObject } from "utility-belt";
+    import { arrayToObject } from "@ludekarts/utility-belt";
     ...
 
     const \\array\\ = [{ name: "John", age: 22 }, { name: "Marry", age: 21 }];
@@ -23,7 +23,7 @@
   <p>Slice array in chunks with given size.</p>
   <h4>Usage</h4>
   <pre>
-    import { chunksArray } from "utility-belt";
+    import { chunksArray } from "@ludekarts/utility-belt";
     ...
 
     const \\array\\ = [1, 2, 3, 4, 5];
@@ -42,7 +42,7 @@
   <p>Compares two arrays and returns an object with <em>added</em> and <em>removed</em> properties.</p>
   <h4>Usage</h4>
   <pre>
-    import { compareArrays } from "utility-belt";
+    import { compareArrays } from "@ludekarts/utility-belt";
     ...
 
     const \\A\\ = [1, 2, 3, 4, 5];
@@ -63,7 +63,7 @@
   <p>Returns a subarray of given size with randomly picked items form source array.</p>
   <h4>Usage</h4>
   <pre>
-    import { getRandomSubarray } from "utility-belt";
+    import { getRandomSubarray } from "@ludekarts/utility-belt";
     ...
 
     const \\randomSubarray\\ = getRandomSubarray([1, 2, 3, 4, 5, 6], \\3\\);
@@ -77,7 +77,7 @@
   <p>Similar to <em>Array.from()</em>. Should work faster for large nodes collections</p>
   <h4>Usage</h4>
   <pre>
-    import { nodeListToArray } from "utility-belt";
+    import { nodeListToArray } from "@ludekarts/utility-belt";
     ...
 
     const \\list\\ = nodeListToArray(document.\\querySelectorAll\\(".list-item"));
@@ -91,7 +91,7 @@
   </p>
   <h4>Usage</h4>
   <pre>
-    import { loop } from "utility-belt";
+    import { loop } from "@ludekarts/utility-belt";
     ...
 
     const reduced = loop(
@@ -110,7 +110,7 @@
   </p>
   <h4>Usage</h4>
   <pre>
-    import { reduce } from "utility-belt";
+    import { reduce } from "@ludekarts/utility-belt";
     ...
 
     const reduced = reduce(
@@ -126,7 +126,7 @@
   <p>Shuffle elements in the array. Returns new array.</p>
   <h4>Usage</h4>
   <pre>
-    import { shuffleArray } from "utility-belt";
+    import { shuffleArray } from "@ludekarts/utility-belt";
     ...
 
     const \\shuffled\\ = shuffleArray([1, 2, 3, 4, 5]);
@@ -145,7 +145,7 @@
     you need to do it up front by yourself (see usage below).</p>
   <h4>Usage</h4>
   <pre>
-    import { sortByPhraseIndex } from "utility-belt";
+    import { sortByPhraseIndex } from "@ludekarts/utility-belt";
     ...
 
     const \\array\\ = ["zero", "big", "deep", "deer", "bolder", "older"];

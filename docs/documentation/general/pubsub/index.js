@@ -7,16 +7,16 @@ import { PubSub } from "../../../assets/ubm/utility-belt.js";
 
   const showAlert = msg => alert(msg);
 
-  pubsub.subscribe("hello", showAlert);
-  pubsub.subscribe("custom", "hello", showAlert);
+  pubsub.on("hello", showAlert);
+  pubsub.on("custom", "hello", showAlert);
 
 
   defaultBtn.addEventListener("click", event => {
-    pubsub.publish("hello", "Hello from DEFAULT namespace");
+    pubsub.dispatch("hello", "Hello from DEFAULT namespace");
   });
 
   customBtn.onclick = () => {
-    pubsub.publish("custom", "hello", "Hello from CUSTOM namespace");
+    pubsub.dispatch("custom", "hello", "Hello from CUSTOM namespace");
   }
 
 }());

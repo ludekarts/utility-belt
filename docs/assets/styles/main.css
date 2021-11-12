@@ -75,6 +75,15 @@ nav .version {
   margin-bottom: 0.5em;
 }
 
+nav a.indent {
+  padding-left: 1em;  
+}
+
+nav a.indent::before {
+  content: "⮞";
+  margin-right: 0.5em;
+}
+
 /* Typography */
 
 
@@ -118,6 +127,21 @@ h3 {
   font-size: 1.2em;
   font-weight: 600;
   margin: 0 0 1.5em;  
+}
+
+h3.submethod {
+  margin-top: 3em;
+}
+
+h3.submethod::before {
+  content: "⮞";
+  color: white;
+  font-size: 0.7em;
+  margin-right: 1em;
+  padding: 0.3em 0.6em;
+  border-radius: 0.2em;
+  transform: translateY(40px);
+  background-color: var(--ub-gray);
 }
 
 h4 {
