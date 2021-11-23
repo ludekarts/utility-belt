@@ -1,0 +1,27 @@
+<h2>createElement(<span class="gray">selector</span>, <span class="gray">content</span>)</h2>
+<p>Creates DOM elements based on CSS-like selector</p>
+<h3>Usage</h3>
+<pre>
+  import { createElement } from "@ludekarts/utility-belt";
+  ...
+
+  const \\div\\ = createElement(`\\div#elId.className[data-type="myType"]\\`, "Hello element");
+</pre>
+<h3>Props</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>selector</td>
+    <td>string</td>
+    <td>CSS-like selector that describes the element</td>
+  </tr>
+  <tr>
+    <td>content</td>
+    <td>string | HTMLElement</td>
+    <td>Contennt for the created element</td>
+  </tr>
+</table>

@@ -1,0 +1,88 @@
+<h3>deepOverride(<span class="gray">target</span>, <span class="gray">source</span>)</h3>
+<p>Allows to deeply override <em>target</em> object with the <em>source</em> object.</p>
+<br>
+<p class="info">
+  Fn always prefers <strong>source object over the target</strong>, except the case when the source property is undefined.</p>
+</p>
+
+<h4>Usage</h4>
+<pre>
+  import { deepOverride } from "@ludekarts/utility-belt";
+  ...
+
+  const \\target\\ = {
+    user : {
+      name: "John",
+      age: 22,
+      gender: "male",
+      metadata: {
+        ststus: "Admin",
+      }
+    }
+  };
+
+  const \\source\\ = {
+    user: {
+      name: "Marry",
+      age: 21,
+      gender: "female",
+      metadata: {
+        auth: true,
+      }
+    }
+  };
+
+  console.log(deepOverride(\\target\\, \\source\\));
+
+  -\/* {
+    user: {
+      name: "Marry",
+      age: 21,
+      gender: "female",
+      metadata: {
+        auth: true,
+        ststus: "Admin"
+      }
+    }
+  } */\-
+</pre>
+<p class="info">When overriding arrays in order to update specific values the structure of the array <strong>need to be preserved</strong> e.g.:</p>
+<pre>
+  deepOverride(
+    [1, 2, \\3\\],
+    [undefined, undefined, \\4\\]
+  );
+  -\--> [1, 2, 4]\-
+
+  deepOverride(
+    [1, 2, \\3\\],
+    [\\4\\, \\5\\]
+  );
+  -\--> [4, 5, 3]\-
+</pre>
+<p class="info"><strong>null</strong> is treated as a value. Below example of overriding whole array:</p>
+<pre>
+  deepOverride(
+    [1, 2, 3],
+    \\null\\
+  );
+  -\--> null\-
+</pre>
+<h4>Props</h4>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>target</td>
+    <td>Any</td>
+    <td>An instance that values will be copied <strong>to</strong></td>
+  </tr>
+  <tr>
+    <td>source</td>
+    <td>Any</td>
+    <td>An instance that values will be copied <strong>from</strong></td>
+  </tr>
+</table>
