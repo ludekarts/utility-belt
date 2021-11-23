@@ -17,7 +17,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "microbundle watch -o docs/assets/ubm --no-sourcemap --no-pkg-main -f es",
-    "build": "microbundle --no-sourcemap && copyfiles -f ./dist/utility-belt.js ./docs/assets/ubm",
+    "build": "microbundle --no-sourcemap && copy-files-from-to",
     "deploy": "npm run build && gh-pages -d docs"
   },
   "keywords": [
@@ -28,8 +28,14 @@
   "license": "ISC",
   "dependencies": {},
   "devDependencies": {
-    "copyfiles": "^2.4.1",
+    "copy-files-from-to": "^3.2.1",
     "gh-pages": "^3.2.3",
-    "microbundle": "^0.13.3"
-  }
+    "microbundle": "^0.14.2"
+  },
+  "copyFiles": [
+    {
+      "from": "./dist/utility-belt.module.js",
+      "to": "./docs/assets/ubm/utility-belt.js"
+    }
+  ]
 }
