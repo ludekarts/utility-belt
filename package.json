@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.3.0-beta.1",
+  "version": "0.3.0-beta.4",
   "description": "JavaScript Utilities Collection",
   "source": "src/index.js",
   "main": "dist/utility-belt.js",
@@ -16,7 +16,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "microbundle watch -o docs/assets/ubm --no-sourcemap --no-pkg-main -f es ",
+    "start": "microbundle watch -o docs/assets/ubm --no-sourcemap --no-pkg-main -f es",
     "build": "microbundle --no-sourcemap && copyfiles -f ./dist/utility-belt.js ./docs/assets/ubm",
     "deploy": "npm run build && gh-pages -d docs"
   },

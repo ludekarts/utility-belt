@@ -1,5 +1,136 @@
 import { isObject } from "./general.js";
-import deepOverride from "./deep-override.js"
+
+/*
+  Configuration options:
+  headers: {};                   // Request headers.
+  method: "GET";                 // GET, POST, PUT, DELETE, etc.
+  redirect: "follow";            // manual, follow, error
+  mode: "no-cors";               // no-cors, cors, same-origin  
+  credentials: "omit";           // include, same-origin, omit
+  cache: false;                  // default, no-cache, reload, force-cache, only-if-cached 
+  referrerPolicy: "no-referrer"; // no-referrer, no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+  responseProcessor: [],         // Array of processor functions
+  requestHash: "",
+  fallback: false,
+  cacheRequests: false,    
+  useErrorWrapper: false,
+  doNotParseResponse: false,
+*/
+
+const requestAllowProps = [
+  // "headers",           // Special case for procesing.
+  "mode",
+  "body",
+  "cache",
+  "method",
+  "redirect",
+  "credentials",
+  "referrerPolicy",
+];
+
+const nativeAllowProps = [
+  // "responseProcessor", // Special case for procesing.
+  "fallback",
+  "requestHash",
+  "cacheRequests",
+  "useErrorWrapper",
+  "doNotParseResponse",
+];
+
+export class RequestConfig {
+  constructor(config) {
+
+    this.native = {};
+    this.headers = {};
+    this.requestConfig = {};
+    this.responseProcessor = [];
+
+    if (isObject(config)) {
+      for (const key in config) {
+        if (config.hasOwnProperty(key) && config[key] !== undefined) {
+          this.update(key, config[key]);
+        }
+      }
+      Object.freeze(this.native);
+      Object.freeze(this.headers);
+      Object.freeze(this.requestConfig);
+      Object.freeze(this.responseProcessor);
+    }
+
+    else if (!Boolean(config)) {
+      return this;
+    }
+
+    else {
+      throw new Error("Config argument should be Undefuned or an Object");
+    }
+  };
+
+  __updateResponseProcessor(target, sourceValue) {
+    if (typeof sourceValue === "function") {
+      target.responseProcessor = [sourceValue];
+    } else if (Array.isArray(sourceValue)) {
+      target.responseProcessor = sourceValue;
+    } else {
+      throw new Error("ResponseProcessor should be Undefined. In other case it should return a Function or an Array");
+    }
+  };
+
+  __updateHeaders(target, sourceValue) {
+    if (typeof sourceValue === "function") {
+      target.headers = sourceValue({ ...target.headers });
+    } else if (isObject(sourceValue)) {
+      target.headers = { ...sourceValue };
+    } else {
+      throw new Error("Headers property should be an Object");
+    }
+  };
+
+  update(key, value) {
+
+    if (key === "responseProcessor") {
+      this.__updateResponseProcessor(this, value);
+    }
+
+    else if (key === "headers") {
+      this.__updateHeaders(this, value);
+    }
+
+    else if (requestAllowProps.includes(key)) {
+      this.requestConfig[key] = value;
+    }
+
+    else if (nativeAllowProps.includes(key)) {
+      this.native[key] = value;
+    }
+
+  };
+
+  merge(source) {
+
+    if (!source) {
+      return this;
+    } else if (!(source instanceof RequestConfig)) {
+      throw new Error("Configuration object should be instace of RequestConfig");
+    }
+
+    return new RequestConfig({
+      ...this.requestConfig,
+      ...source.requestConfig,
+      headers: {
+        ...this.headers,
+        ...(source.headers || {}),
+      },
+      ...this.native,
+      ...source.native,
+      responseProcessor: [
+        ...this.responseProcessor,
+        ...(source.responseProcessor || []),
+      ],
+    });
+  }
+};
+
 
 export default function createRequest(config) {
 
@@ -14,39 +145,42 @@ export default function createRequest(config) {
   const requestCache = new Map();
 
   // Global configuration.
-  const globalConfiguration = config ? { ...config } : {};
+  const globalConfiguration = config || new RequestConfig();
+
 
   // Default request.
   function request(url, config) {
 
-    if (config && !(config instanceof RequestConfig)) {
-      throw new Error("Configuration object should be instace of RequestConfig");
+    const { native, requestConfig, headers, responseProcessor } = globalConfiguration.merge(config);
+    const requestHash = `${url}${native.requestHash || ""}`;
+    const cachedResponse = native.cacheRequests && requestCache.has(requestHash)
+
+    if (cachedResponse) {
+      return getResponseFromCache(requestCache, requestHash);
     }
 
     const controller = new AbortController();
     const { signal } = controller;
-    const { native } = config;
 
     const requestCleanup = response => {
       requestQueue.delete(fetchPromise);
       return response;
     };
 
-    const requestHash = `${url}${native.requestHash}`;
-    const cachedResponse = native.cacheRequests && requestCache.has(requestHash)
-      ? getResponseFromCache(requestCache, requestHash)
-      : undefined;
-
-    const fetchPromise = cachedResponse ||
-      fetch(url, { ...config, signal })
-        // Remove from requests queue.
-        .then(requestCleanup)
-        // Parse response.
-        .then(response => !native.doNotParseResponse ? parseResponse(response, native.fallback, native.useErrorWrapper) : response)
-        // Cache request.
-        .then(response => native.cacheRequests ? cacheResponse(response, requestHash, requestCache, native.responseProcessor) : response)
-        // Remove from requests queue on failure.
-        .catch(handleError(requestCleanup));
+    const fetchPromise = fetch(url, { ...requestConfig, headers, signal })
+      // Remove from requests queue.
+      .then(requestCleanup)
+      // Parse response.
+      .then(response => !native.doNotParseResponse ? parseResponse(response, native.fallback, native.useErrorWrapper) : response)
+      // Cache & Process request.
+      .then(response => native.cacheRequests
+        ? cacheResponse(response, requestHash, requestCache, responseProcessor)
+        : responseProcessor
+          ? responseProcessor.reduce((acc, processor) => processor(acc), response)
+          : response
+      )
+      // Remove from requests queue on failure.
+      .catch(handleError(requestCleanup));
 
 
     // Add request to the queue for cancelation.
@@ -55,19 +189,22 @@ export default function createRequest(config) {
     return fetchPromise;
   }
 
+
   // -------------------------- 
   // ---- GET -----------------
   // -------------------------- 
 
-  function get(url, config) {
-    if (config && !(config instanceof RequestConfig)) {
+  function get(url, configuration) {
+    if (configuration && !(configuration instanceof RequestConfig)) {
       throw new Error("Configuration object should be instace of RequestConfig");
     }
 
-    const requestConfig = new RequestConfig({
-      ...deepOverride(globalConfiguration, config || {}),
+    const getConfig = new RequestConfig({
       method: "GET",
     });
+
+    const requestConfig = configuration ? configuration.merge(getConfig) : getConfig;
+
 
     return request(url, requestConfig);
   }
@@ -79,19 +216,18 @@ export default function createRequest(config) {
 
   function post(url, config, body) {
 
-    const configuration = config instanceof RequestConfig ? config : body instanceof RequestConfig ? body : !body ? undefined : undefined;
-    const bodyContent = (body && !(body instanceof RequestConfig)) ? body : (config && !(config instanceof RequestConfig)) ? config : undefined;
+    const { configuration, bodyContent } = paramsDetection(config, body);
 
     if (configuration && !(configuration instanceof RequestConfig)) {
       throw new Error("Configuration object should be instace of RequestConfig");
     }
 
-    const requestConfig = new RequestConfig({
-      ...deepOverride(globalConfiguration, configuration || {}),
+    const postConfig = new RequestConfig({
       method: "POST",
-      body: encodeBody(bodyContent, configuration?.headers),
+      body: encodeBody(bodyContent, configuration?.headers)
     });
 
+    const requestConfig = configuration ? configuration.merge(postConfig) : postConfig;
     return request(url, requestConfig);
   }
 
@@ -132,7 +268,7 @@ export default function createRequest(config) {
   function updateConfig(config) {
     for (const key in config) {
       if (config.hasOwnProperty(key)) {
-        globalConfiguration[key] = config[key];
+        globalConfiguration.update(key, config[key]);
       }
     }
   }
@@ -148,76 +284,17 @@ export default function createRequest(config) {
 };
 
 
-/*
-  Configuration options:
-  this.headers = {};   
-  this.method = "GET";                 // GET, POST, PUT, DELETE, etc.
-  this.redirect = "follow";            // manual, follow, error
-  this.mode = "no-cors";               // no-cors, cors, same-origin  
-  this.credentials = "omit";           // include, same-origin, omit
-  this.cache = false;                 // default, no-cache, reload, force-cache, only-if-cached 
-  this.referrerPolicy = "no-referrer"; // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-  this.native = {
-    cache: false,
-    fallback: false,
-    requestHash: "",
-    useErrorWrapper: false,
-    responseProcessor: false,
-    doNotParseResponse: false,
-  };
-*/
-
-const requestAllowProps = [
-  "mode",
-  "body",
-  "cache",
-  "method",
-  "headers",
-  "redirect",
-  "credentials",
-  "referrerPolicy",
-];
-
-const nativeAllowProps = [
-  "fallback",
-  "requestHash",
-  "cacheRequests",
-  "useErrorWrapper",
-  "responseProcessor",
-  "doNotParseResponse",
-];
-
-
-export class RequestConfig {
-  constructor(config) {
-
-    this.native = {};
-
-    for (const key in config) {
-      if (config.hasOwnProperty(key)) {
-        if (requestAllowProps.includes(key)) {
-          this[key] = config[key];
-        } else if (nativeAllowProps.includes(key)) {
-          this.native[key] = config[key];
-        }
-      }
-    }
-  };
-};
-
-
-
 // ---- helpers ----------------
 
 function cacheResponse(response, requestHash, cache, responseProcessor) {
-  cache.set(requestHash, responseProcessor ? responseProcessor(response) : response);
-  return response;
+  const processedResponse = Boolean(responseProcessor) ? responseProcessor.reduce((acc, processor) => processor(acc), response) : response;
+  cache.set(requestHash, processedResponse);
+  return processedResponse;
 }
 
 function getResponseFromCache(requestCache, requestHash) {
   return Promise.resolve(requestCache.get(requestHash));
 }
-
 
 async function parseResponse(response, fallback, useErrorWrapper = false) {
 
@@ -280,6 +357,8 @@ function handleError(requestCleanup) {
 function encodeBody(body, headers = {}) {
   const contentType = headers["content-type"] || headers["Content-Type"];
 
+  if (!body) return undefined;
+
   if (contentType === "application/json") {
     return JSON.stringify(body);
   }
@@ -306,7 +385,25 @@ export function objectToFormData(body) {
   return formData;
 }
 
-
 function isBasicType(value) {
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function paramsDetection(config, body) {
+  const configuration = config instanceof RequestConfig
+    ? config
+    : body instanceof RequestConfig
+      ? body
+      : undefined;
+
+  const bodyContent = (body && !(body instanceof RequestConfig))
+    ? body
+    : (config && !(config instanceof RequestConfig))
+      ? config
+      : undefined;
+
+  return {
+    bodyContent,
+    configuration,
+  };
 }

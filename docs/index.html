@@ -17,7 +17,8 @@
 
       <a href="#general-header" class="header">General Utilities</a>
 
-      <a href="#override-doc">deepOverride</a>
+      <a href="#deep-override-doc">deepOverride</a>
+      <a href="#deep-clone-doc">deepClone</a>
       <a href="#hyphenate-doc">hyphenate</a>
       <a href="#fuzzy-doc">fuzzySearch</a>
       <a href="#is-object-doc">isObject</a>
@@ -40,6 +41,20 @@
       <a href="#array-reduce-doc">reduce</a>
       <a href="#array-shuffle-doc">shuffleArray</a>
       <a href="#array-sort-by-phrase-doc">sortByPhraseIndex</a>
+
+      <a href="#request-header" class="header">Request</a>
+
+      <a href="#request-create-request-doc">createRequest</a>
+      <a href="#request-doc" class="indent">request</a>
+      <a href="#request-get-doc" class="indent">get</a>
+      <a href="#request-post-doc" class=" indent">post</a>
+      <a href="#request-abort-doc" class=" indent">abort</a>
+      <a href="#request-release-doc" class=" indent">releaseCache</a>
+      <a href="#request-update-doc" class=" indent">updateConfig</a>
+      <a href="#request-config-doc">RequestConfig</a>
+      <a href="#request-config-merge-doc" class=" indent">merge</a>
+      <a href="#request-config-update-doc" class=" indent">update</a>
+      <a href="#request-otfd-doc">objectToFormData</a>
 
       <a href="#dom-header" class="header">DOM Utilities</a>
 
@@ -82,18 +97,6 @@
       <a href="#query-update-query-doc"><del>xxupdateQueryx</del></a>
       <a href="#query-to-object-doc"><del>queryToObject</del></a>
 
-      <a href="#request-header" class="header">Request</a>
-
-      <a href="#request-default-doc">createRequest</a>
-      <a href="#request-request-doc" class="indent">request</a>
-      <a href="#request-get-doc" class="indent">get</a>
-      <a href="#request-post-doc"" class=" indent">post</a>
-      <a href="#request-abort-doc"" class=" indent">abort</a>
-      <a href="#request-release-doc"" class=" indent">releaseCache</a>
-      <a href="#request-update-doc"" class=" indent">updateConfig</a>
-      <a href="#request-RC-doc">RequestConfig</a>
-      <a href="#request-otfd-doc">objectToFormData</a>
-
       <a href="#schema-header" class="header">Schema</a>
 
       <a href="#schema-types-doc"><del>schemaTypes</del></a>
@@ -108,10 +111,11 @@
   </nav>
 
   <main>
-    <h1>Utility Belt Docs <a href="./tests/index.html">Run tests</a></h1>
+    <h1 id="general-header">Utility Belt Docs <a href="./tests/index.html">Run tests</a></h1>
 
-    <!-- General Utilities 
-    <section id="override-doc" data-import="./documentation/general/deep-override.html"></section>
+    <!-- General Utilities -->
+    <section id="deep-override-doc" data-import="./documentation/general/deep-override.html"></section>
+    <section id="deep-clone-doc" data-import="./documentation/general/deep-clone.html"></section>
     <div class="stack" data-import="./documentation/general/index.html"></div>
     <section id="loopstack-doc" data-import="./documentation/general/loopstack/index.html" data-script="./documentation/general/loopstack/index.js"></section>
     <section id="pubsub-doc" data-import="./documentation/general/pubsub/index.html" data-script="./documentation/general/pubsub/index.js"></section>
@@ -133,9 +137,9 @@
 
     <h2 id="query-header">Query string</h2>
     <p>. . .</p>
--->
+
     <h2 id="request-header">Request</h2>
-    <div id="pubsub-doc" data-import="./documentation/request/index.html"></div>
+    <div id="pubsub-doc" data-import="./documentation/request/index.html" class="stack"></div>
 
     <h2 id="schema-header">Schema</h2>
     <p>. . .</p>

@@ -1,6 +1,6 @@
-<section>
-  <h3>createRequest(<span class="gray">config</span>)</h3>
-  <p>Request management utility with caching and aborting functionality</p>
+<section id="request-header">
+  <h3 id="request-create-request-doc">createRequest(<span class="gray">config</span>)</h3>
+  <p>Request management utility with caching and aborting functionality.</p>
   <h4>Usage</h4>
   <pre>
   import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
@@ -16,8 +16,7 @@
     },
   });
 
-  const {\\request\\, \\get\\, \\post\\, \\abort\\, \\releaseCache\\, \\updateConfig\\} = createRequest(globalConfig);
-    
+  const {\\request\\, \\get\\, \\post\\, \\abort\\, \\releaseCache\\, \\updateConfig\\} = createRequest(globalConfig);    
   </pre>
   <h4>Props</h4>
   <table>
@@ -41,7 +40,7 @@
 
   <!-- REQUEST -->
 
-  <h3 class="submethod">request(<span class="gray">url</span>, <span class="gray">config</span>)</h3>
+  <h3 id="request-doc" class="submethod">request(<span class="gray">url</span>, <span class="gray">config</span>)</h3>
   <p>
     Default <em>window.fetch</em> wrapper configured by the <em>globalConfig</em> object. You can always provide request specific configuration in second argument with new
     RequestConfig object.
@@ -117,7 +116,7 @@
 
   <!-- GET -->
 
-  <h3 class="submethod">get(<span class="gray">url</span>, <span class="gray">config</span>)</h3>
+  <h3 id="request-get-doc" class="submethod">get(<span class="gray">url</span>, <span class="gray">config</span>)</h3>
   <p>
     Shorthand for GET request.
   </p>
@@ -153,7 +152,7 @@
 
   <!-- POST -->
 
-  <h3 class="submethod">post(<span class="gray">url</span>, <span class="gray">body</span>, <span class="gray">config</span>)</h3>
+  <h3 id="request-post-doc" class="submethod">post(<span class="gray">url</span>, <span class="gray">body</span>, <span class="gray">config</span>)</h3>
   <p>
     Shorthand for POST request.
   </p>
@@ -202,23 +201,23 @@
 
   <!-- ABORT -->
 
-  <h3 class="submethod">abort(<span class="gray">requestRef</span>)</h3>
+  <h3 id="request-abort-doc" class="submethod">abort(<span class="gray">requestRef</span>)</h3>
   <p>
     Aborts pending request.
   </p>
   <h4>Usage</h4>
   <pre>
-   import { createRequest } from "@ludekarts/utility-belt";
-   ...
+  import { createRequest } from "@ludekarts/utility-belt";
+  ...
  
-   const { \\get\\, \\abort\\ } = createRequest(globalConfig);
+  const { \\get\\, \\abort\\ } = createRequest(globalConfig);
    
-   const \\getRequest\\ = get("https://url/to/api");
+  const \\getRequest\\ = get("https://url/to/api");
    
-   abort(\\getRequest\\); -\ // Make sure that request reference is only for the "main method" without ".then" and ".catch" part.\-
+  abort(\\getRequest\\); -\ // Make sure that request reference is only for the "main method" without ".then" and ".catch" part.\-
 
-   \\getRequest\\.then(console.log).catch(console.error);     
-   </pre>
+  \\getRequest\\.then(console.log).catch(console.error);     
+  </pre>
   <h4>Props</h4>
   <table>
     <tr>
@@ -236,32 +235,32 @@
 
   <!-- RELEASE CACHE -->
 
-  <h3 class="submethod">releaseCache(<span class="gray">key</span>, <span class="gray">requestHash</span>)</h3>
+  <h3 id="request-release-doc" class="submethod">releaseCache(<span class="gray">key</span>, <span class="gray">requestHash</span>)</h3>
   <p>
     Removes cached request responses form the cache.
   </p>
   <h4>Usage</h4>
   <pre>
-   import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
-   ...
+  import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
+  ...
  
-   const globalConfig = new RequestConfig({
-     \\cacheRequests: true\\,
-   });
+  const globalConfig = new RequestConfig({
+    \\cacheRequests: true\\,
+  });
 
-   const { \\get\\, \\releaseCache\\ } = createRequest(globalConfig);
+  const { \\get\\, \\releaseCache\\ } = createRequest(globalConfig);
    
-   const makeRequest = \\endpoint\\ => 
-    get(`https://url/to/api/${\\endpoint\\}`)
-      .then(console.log)
-      .catch(console.error);
+  const makeRequest = \\endpoint\\ => 
+   get(`https://url/to/api/${\\endpoint\\}`)
+     .then(console.log)
+     .catch(console.error);
    
-   makeRequest("user");
-   makeRequest("user");
-   makeRequest("admin");
+  makeRequest("user");
+  makeRequest("user");
+  makeRequest("admin");
    
-   releaseCache(\\/user$/g\\); -\// Use Reular Expression to find instances to remove\-
-   </pre>
+  releaseCache(\\/user$/g\\); -\// Use Regular Expression to find instances to remove\-
+  </pre>
   <h4>Props</h4>
   <table>
     <tr>
@@ -281,4 +280,313 @@
     </tr>
   </table>
 
+
+  <!-- UPDATE CONFIG -->
+
+  <h3 id="request-update-doc" class="submethod">updateConfig(<span class="gray">newConfig</span>)</h3>
+  <p>
+    Updates global request configuration.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+  import { createRequest, RequestConfig } from "@ludekarts/utility-belt";
+  ...
+  
+  const globalConfig = new RequestConfig({
+    \\cacheRequests: true\\,
+    \\headers\\: {
+      "Content-Type": "plain/text",
+      "X-Custom": "hello.custom",
+    },
+  });
+ 
+  const { \\updateConfig\\ } = createRequest(globalConfig);
+   
+  updateConfig({
+    \\headers\\: (\\initialHeaders\\) => ({
+      "Content-Type": "application/json",
+      "X-Custom": initialHeaders["X-Custom"] + ".updated",
+    }),
+    \\fallback\\: { 
+      msg: "This is fallback",
+    },
+  });
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>newConfig</td>
+      <td>Object</td>
+      <td>New set of properties to be replaced in oryginal globalConfig</td>
+    </tr>
+  </table>
+  <p class="info">
+    <strong>Headers</strong> property can be defined as a <strong>function</strong> which as an argument takes initiall headers.
+    This approach provides an easy way to modify or redefine headers on the fly.
+  </p>
+
+</section>
+
+<!-- REQUEST CONFIG -->
+
+<section id="request-config-doc">
+  <h3 id="request-cr-doc">new RequestConfig(<span class="gray">globalConfig</span>)</h3>
+  <p>Configuration class for all of the requests. This is the only format that request methods will accept.</p>
+  <h4>Usage</h4>
+  <pre>
+  import { RequestConfig } from "@ludekarts/utility-belt";
+  ...
+
+  const globalConfig = \\new RequestConfig\\({
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "GET",            
+    redirect: "follow",         
+    mode: "no-cors",        
+    credentials: "omit",           
+    cache:"default",        
+    referrerPolicy: "no-referrer",    
+    requestHash:"my-unique-hash", 
+    cacheRequests:  false,    
+    useErrorWrapper: false,
+    doNotParseResponse: false,
+    fallback: [ 
+      "This is fallback response" 
+    ],
+    responseProcessor: [
+      response => reposnse.map(item => item.toUpperCase()),
+    ],  
+  });    
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>headers</td>
+      <td>Object</td>
+      <td>{}</td>
+      <td>Request headers set as key-value pair.</td>
+    </tr>
+    <tr>
+      <td>method</td>
+      <td>String</td>
+      <td>GET</td>
+      <td><i>GET</i>, <i>POST</i>, <i>PUT</i>, <i>DELETE</i>, etc.</td>
+    </tr>
+    <tr>
+      <td>redirect</td>
+      <td>String</td>
+      <td>follow</td>
+      <td><i>manual</i>, <i>follow</i>,<i>error</i></td>
+    </tr>
+    <tr>
+      <td>mode</td>
+      <td>String</td>
+      <td>cors</td>
+      <td><i>no-cors</i>, <i>cors</i>, <i>same-origin</i></td>
+    </tr>
+    <tr>
+      <td>credentials</td>
+      <td>String</td>
+      <td>omit</td>
+      <td><i>include</i>, <i>same-origin</i>, <i>omit</i></td>
+    </tr>
+    <tr>
+      <td>cache</td>
+      <td>String</td>
+      <td>default</td>
+      <td><i>default</i>, <i>no-cache</i>, <i>reload</i>, <i>force-cache</i>, <i>only-if-cached</i> </td>
+    </tr>
+    <tr>
+      <td>referrerPolicy</td>
+      <td>String</td>
+      <td>strict-origin-when-cross-origin</td>
+      <td>
+        <i>no-referrer</i>, <i>no-referrer-when-downgrade</i>, <i>origin</i>, <i>origin-when-cross-origin</i>, <i>same-origin</i>, <i>strict-origin</i>,
+        <i>strict-origin-when-cross-origin</i>, <i>unsafe-url</i>
+      </td>
+    </tr>
+    <tr>
+      <td>body</td>
+      <td>Any</td>
+      <td>undefined</td>
+      <td>Request body</td>
+    </tr>
+    <tr>
+      <td>requestHash</td>
+      <td>String</td>
+      <td>undefined</td>
+      <td>Unique key allows to distinguish two reqyest with same URL.</td>
+    </tr>
+    <tr>
+      <td>cacheRequests</td>
+      <td>Boolean</td>
+      <td>false</td>
+      <td>Enables requests caching</td>
+    </tr>
+    <tr>
+      <td>useErrorWrapper</td>
+      <td>Boolean</td>
+      <td>false</td>
+      <td>Enables Promise fails on server error response</td>
+    </tr>
+    <tr>
+      <td>doNotParseResponse</td>
+      <td>Boolean</td>
+      <td>false</td>
+      <td>Diable default response parsing. When set to TRUE request method returns pure Response object.</td>
+    </tr>
+    <tr>
+      <td>fallback</td>
+      <td>Any</td>
+      <td>undefined</td>
+      <td>Any type of data that will be returned to the user when request fails</td>
+    </tr>
+    <tr>
+      <td>responseProcessor</td>
+      <td>Array/Function</td>
+      <td>undefined</td>
+      <td>Function or array of functions used to process response. This processing ill take place before caching so it's result will be cached.</td>
+    </tr>
+  </table>
+
+  <!-- MERGE -->
+
+  <h3 id="request-config-merge-doc" class="submethod">merge(<span class="gray">source</span>)</h3>
+  <p>
+    Merges properties from <em>source</em> object into base RequestConfig instance creating a <strong>new instance</strong> as a result.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+  import { RequestConfig } from "@ludekarts/utility-belt";
+  ...
+ 
+  const \\configA\\ = new RequestConfig({
+    cacheRequests: true,
+  });
+
+  const \\configB\\ = new RequestConfig({
+    cacheRequests: false,
+    headers: {
+     "Content-Type": "application/json",
+   },
+  });
+
+  console.log(\\configB.merge(configA)\\);    
+  -\
+  // { 
+  //  cacheRequests: \\true\\,
+  /  headers: { "Content-Type": "application/json" },
+  // } \-   
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>source</td>
+      <td>RequestConfig</td>
+      <td>Configuraton that should be merged into base configuration</td>
+    </tr>
+  </table>
+
+  <p class="info">
+    When merging two configurations together properties in object with same names will be overridden by the <strong>source</strong> object.
+    In terms of array they'll be concatenate together.
+  </p>
+
+
+  <!-- UPDATE -->
+
+  <h3 id="request-config-update-doc" class="submethod">update(<span class="gray">key</span>, <span class="gray">value</span>)</h3>
+  <p>
+    Updates values in current RequestConfig object.
+  </p>
+  <h4>Usage</h4>
+  <pre>
+  import { RequestConfig } from "@ludekarts/utility-belt";
+  ...
+ 
+  const \\config\\ = new RequestConfig({
+    cacheRequests: true,
+  });
+
+  config.update(\\"method"\\, "DELETE");
+  
+  config.update(\\"headers"\\, initialHeaders => ({
+    "Content-Type": "application/json",
+  }));
+  
+  console.log(config);    
+  -\
+  // { 
+  //  method: \\"DELETE"\\,
+  //  cacheRequests: \\true\\,
+  //  headers: { \\"Content-Type": "application/json"\\ },
+  // } \-   
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>key</td>
+      <td>string</td>
+      <td>Name of property to update</td>
+    </tr>
+    <tr>
+      <td>value</td>
+      <td>Any</td>
+      <td>Value of property to update</td>
+    </tr>
+  </table>
+
+  <p class="info">
+    When updating <strong>headers</strong> you may use function notation to get access to currently set headers.
+  </p>
+</section>
+
+<section id="request-otfd-doc">
+  <h3 id="request-create-request-doc">objectToFormData(<span class="gray">object</span>)</h3>
+  <p>Transforms JS object into FormData instance</p>
+  <h4>Usage</h4>
+  <pre>
+  import { objectToFormData } from "@ludekarts/utility-belt";
+  ...
+
+  const formData = \\objectToFormData\\({
+    firstName: "John",
+    lastName: "Wick",
+  });
+  </pre>
+  <h4>Props</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>object</td>
+      <td>Object</td>
+      <td>Object with properties to transform.</td>
+    </tr>
+  </table>
 </section>

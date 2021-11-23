@@ -1,4 +1,4 @@
-const { deepOverride, hyphenate, fuzzySearch, isObject, inPolygon, wordCase, getRandomNumber, uid, loopstack } = window.utilityBelt;
+const { deepOverride, deepCopy, hyphenate, fuzzySearch, isObject, inPolygon, wordCase, getRandomNumber, uid, loopstack } = window.utilityBelt;
 
 
 describe("Deep Override", () => {
@@ -75,6 +75,49 @@ describe("Deep Override", () => {
 
 });
 
+
+
+describe("Deep Copy", () => {
+  it("Should exist an be a function", () => {
+    chai.expect(deepCopy).to.be.a("function");
+  });
+
+  it("Should copy an Array", () => {
+    const source = [1, 2, 3, 4];
+    const result = deepCopy(source);
+    chai.expect(result).to.eql(source);
+    chai.expect(result).to.not.equal(source);
+  });
+
+  it("Should copy an Object", () => {
+    const source = {
+      user: {
+        name: "John",
+        surname: "Wick",
+        age: 53,
+        aliases: [
+          "Baba Yaga", "The Boogeyman", "The Reaper"
+        ],
+      }
+    };
+
+    const result = deepCopy(source);
+    chai.expect(result).to.eql(source);
+    chai.expect(result).to.not.equal(source);
+  });
+
+  it("should bypass all types except Arry and Object", () => {
+    const symbol = Symbol();
+    function fn() { };
+    chai.expect(deepCopy(1)).to.equal(1);
+    chai.expect(deepCopy(fn)).to.equal(fn);
+    chai.expect(deepCopy(null)).to.equal(null);
+    chai.expect(deepCopy("one")).to.equal("one");
+    chai.expect(deepCopy(symbol)).to.equal(symbol);
+    chai.expect(deepCopy(undefined)).to.equal(undefined);
+  });
+
+});
 
 
 describe("Hyphenate", () => {

@@ -1,87 +1,78 @@
+import { loop, nodeListToArray } from "./arrays.js";
 import { placeStrBetween } from "./strings.js";
-import { nodeListToArray, loop } from "./arrays.js";
-import { insertNodeAfter } from "./dom-manipulations.js";
 
-// Holds all template instances.
-const templateInstances = new Map();
+const elements = elementsStore();
+const elementsRefs = new WeakMap();
 
-// Global references store.
-const references = (function () {
-  const refs = new Map();
-  return {
-    get(host) {
-      if (!host instanceof HTMLElement) {
-        throw new Error("getRefs argument error: Helper expects HTMLElement as an argument.");
-      }
-      return refs.get(host) || {};
-    },
-    set(host, name, ref) {
-      const container = refs.get(host) || {};
-      container[name] = ref;
-      refs.set(host, container);
-    }
+export function html(oneTimeMarkup, ...oneTimeInserts) {
+  const isOneTimeTemplate = oneTimeMarkup !== undefined && Boolean(oneTimeMarkup.raw);
+
+  if (isOneTimeTemplate) {
+    const { element } = createTemplate(oneTimeMarkup, escapeStringsInArray(oneTimeInserts));
+    return element;
   }
-}());
 
+  return function (markup, ...inserts) {
+    const key = oneTimeMarkup;
 
-export const getRefs = references.get;
-
-
-// ---- Main ----------------
-
-
-export function template(markup, ...inserts) {
-
-  // Calletd as tagged function.
-  if (Array.isArray(markup) && markup.raw) {
-    const uid = markup.raw.join("-");
-    const currentTemplate = templateInstances.get(uid);
-    return currentTemplate
-      ? compareInstances(currentTemplate, inserts)
-      : createInstance(uid, markup, inserts);
-
-    // Calletd as tagged function with ID.
-  } else if (typeof markup === "string" || typeof markup === "number") {
-    const uid = markup;
-    const currentTemplate = templateInstances.get(uid);
-    return (markup2, ...inserts2) => {
-      if (Array.isArray(markup2) && markup2.raw) {
-        return currentTemplate
-          ? compareInstances(currentTemplate, inserts2)
-          : createInstance(uid, markup2, inserts2);
-      } else {
-        throw new Error("Template Error: Wrong function initailization.");
-      }
+    // Bail if no key or the key is invalid.
+    if (key === undefined || key === null || key === true || key === false) {
+      throw new Error(`HTML Template Error: html() helper requires unique ID if called as function. Got ${key}`);
     }
-  } else {
-    throw new Error("Template Error: Wrong function initailization.");
+
+    // Update elements.
+    if (elements.has(key)) {
+      const { element, elementBindings } = elements.get(key);
+      updateComponent(elementBindings, escapeStringsInArray(inserts));
+      return element;
+    }
+
+    // Create new element.
+    if (!elements.has(key)) {
+      const { element, elementBindings } = createTemplate(markup, escapeStringsInArray(inserts));
+      const refs = getReferences(element);
+      elements.set(key, { element, elementBindings });
+      refs && elementsRefs.set(element, refs);
+      return element;
+    }
+
+  };
+}
+
+// Get node references. This will skip the insert nodes, since they alreay have external referenes.
+html.refs = function (element) {
+  if (element instanceof HTMLElement) {
+    return elementsRefs.get(element) || {};
   }
+  throw new Error("HTML Template Error: refs() helper should be called with an HTMLElement");
+}
+
+// Removes element and all its references.
+html.destroy = function (key) {
+  const { element } = elements.get(key);
+  elementsRefs.delete(element);
+  return elements.remove(key);
+}
+
+export function debugElementsStore() {
+  elements.trace();
+  console.log("Elements references:", elementsRefs);
+}
+
+export function deriveNewState(prevState, newState) {
+  return newState !== undefined
+    ? typeof newState === "function"
+      ? newState(prevState)
+      : newState
+    : prevState;
 }
 
 
-function createInstance(uid, markup, inserts) {
-  const { element, elementsMap } = createTemplate(markup, inserts);
-  templateInstances.set(uid, {
-    element,
-    elementsMap,
-  });
-  return element;
-}
+// ---- Helpers ----------------
 
-
-// Updates values in DOM nodes.
-function compareInstances(template, inserts) {
-  const { elementsMap } = template;
-  loop(inserts, (insert, index) => {
-    if (insert !== elementsMap[index].value) {
-      updateReference(elementsMap[index], insert);
-    }
-  });
-  return template.element;
-}
-
+// Creates HTMLElement and it's data bindings.
 function createTemplate(markup, inserts) {
-  const elementsMap = [];
+  const elementBindings = [];
   const wrapper = document.createElement("div");
 
   // Combine HTML markup and add placeholders for external inputs.
@@ -126,7 +117,7 @@ function createTemplate(markup, inserts) {
       value = "";
     }
 
-    elementsMap.push(binding);
+    elementBindings.push(binding);
 
     return html + (value || "");
   }, "");
@@ -139,7 +130,7 @@ function createTemplate(markup, inserts) {
     nodeListToArray(wrapper.querySelectorAll("[data-hook]")),
     hook => {
       loop(hook.dataset.hook.split(" "), index => {
-        const currentElement = elementsMap[index];
+        const currentElement = elementBindings[index];
 
         if (hook.dataset.ref) {
           // Insert textNode for simplet text.
@@ -183,51 +174,88 @@ function createTemplate(markup, inserts) {
       });
     });
 
-  // Strip wrapper node if not needed.
+  // // Strip wrapper node if not needed.
   const element = stripWrapper(wrapper);
-
-  // Get node references. This will skip the insert nodes, since they alreay have external referenes.
-  loop(
-    nodeListToArray(element.querySelectorAll("[ref]")),
-    ref => {
-      references.set(element, ref.getAttribute("ref"), ref);
-      ref.removeAttribute("ref");
-    }
-  );
 
   return {
     element,
-    elementsMap,
+    elementBindings,
   };
 }
 
-
-// ---- Helpers ----------------
-
-// Check if current provessing value in HTML is for attribute.
-function isAttribute(html) {
-  return html.lastIndexOf("<") > html.lastIndexOf(">");
-}
-
-// Allow Strings and Numbers.
-function isNumberOrString(value) {
-  return value !== undefined && (typeof value === "number" || typeof value === "string");
-}
-
-function isDomNode(node) {
-  return node instanceof HTMLElement || node instanceof Text;
-}
-
-function insertNodeList(nodeList, pointer, parent) {
-  loop(nodeList, entry => {
-    if (isDomNode(entry)) {
-      parent.insertBefore(entry, pointer);
+// Updates values in DOM nodes.
+function updateComponent(elementsBindings, inserts) {
+  loop(inserts, (insert, index) => {
+    if (insert !== elementsBindings[index].value) {
+      updateReference(elementsBindings[index], insert);
     }
   });
-  pointer.remove();
 }
 
-// On re-render update value's references.
+// Pull out and cleanup "ref" hooks.
+function getReferences(element) {
+  const refs = {};
+  const refsElements = nodeListToArray(element.querySelectorAll("[ref]"));
+  loop(
+    refsElements,
+    refNode => {
+      const refName = refNode.getAttribute("ref");
+      refs[refName] = refNode;
+      refNode.removeAttribute("ref");
+    }
+  );
+  return refsElements.length ? Object.freeze(refs) : undefined;
+}
+
+// Manages elements storage.
+function elementsStore() {
+
+  const hardStore = new Map();
+  const liteStore = new WeakMap();
+
+  function isHardKey(key) {
+    return Array.isArray(key)
+      || typeof key === "function"
+      || typeof key === "string"
+      || typeof key === "number"
+      || typeof key === "symbol";
+  }
+
+  function has(key) {
+    return isHardKey(key) ? hardStore.has(key) : liteStore.has(key);
+  }
+
+  function get(key) {
+    return isHardKey(key) ? hardStore.get(key) : liteStore.get(key);
+  }
+
+  function set(key, value) {
+    return isHardKey(key) ? hardStore.set(key, value) : liteStore.set(key, value);
+  }
+
+  function remove(key) {
+    return isHardKey(key) ? hardStore.delete(key) : liteStore.delete(key);
+  }
+
+  function trace() {
+    console.log("String-as-key Store:\n", hardStore);
+    console.log("Object-as-key Store:\n", liteStore);
+  }
+
+  return Object.freeze({
+    set,
+    has,
+    get,
+    remove,
+    trace,
+  });
+}
+
+function escapeStringsInArray(array) {
+  return array.map(i => typeof i === "string" ? escapeHtml(i) : i);
+}
+
+// Updates values of an element and it's references.
 function updateReference(element, newValue) {
   if (!element) return;
 
@@ -244,7 +272,7 @@ function updateReference(element, newValue) {
           element.attribute.template.replace(new RegExp(`%#${element.index}#%`), newValue)
         );
       } else {
-        throw new Error(`Only String and Numbers can be passedt to the attributes, got: "${typeof newValue}" at "${element.index}" value.`);
+        throw new Error(`Only String and Numbers can be passed to the attributes, got: "${typeof newValue}" at "${element.index}" value.`);
       }
     }
     // Update text values.
@@ -293,6 +321,7 @@ function updateReference(element, newValue) {
 
       // Delete removed nodes.
       let notRemoved = [];
+
       loop(element.value, node => {
         newValue.includes(node)
           ? notRemoved.push(node)
@@ -306,23 +335,44 @@ function updateReference(element, newValue) {
       loop(newValue, (newNode, index) => {
         const oldNode = element.value[index];
         if (oldNode !== newNode) {
-          if (oldNode === undefined) {
-            // Append node.
-            if (element.value[index - 1]) {
-              element.value[index] = insertNodeAfter(newNode, element.value[index - 1]);
-            } else {
-              // In case all items in the list were removed and we need to insert new ones.
-              element.parent.appendChild(newNode);
-            }
-          } else {
-            // Replace node.
-            oldNode.parentNode.replaceChild(newNode, oldNode);
-          }
+          oldNode === undefined
+            ? element.parent.appendChild(newNode) // Add new node.
+            : oldNode.parentNode.replaceChild(newNode, oldNode); // Replace node.            
         }
       });
     }
   }
   element.value = newValue;
+}
+
+// Check if current provessing value in HTML is for attribute.
+function isAttribute(html) {
+  return html.lastIndexOf("<") > html.lastIndexOf(">");
+}
+
+// Allow Strings and Numbers.
+function isNumberOrString(value) {
+  return value !== undefined && (typeof value === "number" || typeof value === "string");
+}
+
+function isDomNode(node) {
+  return node instanceof HTMLElement || node instanceof Text;
+}
+
+function insertNodeList(nodeList, pointer, parent) {
+  loop(nodeList, entry => {
+    if (isDomNode(entry)) {
+      parent.insertBefore(entry, pointer);
+    }
+  });
+  pointer.remove();
+}
+
+// Remove element wrapper if not needed.
+function stripWrapper(wrapper) {
+  return wrapper.children.length === 1
+    ? wrapper.children[0]
+    : wrapper;
 }
 
 // Pull out attribute's template and name for given index.
@@ -336,9 +386,33 @@ function getAttribute(index, node) {
   };
 }
 
-// Remove element wrapper if not needed.
-function stripWrapper(wrapper) {
-  return wrapper.children.length === 1
-    ? wrapper.children[0]
-    : wrapper;
+// Escaepe HTML symbols.
+export function escapeHtml(s) {
+  const reEscape = /[&<>'"]/g;
+  const oEscape = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    "\"": "&quot;",
+  };
+  return s.replace(reEscape, m => oEscape[m]);
+}
+
+// Unescaepe HTML symbols.
+export function unEscapeHtml(s) {
+  const reUnescape = /&(?:amp|#38|lt|#60|gt|#62|apos|#39|quot|#34);/g;
+  const oUnescape = {
+    '&amp;': '&',
+    '&#38;': '&',
+    '&lt;': '<',
+    '&#60;': '<',
+    '&gt;': '>',
+    '&#62;': '>',
+    '&apos;': "'",
+    '&#39;': "'",
+    '&quot;': '"',
+    '&#34;': '"'
+  };
+  return s.replace(reUnescape, m => oUnescape[m]);
 }

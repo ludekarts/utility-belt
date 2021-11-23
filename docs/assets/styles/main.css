@@ -159,7 +159,7 @@ strong {
   font-weight: bold;
 }
 
-em {
+em, i {
   font-style: italic;
 }
 
