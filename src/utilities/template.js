@@ -48,18 +48,25 @@ html.refs = function (element) {
 }
 
 // Removes element and all its references.
+// When provided null key then all detached elemnts will be removed.
 html.destroy = function (key) {
-  const { element } = elements.get(key);
-  elementsRefs.delete(element);
-  return elements.remove(key);
+  if (key === null) {
+    elements.cleanup();
+  } else {
+    const { element } = elements.get(key);
+    elementsRefs.delete(element);
+    element.remove();
+    return elements.remove(key);
+  }
 }
+
 
 export function debugElementsStore() {
   elements.trace();
   console.log("Elements references:", elementsRefs);
 }
 
-export function deriveNewState(prevState, newState) {
+export function derivableState(prevState, newState) {
   return newState !== undefined
     ? typeof newState === "function"
       ? newState(prevState)
@@ -211,43 +218,53 @@ function getReferences(element) {
 function elementsStore() {
 
   const hardStore = new Map();
-  const liteStore = new WeakMap();
+  const weakStore = new WeakMap();
 
   function isHardKey(key) {
-    return Array.isArray(key)
-      || typeof key === "function"
-      || typeof key === "string"
+    if (key === null || key === undefined)
+      throw new Error("Key cannot be null or undefined");
+    return typeof key === "string"
       || typeof key === "number"
       || typeof key === "symbol";
   }
 
   function has(key) {
-    return isHardKey(key) ? hardStore.has(key) : liteStore.has(key);
+    return isHardKey(key) ? hardStore.has(key) : weakStore.has(key);
   }
 
   function get(key) {
-    return isHardKey(key) ? hardStore.get(key) : liteStore.get(key);
+    return isHardKey(key) ? hardStore.get(key) : weakStore.get(key);
   }
 
   function set(key, value) {
-    return isHardKey(key) ? hardStore.set(key, value) : liteStore.set(key, value);
+    return isHardKey(key) ? hardStore.set(key, value) : weakStore.set(key, value);
   }
 
   function remove(key) {
-    return isHardKey(key) ? hardStore.delete(key) : liteStore.delete(key);
+    return isHardKey(key) ? hardStore.delete(key) : weakStore.delete(key);
+  }
+
+  function cleanup() {
+    for (const [key, value] of hardStore) {
+      if (!value.element.parentNode) {
+        elementsRefs.delete(value.element);
+        hardStore.delete(key);
+      }
+    }
   }
 
   function trace() {
-    console.log("String-as-key Store:\n", hardStore);
-    console.log("Object-as-key Store:\n", liteStore);
+    console.log("HardStore:\n", hardStore); // String-as-key.
+    console.log("WeakStore:\n", weakStore); // Object-as-key.
   }
 
   return Object.freeze({
     set,
     has,
     get,
-    remove,
     trace,
+    remove,
+    cleanup,
   });
 }
 
