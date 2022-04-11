@@ -88,16 +88,19 @@ function createTemplate(markup, inserts) {
     let html = acc += part;
     let binding = { value, index };
 
+    // Detect attributes.
     if (isAttribute(html)) {
       const splitIndex = html.lastIndexOf("<");
       const head = html.slice(0, splitIndex);
       const element = html.slice(splitIndex); // Markup of element with current attribute.
 
+      // Update data-hook attribute.
       if (element.includes("data-hook")) {
-        // Update data-hook attribute.
         html = head + element.replace(/data-hook="(.+?)"/, (_, refs) => `data-hook="${refs} ${index}"`);
-      } else {
-        // Create new data-hook attribute.
+      }
+
+      // Create new data-hook attribute.
+      else {
         html = head + placeStrBetween(element, ` data-hook="${index}"`, element.indexOf(" "));
       }
 
@@ -107,20 +110,31 @@ function createTemplate(markup, inserts) {
         binding.bool = html.slice(sliceIndex + 1, html.lastIndexOf("="));
         html = html.slice(0, sliceIndex) + html.slice(sliceIndex + 1);
         value = "";
-      } else {
-        // Process value for non-boolean attributes.
+      }
+
+      // Process value for non-boolean attributes.
+      else {
         value = `%#${index}#%`;
       }
-    } else if (isDomNode(value)) {
-      // HTML Elements
+    }
+
+    // Detect HTML Elements.
+    else if (isDomNode(value)) {
       value = `<i data-hook="${index}" data-hte="true"></i>`;
-    } else if (Array.isArray(value)) {
-      // Array of nodes.
+    }
+
+    // Detect Array of Nodes.
+    else if (Array.isArray(value)) {
       value = `<i data-hook="${index}" data-lst="true"></i>`;
-    } else if (isNumberOrString(value)) {
-      // Numbers & Strings.
+    }
+
+    // Detect Numbers & Strings.
+    else if (isNumberOrString(value)) {
       value = `<i data-hook="${index}" data-ref="true"></i>`;
-    } else {
+    }
+
+    // Clamp other types into empty string.
+    else {
       value = "";
     }
 
@@ -139,27 +153,35 @@ function createTemplate(markup, inserts) {
       loop(hook.dataset.hook.split(" "), index => {
         const currentElement = elementBindings[index];
 
+        // Insert TextNode for Strings & Numbers.
         if (hook.dataset.ref) {
-          // Insert textNode for simplet text.
           currentElement.type = "text";
           currentElement.ref = document.createTextNode(currentElement.value);
           hook.parentNode.replaceChild(currentElement.ref, hook);
-        } else if (hook.dataset.hte) {
-          // HTML Elements.
+        }
+
+        // HTML Elements.
+        else if (hook.dataset.hte) {
           currentElement.type = "node";
           hook.parentNode.replaceChild(currentElement.value, hook);
-        } else if (hook.dataset.lst) {
-          // NodeList.
+        }
+
+        // NodeList.
+        else if (hook.dataset.lst) {
           const parent = hook.parentNode;
           currentElement.type = "list";
           currentElement.parent = parent;
           insertNodeList(currentElement.value, hook, parent);
-        } else {
+        }
+
+        // Attributes.
+        else {
           currentElement.ref = hook;
           currentElement.type = "attribute";
 
           // Handle non-boolean attributes.
           if (!currentElement.bool) {
+
             // Only Number and string in attinutes.
             if (isNumberOrString(currentElement.value)) {
               const attribute = getAttribute(index, hook);
@@ -168,10 +190,15 @@ function createTemplate(markup, inserts) {
                 attribute.name,
                 attribute.template.replace(new RegExp(`%#${index}#%`), currentElement.value),
               );
-            } else {
+            }
+
+            // Throw if value type is incorrect.
+            else {
               throw new Error(`Only String and Numbers can be passedt to the attributes, got: "${typeof currentElement.value}" at "${index}" value.`);
             }
-          } else {
+          }
+
+          else {
             !!currentElement.value
               ? hook.setAttribute(currentElement.bool, currentElement.bool)
               : hook.removeAttribute(currentElement.bool);
@@ -192,11 +219,9 @@ function createTemplate(markup, inserts) {
 
 // Updates values in DOM nodes.
 function updateComponent(elementsBindings, inserts) {
-  loop(inserts, (insert, index) => {
-    if (insert !== elementsBindings[index].value) {
-      updateReference(elementsBindings[index], insert);
-    }
-  });
+  loop(inserts, (insert, index) =>
+    insert !== elementsBindings[index].value && updateReference(elementsBindings[index], insert)
+  );
 }
 
 // Pull out and cleanup "ref" hooks.
@@ -276,52 +301,84 @@ function escapeStringsInArray(array) {
 function updateReference(element, newValue) {
   if (!element) return;
 
-  // Update attributes.
+  // Update attribute.
   if (element.type === "attribute") {
+
+    // Update Boolean attribute.
     if (element.bool) {
       !!newValue
         ? element.ref.setAttribute(element.bool, element.bool)
         : element.ref.removeAttribute(element.bool);
-    } else {
-      if (isNumberOrString(newValue)) {
-        element.ref.setAttribute(
-          element.attribute.name,
-          element.attribute.template.replace(new RegExp(`%#${element.index}#%`), newValue)
-        );
-      } else {
-        throw new Error(`Only String and Numbers can be passed to the attributes, got: "${typeof newValue}" at "${element.index}" value.`);
-      }
     }
-    // Update text values.
-  } else if (element.type === "text") {
+
+    // Update attributes of Numbers and Strings.
+    else if (isNumberOrString(newValue)) {
+      element.ref.setAttribute(
+        element.attribute.name,
+        element.attribute.template.replace(new RegExp(`%#${element.index}#%`), newValue)
+      );
+    }
+
+    // Throw if invalid value type.
+    else {
+      throw new Error(`Only String and Numbers can be passed to the attributes, got: "${typeof newValue}" at value of index: "${element.index}".`);
+    }
+  }
+
+  // Update TextNode.
+  else if (element.type === "text") {
+
+    // Update TextNode to -> TextNode (Strings || Numbers).
     if (isNumberOrString(newValue)) {
       element.ref.textContent = newValue;
-    } else if (isDomNode(newValue)) {
+    }
+
+    // Update TextNode to -> Single DOM Node.
+    else if (isDomNode(newValue)) {
       element.type = "node";
       element.ref.parentNode.replaceChild(newValue, element.ref);
-    } else if (Array.isArray(newValue)) {
+    }
+
+    // Update TextNode to -> Array of DOM Nodes.
+    else if (Array.isArray(newValue)) {
       const parent = element.ref.parentNode;
       element.type = "list";
       element.parent = parent;
       insertNodeList(newValue, element.ref, parent);
     }
-    // Update DOM nodes.
-  } else if (element.type === "node") {
+
+  }
+
+  // Update Single DOM Node.
+  else if (element.type === "node") {
+
+    // Update Single DOM Node to -> TextNode (Strings || Numbers).
     if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
       element.type = "text";
       element.ref = textNode;
       element.value.parentNode.replaceChild(textNode, element.value);
-    } else if (isDomNode(newValue)) {
+    }
+
+    // Update Single DOM Node to -> DOM Node.
+    else if (isDomNode(newValue)) {
       element.value.parentNode.replaceChild(newValue, element.value);
-    } else if (Array.isArray(newValue)) {
+    }
+
+    // Update Single DOM Node to -> Array of DOM Nodes.
+    else if (Array.isArray(newValue)) {
       const parent = element.value.parentNode;
       element.type = "list";
       element.parent = parent;
       insertNodeList(newValue, element.value, parent);
     }
-    // Update Nodes List.
-  } else if (element.type === "list") {
+
+  }
+
+  // Update Nodes List.
+  else if (element.type === "list") {
+
+    // Update Array of DOM Nodes to -> TextNode (Strings || Numbers).
     if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
       element.type = "text";
@@ -329,34 +386,28 @@ function updateReference(element, newValue) {
       element.parent.insertBefore(textNode, element.value[0]);
       loop(element.value, node => node.remove());
       element.parent = undefined;
-    } else if (isDomNode(newValue)) {
+    }
+
+    // Update Array of Nodes to -> Single DOM Node.
+    else if (isDomNode(newValue)) {
       element.type = "node";
       element.parent.insertBefore(newValue, element.value[0]);
       loop(element.value, node => node.remove());
       element.parent = undefined;
-    } else if (Array.isArray(newValue)) {
+    }
 
-      // Delete removed nodes.
-      let notRemoved = [];
+    // Update Array of DOM Nodes to -> Array of DOM Nodes.
+    else if (Array.isArray(newValue)) {
 
-      loop(element.value, node => {
-        newValue.includes(node)
-          ? notRemoved.push(node)
-          : node.remove();
-      });
+      // Detach removed nodes from the DOM.
+      loop(element.value, node => !newValue.includes(node) && node.remove());
 
-      // Update elements list.
-      element.value = notRemoved;
-
-      // Append new children (skip existing).
+      // Append new nodes and skip existing.
       loop(newValue, (newNode, index) => {
-        const oldNode = element.value[index];
-        if (oldNode !== newNode) {
-          oldNode === undefined
-            ? element.parent.appendChild(newNode) // Add new node.
-            : oldNode.parentNode.replaceChild(newNode, oldNode); // Replace node.            
-        }
+        newNode !== element.value[index] &&
+          element.parent.appendChild(newNode);
       });
+
     }
   }
   element.value = newValue;
@@ -372,16 +423,14 @@ function isNumberOrString(value) {
   return value !== undefined && (typeof value === "number" || typeof value === "string");
 }
 
+// Verify if given @node is instance of a Text or HTMLElement.
 function isDomNode(node) {
   return node instanceof HTMLElement || node instanceof Text;
 }
 
+// Insert all nodes from the @nodeList into @parent element starting from @pointer element.
 function insertNodeList(nodeList, pointer, parent) {
-  loop(nodeList, entry => {
-    if (isDomNode(entry)) {
-      parent.insertBefore(entry, pointer);
-    }
-  });
+  loop(nodeList, node => isDomNode(node) && parent.insertBefore(node, pointer));
   pointer.remove();
 }
 
