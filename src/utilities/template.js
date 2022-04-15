@@ -1,7 +1,6 @@
 import { loop, nodeListToArray } from "./arrays.js";
 import { placeStrBetween } from "./strings.js";
 
-
 const elements = elementsStore();
 const elementsRefs = new WeakMap();
 
@@ -98,8 +97,14 @@ function createTemplate(markup, inserts) {
   const elementBindings = [];
   const wrapper = document.createElement("div");
 
+  // Cast markup structure to regular array.
+  const markupSource = Array.from(markup);
+
+  // Omit last element since length of "markup" array is always +1 grater that "inserts" array.
+  markupSource.pop();
+
   // Combine HTML markup and add placeholders for external inputs.
-  const componentHtml = markup.reduce((acc, part, index) => {
+  const componentHtml = markupSource.reduce((acc, part, index) => {
     let value = inserts[index];
     let html = acc += part;
     let binding = { value, index };
@@ -134,6 +139,11 @@ function createTemplate(markup, inserts) {
       }
     }
 
+    // Allow for undefined values (treated as empty strings).
+    else if (value === undefined) {
+      value = `<i data-hook="${index}" data-ref="true"></i>`;
+    }
+
     // Detect HTML Elements.
     else if (isDomNode(value)) {
       value = `<i data-hook="${index}" data-hte="true"></i>`;
@@ -149,7 +159,7 @@ function createTemplate(markup, inserts) {
       value = `<i data-hook="${index}" data-ref="true"></i>`;
     }
 
-    // Clamp other types into empty string.
+    // Clamp other types into empty string (aka skip them).
     else {
       value = "";
     }
@@ -169,10 +179,10 @@ function createTemplate(markup, inserts) {
       loop(hook.dataset.hook.split(" "), index => {
         const currentElement = elementBindings[index];
 
-        // Insert TextNode for Strings & Numbers.
+        // Insert TextNode for Strings, Numbers & Undefined.
         if (hook.dataset.ref) {
           currentElement.type = "text";
-          currentElement.ref = document.createTextNode(currentElement.value);
+          currentElement.ref = document.createTextNode(currentElement.value === undefined ? "" : currentElement.value);
           hook.parentNode.replaceChild(currentElement.ref, hook);
         }
 
@@ -341,8 +351,13 @@ function updateReference(element, newValue) {
   // Update TextNode.
   else if (element.type === "text") {
 
+    // Update TextNode to -> Empty String (undefined).
+    if (newValue === undefined) {
+      element.ref.textContent = "";
+    }
+
     // Update TextNode to -> TextNode (Strings || Numbers).
-    if (isNumberOrString(newValue)) {
+    else if (isNumberOrString(newValue)) {
       element.ref.textContent = newValue;
     }
 
@@ -365,8 +380,16 @@ function updateReference(element, newValue) {
   // Update Single DOM Node.
   else if (element.type === "node") {
 
+    // Update Single DOM Node to -> Empty TextNode.
+    if (newValue === undefined) {
+      const textNode = document.createTextNode("");
+      element.type = "text";
+      element.ref = textNode;
+      element.value.parentNode.replaceChild(textNode, element.value);
+    }
+
     // Update Single DOM Node to -> TextNode (Strings || Numbers).
-    if (isNumberOrString(newValue)) {
+    else if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
       element.type = "text";
       element.ref = textNode;
@@ -391,8 +414,18 @@ function updateReference(element, newValue) {
   // Update Nodes List.
   else if (element.type === "list") {
 
+    // Update Array to -> Empty TextNode.
+    if (newValue === undefined) {
+      const textNode = document.createTextNode("");
+      element.type = "text";
+      element.ref = textNode;
+      element.parent.insertBefore(textNode, element.value[0]);
+      loop(element.value, node => node.remove());
+      element.parent = undefined;
+    }
+
     // Update Array of DOM Nodes to -> TextNode (Strings || Numbers).
-    if (isNumberOrString(newValue)) {
+    else if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
       element.type = "text";
       element.ref = textNode;
