@@ -1,8 +1,14 @@
 import { loop, nodeListToArray } from "./arrays.js";
 import { placeStrBetween } from "./strings.js";
 
+
 const elements = elementsStore();
 const elementsRefs = new WeakMap();
+
+// Clean up element (by default) every 5 minutes.
+let terminateElementsIntervel = 300_000;
+let terminateTimre = setInterval(elements.cleanup, terminateElementsIntervel);
+
 
 export function html(oneTimeMarkup, ...oneTimeInserts) {
   const isOneTimeTemplate = oneTimeMarkup !== undefined && Boolean(oneTimeMarkup.raw);
@@ -60,10 +66,20 @@ html.destroy = function (key) {
   }
 }
 
+html.__setTerminateInterval = function (time) {
+  if (!Boolean(time)) {
+    return terminateElementsIntervel;
+  } else {
+    clearInterval(terminateTimre);
+    terminateElementsIntervel = time;
+    terminateTimre = setInterval(elements.cleanup, terminateElementsIntervel);
+  }
+}
 
 export function debugElementsStore() {
   elements.trace();
   console.log("Elements references:", elementsRefs);
+  console.log("Terminate Interval:", html.__setTerminateInterval());
 }
 
 export function derivableState(prevState, newState) {
@@ -242,45 +258,42 @@ function getReferences(element) {
 // Manages elements storage.
 function elementsStore() {
 
-  const hardStore = new Map();
-  const weakStore = new WeakMap();
+  const store = new Map();
 
-  function isHardKey(key) {
+  function allowKey(key) {
     if (key === null || key === undefined)
       throw new Error("Key cannot be null or undefined");
-    return typeof key === "string"
-      || typeof key === "number"
-      || typeof key === "symbol";
+    return key;
   }
 
   function has(key) {
-    return isHardKey(key) ? hardStore.has(key) : weakStore.has(key);
+    return store.has(allowKey(key));
   }
 
   function get(key) {
-    return isHardKey(key) ? hardStore.get(key) : weakStore.get(key);
+    return store.get(allowKey(key));
   }
 
   function set(key, value) {
-    return isHardKey(key) ? hardStore.set(key, value) : weakStore.set(key, value);
+    return store.set(allowKey(key), value);
   }
 
   function remove(key) {
-    return isHardKey(key) ? hardStore.delete(key) : weakStore.delete(key);
+    return store.delete(allowKey(key));
   }
 
   function cleanup() {
-    for (const [key, value] of hardStore) {
-      if (!value.element.parentNode) {
+    for (const [key, value] of store) {
+      // Remove only detached nodes.
+      if (!document.body.contains(value.element)) {
         elementsRefs.delete(value.element);
-        hardStore.delete(key);
+        store.delete(key);
       }
     }
   }
 
   function trace() {
-    console.log("HardStore:\n", hardStore); // String-as-key.
-    console.log("WeakStore:\n", weakStore); // Object-as-key.
+    console.log("store:\n", store);
   }
 
   return Object.freeze({
@@ -399,18 +412,53 @@ function updateReference(element, newValue) {
     // Update Array of DOM Nodes to -> Array of DOM Nodes.
     else if (Array.isArray(newValue)) {
 
-      // Detach removed nodes from the DOM.
+      /*        
+        Implement 4 basic update actions to update DOM tree.
+      
+        - ADD:      when node is the new one.
+        - SKIP:     when node matches old position.
+        - MOVE:     when node position changed.
+        - REVMOE:   when node does not esist.
+      */
+
+      // Remove all nodes that does not exist in newValue array.
       loop(element.value, node => !newValue.includes(node) && node.remove());
 
-      // Append new nodes and skip existing.
+      // Update remaining nodes.
       loop(newValue, (newNode, index) => {
-        newNode !== element.value[index] &&
-          element.parent.appendChild(newNode);
+        const oldIndex = element.value.indexOf(newNode);
+
+        // Add (append new node).
+        if (oldIndex === -1) {
+          addNodeAtIndex(index, newNode, element.parent);
+        }
+
+        // Move (node does not match old position).
+        else if (element.value[index] !== newNode) {
+          addNodeAtIndex(index, newNode, element.parent)
+        }
+
+        // Skip (new node matches its old position).
+        else if (element.value[index] === newNode) {
+          /* Do nothing*/
+        }
+
       });
 
     }
   }
   element.value = newValue;
+}
+
+// Simplify adding nodes ad given index.
+function addNodeAtIndex(index, node, parent) {
+  node !== parent.children[index]
+    ? index === 0
+      ? parent.children.length === 0
+        ? parent.append(node)
+        : parent.children[0].before(node)
+      : parent.children[index - 1].after(node)
+    : null;
 }
 
 // Check if current provessing value in HTML is for attribute.

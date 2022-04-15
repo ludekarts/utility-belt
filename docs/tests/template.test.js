@@ -194,3 +194,11 @@ describe("DOM Templates", () => {
 
 });
 
+
+// window.__debugElementsStore = debugElementsStore;
+// debugElementsStore();
+// html.__setTerminateInterval(5000);
+// setTimeout(() => {
+//   document.body.append(html("X")`<p>HELLO</p>`);
+//   debugElementsStore();
+// }, 6000);
