@@ -33,7 +33,7 @@ export * from "./utilities/delay-events.js";
 // DOM Helpers.
 export * from "./utilities/template.js";
 export * from "./utilities/dom-helpers.js";
-export { default as component } from "./utilities/component.js";
+export * from "./utilities/component.js";
 export { default as importHtml } from "./utilities/import-html.js";
 export { default as memoElement } from "./utilities/memo-element.js";
 export { default as createElement } from "./utilities/create-element.js";

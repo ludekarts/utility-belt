@@ -1,4 +1,4 @@
-import { html, derivableState } from "./template.js";
+import { html } from "./template.js";
 
 export default function component(renderFunction, initState) {
   let api = {};
@@ -34,4 +34,12 @@ export default function component(renderFunction, initState) {
   };
 
   return api;
+}
+
+export function derivableState(prevState, newState) {
+  return newState !== undefined
+    ? typeof newState === "function"
+      ? newState(prevState)
+      : newState
+    : prevState;
 }
