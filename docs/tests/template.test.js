@@ -192,6 +192,16 @@ describe("DOM Templates", () => {
     chai.expect(element).to.not.be.equal(element2);
   });
 
+  it("should move elements to another container", () => {
+    const content = ["A", "B", "C", "D"];
+    const redenrContent = el => html(`el-${el}`)`<span>${el}</span>`;
+    const container = html`<div>${content.map(redenrContent)}</div>`;
+    chai.expect(container.textContent).to.be.equal("ABCD");
+    content.reverse();
+    const container2 = html`<div>${content.map(redenrContent)}</div>`;
+    chai.expect(container2.textContent).to.be.equal("DCBA");
+  });
+
 });
 
 

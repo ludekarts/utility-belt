@@ -18,6 +18,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "microbundle watch -o docs/assets/ubm --no-sourcemap --no-pkg-main -f es",
     "build": "microbundle --no-sourcemap && copy-files-from-to",
+    "debug-build": "microbundle && copy-files-from-to",
     "deploy": "npm run build && gh-pages -d docs"
   },
   "keywords": [

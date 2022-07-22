@@ -1,4 +1,4 @@
-import { loop, nodeListToArray } from "./arrays.js";
+import { loop, reduce, nodeListToArray } from "./arrays.js";
 import { placeStrBetween } from "./strings.js";
 
 const elements = elementsStore();
@@ -13,7 +13,7 @@ export function html(oneTimeMarkup, ...oneTimeInserts) {
   const isOneTimeTemplate = oneTimeMarkup !== undefined && Boolean(oneTimeMarkup.raw);
 
   if (isOneTimeTemplate) {
-    const { element } = createTemplate(oneTimeMarkup, escapeStringsInArray(oneTimeInserts));
+    const { element } = createTemplate(oneTimeMarkup, oneTimeInserts);
     return element;
   }
 
@@ -28,13 +28,13 @@ export function html(oneTimeMarkup, ...oneTimeInserts) {
     // Update elements.
     if (elements.has(key)) {
       const { element, elementBindings } = elements.get(key);
-      updateComponent(elementBindings, escapeStringsInArray(inserts));
+      updateComponent(elementBindings, inserts);
       return element;
     }
 
     // Create new element.
     if (!elements.has(key)) {
-      const { element, elementBindings } = createTemplate(markup, escapeStringsInArray(inserts));
+      const { element, elementBindings } = createTemplate(markup, inserts);
       const refs = getReferences(element);
       elements.set(key, { element, elementBindings });
       refs && elementsRefs.set(element, refs);
@@ -52,6 +52,13 @@ html.refs = function (element) {
   throw new Error("HTML Template Error: refs() helper should be called with an HTMLElement");
 }
 
+// Finds element by it KEY identifier.
+html.find = function (key) {
+  if (!elements.has(key)) return;
+  const { element } = elements.get(key);
+  return element;
+}
+
 // Removes element and all its references.
 // When provided null key then all detached elemnts will be removed.
 html.destroy = function (key) {
@@ -66,7 +73,7 @@ html.destroy = function (key) {
 }
 
 html.__setTerminateInterval = function (time) {
-  if (!Boolean(time)) {
+  if (time === undefined) {
     return terminateElementsIntervel;
   } else {
     clearInterval(terminateTimre);
@@ -76,9 +83,17 @@ html.__setTerminateInterval = function (time) {
 }
 
 export function debugElementsStore() {
-  elements.trace();
-  console.log("Elements references:", elementsRefs);
-  console.log("Terminate Interval:", html.__setTerminateInterval());
+  console.groupCollapsed("Elements registry");
+  console.log(elements.dump());
+  console.groupEnd();
+
+  console.groupCollapsed("Elements references");
+  console.log(elementsRefs);
+  console.groupEnd();
+
+  console.groupCollapsed("Terminate Interval");
+  console.log(html.__setTerminateInterval());
+  console.groupEnd();
 }
 
 export function derivableState(prevState, newState) {
@@ -96,75 +111,76 @@ export function derivableState(prevState, newState) {
 function createTemplate(markup, inserts) {
   const elementBindings = [];
   const wrapper = document.createElement("div");
-
-  // Cast markup structure to regular array.
-  const markupSource = Array.from(markup);
-
-  // Omit last element since length of "markup" array is always +1 grater that "inserts" array.
-  markupSource.pop();
+  const escapedInserts = escapeStringsInArray(inserts);
 
   // Combine HTML markup and add placeholders for external inputs.
-  const componentHtml = markupSource.reduce((acc, part, index) => {
-    let value = inserts[index];
+  const componentHtml = reduce(Array.from(markup), (acc, part, index, isLast) => {
+    let value = escapedInserts[index];
     let html = acc += part;
     let binding = { value, index };
 
-    // Detect attributes.
-    if (isAttribute(html)) {
-      const splitIndex = html.lastIndexOf("<");
-      const head = html.slice(0, splitIndex);
-      const element = html.slice(splitIndex); // Markup of element with current attribute.
+    // Last element of markup array does not generate "binding value" so we do not process it.
+    // We only add the result HTML at the end.
+    if (!isLast) {
 
-      // Update data-hook attribute.
-      if (element.includes("data-hook")) {
-        html = head + element.replace(/data-hook="(.+?)"/, (_, refs) => `data-hook="${refs} ${index}"`);
+      // Detect attributes.
+      if (isAttribute(html)) {
+        const splitIndex = html.lastIndexOf("<");
+        const head = html.slice(0, splitIndex);
+        const element = html.slice(splitIndex); // Markup of element with current attribute.
+
+        // Update data-hook attribute.
+        if (element.includes("data-hook")) {
+          html = head + element.replace(/data-hook="(.+?)"/, (_, refs) => `data-hook="${refs} ${index}"`);
+        }
+
+        // Create new data-hook attribute.
+        else {
+          html = head + placeStrBetween(element, ` data-hook="${index}"`, element.indexOf(" "));
+        }
+
+        // Detect boolean attribute.
+        if (/ \?.+="$/.test(element)) {
+          const sliceIndex = html.lastIndexOf("?");
+          binding.bool = html.slice(sliceIndex + 1, html.lastIndexOf("="));
+          html = html.slice(0, sliceIndex) + html.slice(sliceIndex + 1);
+          value = "";
+        }
+
+        // Process value for non-boolean attributes.
+        else {
+          value = `%#${index}#%`;
+        }
       }
 
-      // Create new data-hook attribute.
+      // Allow for undefined values (treated as empty strings).
+      else if (value === undefined) {
+        value = `<i data-hook="${index}" data-ref="true"></i>`;
+      }
+
+      // Detect HTML Elements.
+      else if (isDomNode(value)) {
+        value = `<i data-hook="${index}" data-hte="true"></i>`;
+      }
+
+      // Detect Array of Nodes.
+      else if (Array.isArray(value)) {
+        value = `<i data-hook="${index}" data-lst="true"></i>`;
+      }
+
+      // Detect Numbers & Strings.
+      else if (isNumberOrString(value)) {
+        value = `<i data-hook="${index}" data-ref="true"></i>`;
+      }
+
+      // Clamp other types into empty string (aka skip them).
       else {
-        html = head + placeStrBetween(element, ` data-hook="${index}"`, element.indexOf(" "));
-      }
-
-      // Detect boolean attribute.
-      if (/ \?.+="$/.test(element)) {
-        const sliceIndex = html.lastIndexOf("?");
-        binding.bool = html.slice(sliceIndex + 1, html.lastIndexOf("="));
-        html = html.slice(0, sliceIndex) + html.slice(sliceIndex + 1);
         value = "";
       }
 
-      // Process value for non-boolean attributes.
-      else {
-        value = `%#${index}#%`;
-      }
-    }
+      elementBindings.push(binding);
 
-    // Allow for undefined values (treated as empty strings).
-    else if (value === undefined) {
-      value = `<i data-hook="${index}" data-ref="true"></i>`;
     }
-
-    // Detect HTML Elements.
-    else if (isDomNode(value)) {
-      value = `<i data-hook="${index}" data-hte="true"></i>`;
-    }
-
-    // Detect Array of Nodes.
-    else if (Array.isArray(value)) {
-      value = `<i data-hook="${index}" data-lst="true"></i>`;
-    }
-
-    // Detect Numbers & Strings.
-    else if (isNumberOrString(value)) {
-      value = `<i data-hook="${index}" data-ref="true"></i>`;
-    }
-
-    // Clamp other types into empty string (aka skip them).
-    else {
-      value = "";
-    }
-
-    elementBindings.push(binding);
 
     return html + (value || "");
   }, "");
@@ -245,7 +261,8 @@ function createTemplate(markup, inserts) {
 
 // Updates values in DOM nodes.
 function updateComponent(elementsBindings, inserts) {
-  loop(inserts, (insert, index) =>
+  const escapedInserts = escapeStringsInArray(inserts);
+  loop(escapedInserts, (insert, index) =>
     insert !== elementsBindings[index].value && updateReference(elementsBindings[index], insert)
   );
 }
@@ -302,15 +319,15 @@ function elementsStore() {
     }
   }
 
-  function trace() {
-    console.log("store:\n", store);
+  function dump() {
+    return store;
   }
 
   return Object.freeze({
     set,
     has,
     get,
-    trace,
+    dump,
     remove,
     cleanup,
   });
@@ -445,9 +462,9 @@ function updateReference(element, newValue) {
     // Update Array of DOM Nodes to -> Array of DOM Nodes.
     else if (Array.isArray(newValue)) {
 
-      /*        
+      /*
         Implement 4 basic update actions to update DOM tree.
-      
+
         - ADD:      when node is the new one.
         - SKIP:     when node matches old position.
         - MOVE:     when node position changed.
