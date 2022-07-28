@@ -75,7 +75,13 @@ html.destroy = function (key) {
 html.__setTerminateInterval = function (time) {
   if (time === undefined) {
     return terminateElementsIntervel;
-  } else {
+  }
+
+  else if (time === 0) {
+    clearInterval(terminateTimre);
+  }
+
+  else {
     clearInterval(terminateTimre);
     terminateElementsIntervel = time;
     terminateTimre = setInterval(elements.cleanup, terminateElementsIntervel);
@@ -102,6 +108,10 @@ function createTemplate(markup, inserts) {
     //   index:         index of inset in template,
     //   type:          type of given entry: [ "text", "node", "list", "attribute" ],
     //   ref:           reference to node holding given value; for attributes node with given attribute; for lists parent node,
+    //   container:     {
+    //     ref:         reference to the parent container,
+    //     index:       index on wchih the dynamic node is rendered,
+    //   },
     //   attribute: {
     //     name:        attribute name,
     //     bool:        flag attribute as boolean: [ true, false ],
@@ -204,27 +214,31 @@ function createTemplate(markup, inserts) {
       if (type === "text") {
         binding.type = "text";
         binding.ref = document.createTextNode(binding.value || "");
-        hook.parentNode.replaceChild(binding.ref, hook);
+        binding.container = createContainer(hook);
+        binding.container.ref.replaceChild(binding.ref, hook);
       }
 
       // HTML Elements.
       else if (type === "node") {
         binding.type = "node";
         binding.ref = binding.value;
-        hook.parentNode.replaceChild(binding.ref, hook);
+        binding.container = createContainer(hook);
+        binding.container.ref.replaceChild(binding.ref, hook);
       }
 
       // NodeList.
       else if (type === "list") {
         binding.type = "list";
         binding.ref = hook.parentNode;
+        binding.container = createContainer(hook);
         insetrNodesBefore(binding.value, hook);
       }
 
       // Attributes.
       else {
-        binding.type = "attribute";
         binding.ref = hook;
+        binding.type = "attribute";
+        binding.container = createContainer(hook);
 
         const isBooleanAtribute = binding.attribute.bool;
         const hasValue = Boolean(binding.value);
@@ -316,16 +330,15 @@ function updateReference(binding, newValue) {
     // TextNode to -> Single DOM Node.
     else if (isDomNode(newValue)) {
       binding.type = "node";
-      binding.ref.parentNode.replaceChild(newValue, binding.ref);
+      binding.container.ref.replaceChild(newValue, binding.ref);
       binding.ref = newValue;
     }
 
     // TextNode to -> Array of DOM Nodes.
     else if (Array.isArray(newValue)) {
-      const root = binding.ref.parentNode;
       insetrNodesBefore(newValue, binding.ref);
       binding.type = "list";
-      binding.ref = root;
+      binding.ref = newValue;
     }
 
   }
@@ -336,7 +349,7 @@ function updateReference(binding, newValue) {
     // Single DOM Node to -> Empty TextNode.
     if (newValue === undefined) {
       const textNode = document.createTextNode("");
-      binding.ref.parentNode.replaceChild(textNode, binding.ref);
+      binding.container.ref.replaceChild(textNode, binding.ref);
       binding.type = "text";
       binding.ref = textNode;
     }
@@ -344,24 +357,23 @@ function updateReference(binding, newValue) {
     // Single DOM Node to -> TextNode (Strings || Numbers).
     else if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
-      binding.ref.parentNode.replaceChild(textNode, binding.ref);
+      binding.container.ref.replaceChild(textNode, binding.ref);
       binding.type = "text";
       binding.ref = textNode;
     }
 
     // Single DOM Node to -> DOM Node.
     else if (isDomNode(newValue)) {
-      binding.ref.parentNode.replaceChild(newValue, binding.ref);
+      binding.container.ref.replaceChild(newValue, binding.ref);
       binding.type = "node";
       binding.ref = newValue;
     }
 
     // Single DOM Node to -> Array of DOM Nodes.
     else if (Array.isArray(newValue)) {
-      const root = binding.ref.parentNode;
       insetrNodesBefore(newValue, binding.ref);
       binding.type = "list";
-      binding.ref = root;
+      binding.ref = newValue;
     }
 
   }
@@ -372,8 +384,8 @@ function updateReference(binding, newValue) {
     // Array of DOM Nodes to -> Empty TextNode.
     if (newValue === undefined) {
       const textNode = document.createTextNode("");
-      binding.ref.insertBefore(textNode, binding.value[0]);
-      loop(binding.value, node => node.remove());
+      insertNodeAtIndex(binding.container.index, textNode, binding.container.ref);
+      removeNodes(binding.value, binding.container.ref);
       binding.type = "text";
       binding.ref = textNode;
     }
@@ -381,24 +393,16 @@ function updateReference(binding, newValue) {
     // Array of DOM Nodes to -> TextNode (Strings || Numbers).
     else if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
-
-      binding.value[0]
-        ? binding.ref.insertBefore(textNode, binding.value[0])
-        : binding.ref.append(newValue);
-
-      loop(binding.value, node => node.remove());
+      insertNodeAtIndex(binding.container.index, textNode, binding.container.ref);
+      removeNodes(binding.value, binding.container.ref);
       binding.type = "text";
       binding.ref = textNode;
     }
 
     // Array of Nodes to -> Single DOM Node.
     else if (isDomNode(newValue)) {
-
-      binding.value[0]
-        ? binding.ref.insertBefore(newValue, binding.value[0])
-        : binding.ref.append(newValue);
-
-      loop(binding.value, node => node.remove());
+      insertNodeAtIndex(binding.container.index, newValue, binding.container.ref);
+      removeNodes(binding.value, binding.container.ref);
       binding.type = "node";
       binding.ref = newValue;
     }
@@ -424,12 +428,12 @@ function updateReference(binding, newValue) {
 
         // Add (append new node).
         if (oldIndex === -1) {
-          addNodeAtIndex(index, newNode, binding.ref);
+          insertNodeAtIndex(index, newNode, binding.container.ref);
         }
 
         // Move (node does not match old position).
         else if (binding.value[index] !== newNode) {
-          addNodeAtIndex(index, newNode, binding.ref);
+          insertNodeAtIndex(index, newNode, binding.container.ref);
         }
 
         // Skip (new node matches its old position).
@@ -445,7 +449,9 @@ function updateReference(binding, newValue) {
 }
 
 
-export function debugElementsStore() {
+export function debugElementsStore(key) {
+  if (key) return elements.get(key);
+
   console.groupCollapsed("Elements registry");
   console.log(elements.dump());
   console.groupEnd();
@@ -542,13 +548,13 @@ function getReferences(element) {
 }
 
 // Simplify adding nodes at given index.
-function addNodeAtIndex(index, node, parent) {
-  node !== parent.children[index]
+function insertNodeAtIndex(index, node, parent) {
+  node !== parent.childNodes[index]
     ? index === 0
-      ? parent.children.length === 0
+      ? parent.childNodes.length === 0
         ? parent.append(node)
-        : parent.children[0].before(node)
-      : parent.children[index - 1].after(node)
+        : parent.childNodes[0].before(node)
+      : parent.childNodes[index - 1].after(node)
     : null;
 }
 
@@ -567,16 +573,31 @@ function isDomNode(node) {
   return node instanceof HTMLElement || node instanceof Text;
 }
 
-// Insert all nodes from the @nodeList into @parent element starting from @pointer element.
-function insertNodeList(nodeList, pointer, parent) {
-  loop(nodeList, node => isDomNode(node) && parent.insertBefore(node, pointer));
-  pointer.remove();
+function createContainer(node) {
+  return {
+    ref: node.parentNode,
+    index: getNdoeIndex(node),
+  };
+}
+
+function getNdoeIndex(node) {
+  let index = 0;
+  while ((node = node.previousSibling) !== null) index++;
+  return index;
 }
 
 function insetrNodesBefore(nodes, pointer) {
-  loop(nodes, node => isDomNode(node) && pointer.before(node))
+  loop(nodes, node => isDomNode(node) && pointer.before(node));
   pointer.remove();
 }
+
+// Remove only direct nodes of the container element.
+// NOTE: This additional check is required forth case where DOM node is reused elsewhere,
+// so we need to avoid removing it from other container.
+function removeNodes(nodes, container) {
+  loop(nodes, node => node.parentNode === container && node.remove());
+}
+
 
 // Remove element wrapper if not needed.
 function stripWrapper(wrapper) {
