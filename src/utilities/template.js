@@ -27,16 +27,16 @@ export function html(oneTimeMarkup, ...oneTimeInserts) {
 
     // Update elements.
     if (elements.has(key)) {
-      const { element, elementBindings } = elements.get(key);
-      updateComponent(elementBindings, inserts);
+      const { element, bindings, attributes } = elements.get(key);
+      updateComponent(bindings, attributes, inserts);
       return element;
     }
 
     // Create new element.
     if (!elements.has(key)) {
-      const { element, elementBindings } = createTemplate(markup, inserts);
+      const { element, bindings, attributes } = createTemplate(markup, inserts);
       const refs = getReferences(element);
-      elements.set(key, { element, elementBindings });
+      elements.set(key, { element, bindings, attributes });
       refs && elementsRefs.set(element, refs);
       return element;
     }
@@ -92,7 +92,9 @@ html.__setTerminateInterval = function (time) {
 
 // Creates HTMLElement and it's data bindings.
 function createTemplate(markup, inserts) {
-  const elementBindings = [];
+  let attributes = {};
+
+  const bindings = [];
   const wrapper = document.createElement("div");
   const escapedInserts = escapeStringsInArray(inserts);
 
@@ -102,11 +104,12 @@ function createTemplate(markup, inserts) {
     let html = acc += part;
     let binding = { value, index };
 
+
     // Binding Object Spec.
     // {
     //   value:         current value of given entry,
     //   index:         index of inset in template,
-    //   type:          type of given entry: [ "text", "node", "list", "attribute" ],
+    //   type:          type of given entry: [ "text", "node", "list", "attribute". "bool:attribute" ],
     //   ref:           reference to node holding given value; for attributes node with given attribute; for lists parent node,
     //   container:     {
     //     ref:         reference to the parent container,
@@ -129,8 +132,7 @@ function createTemplate(markup, inserts) {
       if (isAttribute(html)) {
         const splitIndex = html.lastIndexOf("<");
         const head = html.slice(0, splitIndex);
-        const element = html.slice(splitIndex); // Markup of element with current attribute.
-
+        const element = html.slice(splitIndex); // Markup of the element with current attribute.
 
         // Create new data-hook to keep track of attributes placeholders.
         if (!element.includes("data-hook")) {
@@ -142,24 +144,8 @@ function createTemplate(markup, inserts) {
           html = head + element.replace(/data-hook="(.+?)"/, (_, refs) => `data-hook="${refs} ${index}"`);
         }
 
-        // Detect boolean attributes e.g.: ?disabled="
-        if (/ \?.+="$/.test(element)) {
-          const sliceIndex = html.lastIndexOf("?");
-          binding.attribute = {
-            bool: true,
-            name: html.slice(sliceIndex + 1, html.lastIndexOf("=")),
-          };
-          html = html.slice(0, sliceIndex) + html.slice(sliceIndex + 1);
-          placeholder = "";
-        }
+        placeholder = `%#${index}#%`;
 
-        // Generate placeholder for value in non-boolean attributes.
-        else {
-          placeholder = `%#${index}#%`;
-          binding.attribute = {
-            bool: false,
-          };
-        }
       }
 
       // Allow for undefined values (treat them as an empty strings).
@@ -187,7 +173,7 @@ function createTemplate(markup, inserts) {
         placeholder = "";
       }
 
-      elementBindings.push(binding);
+      bindings.push(binding);
       return html + placeholder;
 
     }
@@ -196,6 +182,7 @@ function createTemplate(markup, inserts) {
 
   }, "");
 
+
   // Parese HTML template into DOM elements.
   wrapper.insertAdjacentHTML("beforeend", componentHtml);
 
@@ -203,12 +190,53 @@ function createTemplate(markup, inserts) {
   const dataHooks = nodeListToArray(wrapper.querySelectorAll("[data-hook]"));
 
   loop(dataHooks, hook => {
+    const { type } = hook.dataset;
 
-    const bindingIndexes = hook.dataset.hook.split(" ");
-    loop(bindingIndexes, index => {
+    // Attributes.
+    if (type === undefined) {
 
-      const binding = elementBindings[index];
-      const { type } = hook.dataset;
+      const localAttributes = getAllAttributes(hook);
+
+      // Set Boolean attributes.
+
+      Object.keys(localAttributes).forEach(index => {
+        const { value } = bindings[index];
+        const attribute = localAttributes[index];
+
+        bindings[index].ref = hook;
+        bindings[index].container = createContainer(hook);
+
+        // Handle boolean attributes.
+        if (attribute.bool) {
+          bindings[index].type = "bool:attribute";
+
+          hook.removeAttribute(`?${attribute.name}`);
+
+          value
+            ? hook.setAttribute(attribute.name, attribute.name)
+            : hook.removeAttribute(attribute.name);
+        }
+
+        // Handle non-boolean attributes.
+        else if (isNumberOrString(value)) {
+          bindings[index].type = "attribute";
+          updateAttributesTempate(hook, attribute, bindings);
+        }
+
+        else {
+          throw new Error(`Only String and Numbers can be passedt to the attributes, got: "${typeof value}" at "${index}" value.`);
+        }
+
+      });
+
+      // Store local attributes.
+      attributes = { ...attributes, ...localAttributes };
+    }
+
+    // Nodes.
+    else {
+
+      const binding = bindings[Number(hook.dataset.hook)];
 
       // Insert TextNode for Strings, Numbers & Undefined.
       if (type === "text") {
@@ -233,40 +261,10 @@ function createTemplate(markup, inserts) {
         binding.container = createContainer(hook);
         insetrNodesBefore(binding.value, hook);
       }
+    }
 
-      // Attributes.
-      else {
-        binding.ref = hook;
-        binding.type = "attribute";
-        binding.container = createContainer(hook);
+    hook.removeAttribute("data-hook");
 
-        const isBooleanAtribute = binding.attribute.bool;
-        const hasValue = Boolean(binding.value);
-
-        // Handle boolean attributes.
-        if (isBooleanAtribute) {
-          hasValue
-            ? hook.setAttribute(binding.attribute.name, binding.attribute.name)
-            : hook.removeAttribute(binding.attribute.name);
-        }
-
-        // Handle non-boolean attributes.
-        else if (isNumberOrString(binding.value)) {
-          const { name, template } = getAttribute(index, hook);
-
-          binding.attribute.name = name;
-          binding.attribute.template = template;
-
-          hook.setAttribute(name, template.replace(new RegExp(`%#${index}#%`), binding.value));
-        }
-
-        else {
-          throw new Error(`Only String and Numbers can be passedt to the attributes, got: "${typeof binding.value}" at "${index}" value.`);
-        }
-
-      }
-      hook.removeAttribute("data-hook");
-    });
   });
 
   // // Strip wrapper node if not needed.
@@ -274,39 +272,42 @@ function createTemplate(markup, inserts) {
 
   return {
     element,
-    elementBindings,
+    bindings,
+    attributes,
   };
 }
 
 // Updates values in DOM nodes.
-function updateComponent(elementsBindings, inserts) {
+function updateComponent(bindings, attributes, inserts) {
   const escapedInserts = escapeStringsInArray(inserts);
-  loop(escapedInserts, updateChangedValues(elementsBindings));
+  loop(escapedInserts, updateChangedValues(bindings, attributes));
 }
 
 // Updates values of an element and it's references.
-function updateReference(binding, newValue) {
+function updateReference(index, bindings, attributes, newValue) {
+
+  const binding = bindings[index];
+
   if (!binding) return;
 
-  // Update attribute.
-  if (binding.type === "attribute") {
+  // Update Boolean Attributes.
+  if (binding.type === "bool:attribute") {
+    const attribute = attributes[binding.index];
 
-    const isBooleanAtribute = binding.attribute.bool;
-    const hasValue = Boolean(binding.value);
+    binding.value
+      ? binding.ref.setAttribute(attribute.name, attribute.name)
+      : binding.ref.removeAttribute(attribute.name);
 
-    // Update boolean attributes.
-    if (isBooleanAtribute) {
-      hasValue
-        ? binding.ref.setAttribute(binding.attribute.name, binding.attribute.name)
-        : binding.ref.removeAttribute(binding.attribute);
-    }
+  }
 
-    // Update attributes of Numbers and Strings.
-    else if (isNumberOrString(newValue)) {
-      binding.ref.setAttribute(
-        binding.attribute.name,
-        binding.attribute.template.replace(new RegExp(`%#${binding.index}#%`), newValue)
-      );
+  // Update Attributes.
+  else if (binding.type === "attribute") {
+
+    if (isNumberOrString(newValue)) {
+      // Update value in bindings early on so it can be use in updateAttributesTempate() fn on the next line.
+      // This simplifies logic of updateAttributesTempate().
+      binding.value = newValue;
+      updateAttributesTempate(binding.ref, attributes[binding.index], bindings);
     }
 
     else {
@@ -523,9 +524,9 @@ function elementsStore() {
 
 // ---- Helpers ----------------
 
-function updateChangedValues(elementsBindings) {
-  return (insert, index) => insert !== elementsBindings[index].value
-    && updateReference(elementsBindings[index], insert);
+function updateChangedValues(bindings, attibutes) {
+  return (insert, index) => insert !== bindings[index].value
+    && updateReference(index, bindings, attibutes, insert);
 }
 
 // Pull out and cleanup "ref" hooks.
@@ -556,6 +557,10 @@ function insertNodeAtIndex(index, node, parent) {
         : parent.childNodes[0].before(node)
       : parent.childNodes[index - 1].after(node)
     : null;
+}
+
+function updateAttributesTempate(node, attribute, bindings) {
+  node.setAttribute(attribute.name, attribute.template.replace(/%#(\d+)#%/g, (_, index) => bindings[Number(index)].value));
 }
 
 // Check if current provessing value in HTML is for attribute.
@@ -606,15 +611,34 @@ function stripWrapper(wrapper) {
     : wrapper;
 }
 
-// Pull out attribute's template and name for given index.
-function getAttribute(index, node) {
-  const attribute = Array.prototype.slice.call(node.attributes).find(
-    attr => new RegExp(`%#${index}#%`).test(attr.value)
-  );
-  return {
-    name: attribute.name,
-    template: attribute.value,
-  };
+// Pull out all attribute's of given @node that contains template in their value and map them onto index-object.
+// Each key in index-object represents the "binding.index" to be matched during renders and updates.
+function getAllAttributes(node) {
+  return Array.prototype.slice.call(node.attributes).reduce((acc, attr) => {
+
+    if (new RegExp("%#\\d+#%", "g").test(attr.value)) {
+
+      // match[1] is refere to the first capturing group of the RegExp.
+      const foundIndexes = Array.from(attr.value.matchAll(new RegExp("%#(\\d+)#%", "g"))).map(match => match[1]);
+
+      const attributeBindind = {
+        name: attr.name,
+        template: attr.value,
+      };
+
+      // Mark boolean attributes.
+      if (attributeBindind.name.indexOf("?") === 0) {
+        attributeBindind.name = attributeBindind.name.slice(1);
+        attributeBindind.bool = true;
+      }
+
+      for (const index of foundIndexes) {
+        acc[index] = attributeBindind;
+      }
+    }
+
+    return acc;
+  }, {});
 }
 
 function escapeStringsInArray(array) {

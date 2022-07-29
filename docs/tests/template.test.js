@@ -202,23 +202,28 @@ describe("DOM Templates", () => {
     chai.expect(container2.textContent).to.be.equal("DCBA");
   });
 
-  it("should render array of elements into template", () => {
-    const content = ["X", "Y", "Z"];
-    const container = document.createElement("div");
-    const container2 = document.createElement("div");
-    const redenrSpan = el => html(`el-${el}`)`<span>${el}</span>`;
-    const renderContainer = content => html("#12")`<div>${content.map(redenrSpan)}</div>`;
-    const element = renderContainer(content);
-    container.append(element);
-    chai.expect(container.textContent).to.be.equal("XYZ");
-    element.remove();
-    const element2 = renderContainer(content);
-    container2.append(element2);
-    chai.expect(container2.textContent).to.be.equal("XYZ");
+  it("should update multple attribute entries", () => {
+    const container = html("#11")`<div data-action="${"add"}" class="one ${"two"} three ${"four"}">Hello</div>`;
+    chai.expect(container.className).to.be.equal("one two three four");
+    chai.expect(container.dataset.action).to.be.equal("add");
 
-    // console.log(html("abc")`<div><span class="hello ${"world"} and ${"bye"}" data-uid="${"83i48!2s#"}" ?disabled="${true}">${123}</span></div>`);
-
+    html("#11")`<div data-action="${"remove"}" class="one ${"change"} three ${"four"}">Hello</div>`;
+    chai.expect(container.className).to.be.equal("one change three four");
+    chai.expect(container.dataset.action).to.be.equal("remove");
   });
+
+  // it("should debug", () => {
+
+  //   const container = html("debug")`
+  //     <div>
+  //       <h1>${"hello"}</h1>
+  //       <div class="show ${"me"} ${"the"} money ${"🤯"}" data-action="${"go"}" ?active="${true}">${"this is content"}</div>
+  //       <footer class="${"super"}">${"👣"}</footer>
+  //     </div>
+  //   `
+  //   console.log(container.outerHTML);
+
+  // });
 
 });
 
