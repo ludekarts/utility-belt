@@ -47,3 +47,6 @@ export * from "./utilities/hashing.js";
 
 // Strings.
 export * from "./utilities/strings.js";
+
+// Mini RDX.
+export * from "./utilities/minirdx.js";
