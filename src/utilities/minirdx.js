@@ -1,3 +1,5 @@
+import PubSub from "./pubsub.js";
+
 // Inspired by Redux, a mini library for managing global state.
 // by @ludekarts 02.2022
 
@@ -99,9 +101,10 @@ export function createStore(reducer) {
   let state;
   let listeners = [];
   let reducers = [reducer];
+  let actionListeners = PubSub();
 
   if (!reducer) {
-    throw new Error("MinirdxError: Main reducer is required to create a store");
+    throw new Error("MiniRDXError: The Main Reducer is required to create a store");
   }
 
   // Provides a way to get current state value out of sibscribe callback.
@@ -112,7 +115,7 @@ export function createStore(reducer) {
   // Subscribes @callback to state chabges and returns teardown/unsubscribe fn.
   function subscribe(callback) {
     !listeners.includes(callback) && listeners.push(callback);
-    return () => {
+    return function unsubscribe() {
       listeners = listeners.filter(l => l !== callback);
     }
   }
@@ -122,6 +125,8 @@ export function createStore(reducer) {
 
     const action = isActionObject(actionType) ? actionType : { type: actionType, payload };
 
+    actionListeners.dispatch(action.type, state);
+
     state = reducers.reduce((newState, reducer) => {
       if (typeof reducer.setter === "function") {
         reducer.setter(newState, reducer(newState, action));
@@ -130,8 +135,10 @@ export function createStore(reducer) {
       return reducer(newState, action);
     }, state);
 
-    action.type && // Prevents from state updates when "setupAction" is dispatched.
-      listeners.forEach(listener => listener(state));
+    actionListeners.dispatch(`${action.type}::afterupdate`, state);
+
+    // Prevents from state updates when internal actions are dispatched.
+    isExternalAction(action) && listeners.forEach(listener => listener(state));
   }
 
 
@@ -278,10 +285,18 @@ export function createStore(reducer) {
   }
 
 
+  // Tap to dispatch call and action
+  function on(actionName, callback) {
+    actionListeners.on(actionName, callback);
+    return function destroy() {
+      actionListeners.off(actionName, callback);
+    }
+  }
+
   // setupAction -> initialize reducers.
   dispatch("initialize:true");
 
-  return { getState, subscribe, dispatch, defineReducer };
+  return { getState, subscribe, dispatch, defineReducer, on };
 }
 
 
@@ -289,6 +304,10 @@ export function createStore(reducer) {
 
 function isActionObject(object) {
   return typeof object === "object" && object.hasOwnProperty("type") && object.hasOwnProperty("payload");
+}
+
+function isExternalAction(action) {
+  return action.type !== "initialize:true" && action.type !== "defineReducer:true";
 }
 
 

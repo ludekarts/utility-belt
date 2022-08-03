@@ -87,7 +87,7 @@ describe("Mini RDX", () => {
   });
 
 
-  it("Store:: Should add define more reducer", () => {
+  it("Store:: Should define new reducer", () => {
     const initState = { hello: "world" };
     const mainReducer = createReducer(initState).done();
     const store = createStore(mainReducer);
@@ -129,10 +129,101 @@ describe("Mini RDX", () => {
   });
 
 
-  it("Action tests:: Should create new action with proper format", () => {
+  it("Store:: Should dipatch action withouth actionCreator", () => {
+    const initState = { text: "World" };
+    const mainReducer = createReducer(initState)
+      .on("greet", state => {
+        state.text = "Hello" + state.text;
+        return { ...state };
+      })
+      .done();
+
+    const store = createStore(mainReducer);
+    store.dispatch("greet");
+    chai.expect(store.getState()).to.have.property("text", "HelloWorld");
+  })
+
+
+  it("Action creator:: Should create new action with proper format", () => {
     const updateAction = action("update", "newValue");
     chai.expect(updateAction).to.have.property("type", "update");
     chai.expect(updateAction).to.have.property("payload", "newValue");
   });
+
+
+  it("Action listener:: Should detect 'hello' action being dispatched", () => {
+    const mainReducer = createReducer({}).done();
+    const store = createStore(mainReducer);
+    const spy = chai.spy();
+
+    store.on("hello", spy);
+
+    store.dispatch("fake.action");
+    chai.expect(spy).to.not.have.been.called();
+
+    store.dispatch("hello");
+    chai.expect(spy).to.have.been.called();
+  });
+
+
+  it("Action listener:: Should fire many callback attached to single action", () => {
+    const mainReducer = createReducer({}).done();
+    const store = createStore(mainReducer);
+    const spy1 = chai.spy();
+    const spy2 = chai.spy();
+
+    store.on("hello", spy1);
+    store.on("hello", spy2);
+
+    store.dispatch("hello");
+
+    chai.expect(spy1).to.have.been.called();
+    chai.expect(spy2).to.have.been.called();
+  });
+
+  it("Action listener:: Should destroy action handler", () => {
+    const mainReducer = createReducer({}).done();
+    const store = createStore(mainReducer);
+    const spy = chai.spy();
+    const destory = store.on("hello", spy);
+
+    store.dispatch("fake.action");
+    chai.expect(spy).to.not.been.called();
+
+    destory();
+
+    store.dispatch("hello");
+    chai.expect(spy).to.have.not.been.called();
+  });
+
+
+  it("Action listener:: Should pass to action handler current state value", () => {
+    const mainReducer = createReducer("one")
+      .on("change", () => "two")
+      .done();
+    const store = createStore(mainReducer);
+    const spy = chai.spy();
+
+    store.on("change", spy);
+    chai.expect(store.getState()).to.equal("one");
+
+    store.dispatch("change");
+    chai.expect(spy).to.have.been.called.with("one", "change");
+  });
+
+  it("Action listener:: Should handle '::afterupdate' action with new state value", () => {
+    const mainReducer = createReducer("one")
+      .on("change", () => "two")
+      .done();
+    const store = createStore(mainReducer);
+    const spy = chai.spy();
+
+    store.on("change::afterupdate", spy);
+    chai.expect(store.getState()).to.equal("one");
+
+    store.dispatch("change");
+    chai.expect(spy).to.have.been.called.with("two", "change::afterupdate");
+  });
+
 
 });

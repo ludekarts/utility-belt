@@ -1,7 +1,6 @@
-export default function PubSub(config) {
+export default function PubSub(config = {}) {
   const namespaces = new Map();
-  const debugMode = config && config.debug === true;
-  const logger = typeof config.logger === "function" ? config.logger : undefined;
+  const { debug = false, logger } = config
 
   // Default namespace.
   namespaces.set("/", new Map());
@@ -23,7 +22,7 @@ export default function PubSub(config) {
 
       currentNamespace.get(event).push(observer);
 
-      if (debugMode && logger) {
+      if (debug && logger) {
         logger(`A new subscription "${event}" was added to namespace "${namespace}".`);
       }
 
@@ -62,16 +61,21 @@ export default function PubSub(config) {
       if (namespaces.has(namespace)) {
         const currentNamespace = namespaces.get(namespace);
         if (currentNamespace.has(event)) {
+
           const observersList = currentNamespace.get(event);
           const length = observersList.length;
+
           for (let i = 0; i < length; i++) {
             observersList[i](message, event);
           }
 
-          if (debugMode && logger) {
+          if (debug && logger) {
             logger("published", { namespace, event, message, observersList });
           }
-        } else if (debugMode) {
+
+        }
+
+        else if (debug) {
           console.warn(`Event "${event}" does not exist in "${namespace}" namespace.`);
         }
       }
@@ -80,7 +84,7 @@ export default function PubSub(config) {
     },
 
     getNamespace(namespace, purge = false) {
-      if (!debugMode) return;
+      if (!debug) return;
       if (purge) {
         namespace !== "/" && // This condition need to be here to not exit purge IF in case of "/".
           namespaces.delete(namespace);
