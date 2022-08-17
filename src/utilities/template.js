@@ -134,14 +134,14 @@ function createTemplate(markup, inserts) {
         const head = html.slice(0, splitIndex);
         const element = html.slice(splitIndex); // Markup of the element with current attribute.
 
-        // Create new data-hook to keep track of attributes placeholders.
-        if (!element.includes("data-hook")) {
-          html = head + placeStrBetween(element, ` data-hook="${index}"`, element.indexOf(" "));
+        // Create new data-hk to keep track of attributes placeholders.
+        if (!element.includes("data-hk")) {
+          html = head + placeStrBetween(element, ` data-hk="${index}"`, element.indexOf(" "));
         }
 
-        // Update data-hook attribute (multiple attributes in one element).
+        // Update data-hk attribute (multiple attributes in one element).
         else {
-          html = head + element.replace(/data-hook="(.+?)"/, (_, refs) => `data-hook="${refs} ${index}"`);
+          html = head + element.replace(/data-hk="(.+?)"/, (_, refs) => `data-hk="${refs} ${index}"`);
         }
 
         placeholder = `%#${index}#%`;
@@ -150,22 +150,22 @@ function createTemplate(markup, inserts) {
 
       // Allow for undefined values (treat them as an empty strings).
       else if (value === undefined) {
-        placeholder = `<i data-hook="${index}" data-type="text"></i>`;
+        placeholder = `<i data-hk="${index}" data-typ3="text"></i>`;
       }
 
       // Detect Numbers & Strings.
       else if (isNumberOrString(value)) {
-        placeholder = `<i data-hook="${index}" data-type="text"></i>`;
+        placeholder = `<i data-hk="${index}" data-typ3="text"></i>`;
       }
 
       // Detect HTML Elements.
       else if (isDomNode(value)) {
-        placeholder = `<i data-hook="${index}" data-type="node"></i>`;
+        placeholder = `<i data-hk="${index}" data-typ3="node"></i>`;
       }
 
       // Detect Array of Nodes.
       else if (Array.isArray(value)) {
-        placeholder = `<i data-hook="${index}" data-type="list"></i>`;
+        placeholder = `<i data-hk="${index}" data-typ3="list"></i>`;
       }
 
       // Clamp other types into empty string (just skip them).
@@ -186,11 +186,12 @@ function createTemplate(markup, inserts) {
   // Parese HTML template into DOM elements.
   wrapper.insertAdjacentHTML("beforeend", componentHtml);
 
-  // Map data-hook elements and attributes into their external inputs + complete bindings configuration.
-  const dataHooks = nodeListToArray(wrapper.querySelectorAll("[data-hook]"));
+  // Map data-hk elements and attributes into their external inputs + complete bindings configuration.
+  const dataHooks = nodeListToArray(wrapper.querySelectorAll("[data-hk]"));
 
   loop(dataHooks, hook => {
-    const { type } = hook.dataset;
+    const type = hook.dataset.typ3;
+
 
     // Attributes.
     if (type === undefined) {
@@ -236,7 +237,7 @@ function createTemplate(markup, inserts) {
     // Nodes.
     else {
 
-      const binding = bindings[Number(hook.dataset.hook)];
+      const binding = bindings[Number(hook.dataset.hk)];
 
       // Insert TextNode for Strings, Numbers & Undefined.
       if (type === "text") {
@@ -263,7 +264,7 @@ function createTemplate(markup, inserts) {
       }
     }
 
-    hook.removeAttribute("data-hook");
+    hook.removeAttribute("data-hk");
 
   });
 
@@ -427,14 +428,17 @@ function updateReference(index, bindings, attributes, newValue) {
       loop(newValue, (newNode, index) => {
         const oldIndex = binding.value.indexOf(newNode);
 
-        // Add (append new node).
+        // Offset index value with container.index in case list is not only item in the element.
+        const insertIndex = binding.container.index + index;
+
+        // Add (node does not exist -> append new node).
         if (oldIndex === -1) {
-          insertNodeAtIndex(index, newNode, binding.container.ref);
+          insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
         }
 
         // Move (node does not match old position).
         else if (binding.value[index] !== newNode) {
-          insertNodeAtIndex(index, newNode, binding.container.ref);
+          insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
         }
 
         // Skip (new node matches its old position).
@@ -581,11 +585,11 @@ function isDomNode(node) {
 function createContainer(node) {
   return {
     ref: node.parentNode,
-    index: getNdoeIndex(node),
+    index: getNodeIndex(node),
   };
 }
 
-function getNdoeIndex(node) {
+function getNodeIndex(node) {
   let index = 0;
   while ((node = node.previousSibling) !== null) index++;
   return index;

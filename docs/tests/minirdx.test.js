@@ -129,6 +129,19 @@ describe("Mini RDX", () => {
   });
 
 
+  it("Store:: Should subscribe to Store updates", () => {
+    const mainReducer = createReducer({})
+      .on("update", () => ({}))
+      .done();
+
+    const store = createStore(mainReducer);
+    const spy = chai.spy();
+    store.subscribe(spy);
+    store.dispatch("update");
+    store.dispatch("update");
+    chai.expect(spy).to.have.been.called(2);
+  });
+
   it("Store:: Should dipatch action withouth actionCreator", () => {
     const initState = { text: "World" };
     const mainReducer = createReducer(initState)
@@ -141,7 +154,45 @@ describe("Mini RDX", () => {
     const store = createStore(mainReducer);
     store.dispatch("greet");
     chai.expect(store.getState()).to.have.property("text", "HelloWorld");
-  })
+  });
+
+  it("Store:: Should dipatch multiple actions as one batch", () => {
+    const initState = { counter: 0, title: "none" };
+    const mainReducer = createReducer(initState)
+      .on("add", state => {
+        state.counter++;
+        return { ...state };
+      })
+      .on("subtract", state => {
+        state.counter--;
+        return { ...state };
+      })
+      .on("rename", (state, action) => {
+        state.title = action.payload;
+        return { ...state };
+      })
+      .done();
+
+    const store = createStore(mainReducer);
+    const spyActionListeners = chai.spy();
+    const spyStoreListener = chai.spy();
+
+    store.on("add", spyActionListeners);
+    store.subscribe(spyStoreListener);
+
+    store.dispatch.batch(
+      ["add"],
+      ["add"],
+      ["subtract"],
+      ["rename", "batch"]
+    );
+
+    chai.expect(spyActionListeners).to.have.been.called(2);
+    chai.expect(spyStoreListener).to.have.been.called.once;
+    chai.expect(store.getState()).to.have.property("counter", 1);
+    chai.expect(store.getState()).to.have.property("title", "batch");
+
+  });
 
 
   it("Action creator:: Should create new action with proper format", () => {
@@ -224,6 +275,7 @@ describe("Mini RDX", () => {
     store.dispatch("change");
     chai.expect(spy).to.have.been.called.with("two", "change::afterupdate");
   });
+
 
 
 });

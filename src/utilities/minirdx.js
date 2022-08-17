@@ -120,27 +120,49 @@ export function createStore(reducer) {
     }
   }
 
+
+
   // Base on given @action triggers all reducers to perform state update, then notifies all listeners with new state.
   function dispatch(actionType, payload) {
 
     const action = isActionObject(actionType) ? actionType : { type: actionType, payload };
-
-    actionListeners.dispatch(action.type, state);
-
-    state = reducers.reduce((newState, reducer) => {
-      if (typeof reducer.setter === "function") {
-        reducer.setter(newState, reducer(newState, action));
-        return newState;
-      }
-      return reducer(newState, action);
-    }, state);
-
-    actionListeners.dispatch(`${action.type}::afterupdate`, state);
+    state = dispatchCore(action, state);
 
     // Prevents from state updates when internal actions are dispatched.
     isExternalAction(action) && listeners.forEach(listener => listener(state));
   }
 
+
+  // Dispatches multiple actions in given order, hoewer only last action triggers Store update.
+  dispatch.batch = function batchDispatch(...args) {
+
+    state = args.reduce((newState, [actionType, payload]) => {
+      const action = isActionObject(actionType) ? actionType : { type: actionType, payload };
+      return dispatchCore(action, newState);
+    }, state);
+
+    // Prevents from state updates when internal actions are dispatched.
+    listeners.forEach(listener => listener(state));
+  }
+
+
+  // Core dispatch functionality.
+  function dispatchCore(action, oldState) {
+    actionListeners.dispatch(action.type, oldState);
+
+    const finalState = reducers.reduce((newState, reducer) => {
+      // Handles defineReducer logic.
+      if (typeof reducer.setter === "function") {
+        reducer.setter(newState, reducer(newState, action));
+        return newState;
+      }
+      return reducer(newState, action);
+    }, oldState);
+
+    actionListeners.dispatch(`${action.type}::afterupdate`, finalState);
+
+    return finalState;
+  }
 
 
   /*
