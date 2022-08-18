@@ -219,13 +219,13 @@ function createTemplate(markup, inserts) {
         }
 
         // Handle non-boolean attributes.
-        else if (isNumberOrString(value)) {
+        else if (value === undefined || isNumberOrString(value)) {
           bindings[index].type = "attribute";
           updateAttributesTempate(hook, attribute, bindings);
         }
 
         else {
-          throw new Error(`Only String and Numbers can be passedt to the attributes, got: "${typeof value}" at "${index}" value.`);
+          throw new Error(`Only String, Numbers or Undefined can be passed as attributes. Got: "${typeof value}" at "${index}" value.`);
         }
 
       });
@@ -304,7 +304,7 @@ function updateReference(index, bindings, attributes, newValue) {
   // Update Attributes.
   else if (binding.type === "attribute") {
 
-    if (isNumberOrString(newValue)) {
+    if (newValue === undefined || isNumberOrString(newValue)) {
       // Update value in bindings early on so it can be use in updateAttributesTempate() fn on the next line.
       // This simplifies logic of updateAttributesTempate().
       binding.value = newValue;
@@ -312,7 +312,7 @@ function updateReference(index, bindings, attributes, newValue) {
     }
 
     else {
-      throw new Error(`Only String and Numbers can be passed to the attributes, got: "${typeof newValue}" at value of index: "${binding.index}".`);
+      throw new Error(`Only String, Numbers or Undefined can be passed as attributes. Got: "${typeof newValue}" at value of index: "${binding.index}".`);
     }
   }
 
@@ -564,7 +564,7 @@ function insertNodeAtIndex(index, node, parent) {
 }
 
 function updateAttributesTempate(node, attribute, bindings) {
-  node.setAttribute(attribute.name, attribute.template.replace(/%#(\d+)#%/g, (_, index) => bindings[Number(index)].value));
+  node.setAttribute(attribute.name, attribute.template.replace(/%#(\d+)#%/g, (_, index) => bindings[Number(index)].value ?? ""));
 }
 
 // Check if current provessing value in HTML is for attribute.

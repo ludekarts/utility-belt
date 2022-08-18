@@ -180,10 +180,12 @@ describe("DOM Templates", () => {
     chai.expect(element.getAttribute("data-index")).to.be.equal("0");
   });
 
+
   it("should not allow for non-sting and non-number attributes", () => {
     const t = () => html`<input type="text" value="${document.createTextNode("hello")}">`;
     chai.expect(t).to.throw();
   });
+
 
   it("should destroy element", () => {
     const element = html("#10")`<span>Hello</span>`;
@@ -210,6 +212,20 @@ describe("DOM Templates", () => {
     html("#11")`<div data-action="${"remove"}" class="one ${"change"} three ${"four"}">Hello</div>`;
     chai.expect(container.className).to.be.equal("one change three four");
     chai.expect(container.dataset.action).to.be.equal("remove");
+  });
+
+  it("should allow undefined attributes", () => {
+    const render = type => html("#12")`<input type="${type}" value="${10}">`;
+    const element = render("text");
+
+    chai.expect(element.getAttribute("value")).to.be.equal("10");
+    chai.expect(element.getAttribute("type")).to.be.equal("text");
+
+    render(undefined);
+    chai.expect(element.getAttribute("type")).to.be.equal("");
+
+    render("number");
+    chai.expect(element.getAttribute("type")).to.be.equal("number");
   });
 
   // it("should debug", () => {
