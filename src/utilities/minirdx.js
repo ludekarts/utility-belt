@@ -133,7 +133,7 @@ export function createStore(reducer) {
   }
 
 
-  // Dispatches multiple actions in given order, hoewer only last action triggers Store update.
+  // Dispatches multiple actions in given order, however only last action triggers Store update.
   dispatch.batch = function batchDispatch(...args) {
 
     state = args.reduce((newState, [actionType, payload]) => {

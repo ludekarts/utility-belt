@@ -219,13 +219,13 @@ function createTemplate(markup, inserts) {
         }
 
         // Handle non-boolean attributes.
-        else if (value === undefined || isNumberOrString(value)) {
+        else if (isValidAttributeValue(value)) {
           bindings[index].type = "attribute";
           updateAttributesTempate(hook, attribute, bindings);
         }
 
         else {
-          throw new Error(`Only String, Numbers or Undefined can be passed as attributes. Got: "${typeof value}" at "${index}" value.`);
+          throw new Error(`Only String, Numbers, Undefined or False can be passed as attributes. Got: "${typeof value}" at "${index}" value.`);
         }
 
       });
@@ -304,7 +304,7 @@ function updateReference(index, bindings, attributes, newValue) {
   // Update Attributes.
   else if (binding.type === "attribute") {
 
-    if (newValue === undefined || isNumberOrString(newValue)) {
+    if (isValidAttributeValue(newValue)) {
       // Update value in bindings early on so it can be use in updateAttributesTempate() fn on the next line.
       // This simplifies logic of updateAttributesTempate().
       binding.value = newValue;
@@ -312,7 +312,7 @@ function updateReference(index, bindings, attributes, newValue) {
     }
 
     else {
-      throw new Error(`Only String, Numbers or Undefined can be passed as attributes. Got: "${typeof newValue}" at value of index: "${binding.index}".`);
+      throw new Error(`Only String, Numbers, Undefined or False can be passed as attributes. Got: "${typeof newValue}" at value of index: "${binding.index}".`);
     }
   }
 
@@ -564,12 +564,28 @@ function insertNodeAtIndex(index, node, parent) {
 }
 
 function updateAttributesTempate(node, attribute, bindings) {
-  node.setAttribute(attribute.name, attribute.template.replace(/%#(\d+)#%/g, (_, index) => bindings[Number(index)].value ?? ""));
+  const attributeValue = attribute.template.replace(/%#(\d+)#%/g, (_, index) => {
+    const { value } = bindings[Number(index)];
+    return (value === undefined || value === false) ? "" : value;
+  });
+
+  // Inputs and textareas does not re-reder by "setAttribute" after user types content.
+  if (attribute.name === "value") {
+    node.value = attributeValue;
+  } else {
+    node.setAttribute(attribute.name, attributeValue);
+  }
+
 }
 
 // Check if current provessing value in HTML is for attribute.
 function isAttribute(html) {
   return html.lastIndexOf("<") > html.lastIndexOf(">");
+}
+
+// Verify if value is valid for attribute.
+function isValidAttributeValue(value) {
+  return value === undefined || value === false || typeof value === "number" || typeof value === "string";
 }
 
 // Allow Strings and Numbers.
