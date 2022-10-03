@@ -1,11 +1,11 @@
 // Create DOM elements from CSS-like syntax.
-export default function createElement (phrase, content) {
+export default function createElement(phrase, content) {
 
   // Filter attributes.
   let attrs = phrase.match(/[\w-:]+=".+?"/g);
 
   if (attrs) {
-    attrs = attrs.map(match => splitStringAt(match.replace(/"/g,""), match.indexOf("=")));
+    attrs = attrs.map(match => splitStringAt(match.replace(/"/g, ""), match.indexOf("=")));
   }
 
   // Filter id, type & classes.
@@ -32,7 +32,7 @@ export default function createElement (phrase, content) {
   // Append content.
   if (content) {
     if (typeof content === "string") {
-      element.innerHTML = content ;
+      element.innerHTML = content;
     }
     else if (content instanceof HTMLElement) {
       element.appendChild(content);

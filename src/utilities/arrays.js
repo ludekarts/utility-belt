@@ -103,3 +103,37 @@ export function sortByPhraseIndex(array, phrase, selector = x => x) {
     return ia - ib;
   });
 }
+
+
+export function removeByIndex(array, index) {
+  const clone = [...array];
+  clone.splice(index, 1);
+  return clone;
+}
+
+export function removeByInstance(array, instance) {
+  const index = array.indexOf(instance);
+  if (index === -1) return array;
+  const clone = [...array];
+  clone.splice(index, 1);
+  return clone;
+}
+
+export function replaceByIndex(array, index, item) {
+  const clone = [...array];
+  clone.splice(index, 1, item);
+  return clone;
+}
+
+export function swapOrder(array, startIndex, endIndex) {
+  const clone = [...array];
+  const [removed] = clone.splice(startIndex, 1);
+  clone.splice(endIndex, 0, removed);
+  return clone;
+}
+
+export function insertAtIndex(array, index, item) {
+  const clone = [...array];
+  clone.splice(index, 0, item);
+  return clone;
+}

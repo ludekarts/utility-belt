@@ -7,7 +7,7 @@ export function base64(str) {
 }
 
 // From bryc at stackoverflow: https://stackoverflow.com/a/52171480
-function hash53(str, seed = 0) {
+export function hash53(str, seed = 0) {
   let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
   let length = str.length;
   for (let i = 0, ch; i < length; i++) {

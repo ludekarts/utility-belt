@@ -1,78 +1,96 @@
 import { loop, reduce, nodeListToArray } from "./arrays.js";
 import { placeStrBetween } from "./strings.js";
 
-const elements = elementsStore();
-const elementsRefs = new WeakMap();
 
-// Clean up element (by default) every 5 minutes.
-let terminateElementsIntervel = 300_000;
-let terminateTimre = setInterval(elements.cleanup, terminateElementsIntervel);
-
-
-export function html(oneTimeMarkup, ...oneTimeInserts) {
-  const isOneTimeTemplate = oneTimeMarkup !== undefined && Boolean(oneTimeMarkup.raw);
-
-  if (isOneTimeTemplate) {
-    const { element } = createTemplate(oneTimeMarkup, oneTimeInserts);
-    return element;
-  }
-
-  return function (markup, ...inserts) {
-    const key = oneTimeMarkup;
-
-    // Bail if no key or the key is invalid.
-    if (key === undefined || key === null || key === true || key === false) {
-      throw new Error(`HTML Template Error: html() helper requires unique ID if called as a function. Now got: ${key}`);
-    }
-
-    // Update elements.
-    if (elements.has(key)) {
-      const { element, bindings, attributes } = elements.get(key);
-      updateComponent(bindings, attributes, inserts);
-      return element;
-    }
-
-    // Create new element.
-    if (!elements.has(key)) {
-      const { element, bindings, attributes } = createTemplate(markup, inserts);
-      const refs = getReferences(element);
-      elements.set(key, { element, bindings, attributes });
-      refs && elementsRefs.set(element, refs);
-      return element;
-    }
-
-  };
+export function html(markup, ...inserts) {
+  const notTemplateString = markup === undefined || !Boolean(markup.raw);
+  if (notTemplateString)
+    throw new Error("html helper should be used as a tagFunction");
+  return { markup: markup.raw, inserts };
 }
 
-// Get node references. This will skip the insert nodes, since they alreay have external referenes.
-html.refs = function (element) {
-  if (element instanceof HTMLElement) {
-    return elementsRefs.get(element) || {};
-  }
-  throw new Error("HTML Template Error: refs() helper should be called with an HTMLElement");
-}
-
-// Finds element by it KEY identifier.
-html.find = function (key) {
-  if (!elements.has(key)) return;
-  const { element } = elements.get(key);
+export function dynamicElement(renderFn, initState) {
+  const { markup, inserts } = renderFn(initState);
+  const { element, bindings, attributes } = createTemplate(markup, inserts);
+  element.update = updateComponent(element, bindings, attributes, renderFn);
+  element.refs = getReferences(element);
   return element;
 }
 
-// Removes element and all its references.
-// When provided null key then all detached elemnts will be removed.
-html.destroy = function (key) {
-  if (key && key.all === true) {
-    elements.cleanup();
-  } else {
-    const { element } = elements.get(key);
-    elementsRefs.delete(element);
-    element.remove();
-    return elements.remove(key);
-  }
+
+// ---- REPEATERS ----------------
+
+const repeatersPool = [];
+
+// Clean up repeaters elements (by default) every 5 minutes.
+let terminateElementsIntervel = 300_000;
+let terminateTimre = setInterval(cleanupRepeaters, terminateElementsIntervel);
+
+export function createRepeater(instanceCount = 1) {
+  return new Array(instanceCount).fill(true).map(() => {
+    repeatersPool.push(null);
+    return initializeRepeater(repeatersPool.length - 1);
+  });
 }
 
-html.__setTerminateInterval = function (time) {
+function initializeRepeater(index) {
+  return function repeater(renderFn, collection, idSelector) {
+
+    if (typeof idSelector === "function") {
+
+      if (!repeatersPool[index]) {
+        repeatersPool[index] = {};
+        const elements = collection.map(item => {
+          const element = renderFn(item);
+          repeatersPool[index][idSelector(item)] = element;
+          return element;
+        });
+
+        return elements;
+      }
+
+      else {
+        const elements = collection.map(item => {
+          let element = repeatersPool[index][idSelector(item)];
+
+          if (!element) {
+            element = repeatersPool[index][idSelector(item)] = renderFn(item);
+            return element;
+          }
+
+          return element.update(item);
+        });
+
+        return elements;
+      }
+
+    }
+
+    else {
+
+      if (!repeatersPool[index]) {
+        const elements = collection.map(renderFn);
+        repeatersPool[index] = elements;
+        return elements;
+      }
+
+      else {
+        const elements = collection.map((item, index) => {
+          return repeatersPool[index][index] ? repeatersPool[index][index].update(item) : renderFn(item);
+        });
+
+        if (elements.length > repeatersPool[index].length) {
+          repeatersPool[index] = elements;
+        }
+
+        return elements;
+      }
+    }
+  }
+
+}
+
+createRepeater.__setTerminateInterval = function (time) {
   if (time === undefined) {
     return terminateElementsIntervel;
   }
@@ -84,9 +102,38 @@ html.__setTerminateInterval = function (time) {
   else {
     clearInterval(terminateTimre);
     terminateElementsIntervel = time;
-    terminateTimre = setInterval(elements.cleanup, terminateElementsIntervel);
+    terminateTimre = setInterval(cleanupRepeaters, terminateElementsIntervel);
   }
 }
+
+function cleanupRepeaters() {
+
+  for (let i = 0; i < repeatersPool.length; i++) {
+    const cache = repeatersPool[i];
+
+    if (cache) {
+
+      // Is Array.
+      if (Array.isArray(cache)) {
+        for (let j = 0; j < cache.length; j++) {
+          if (!document.contains(array[j])) {
+            cache.splice(j, 0);
+          }
+        }
+      }
+
+      // Is HashMap.
+      else {
+        Object.keys(cache).forEach(key => {
+          if (!document.contains(cache[key])) {
+            delete cache[key];
+          }
+        });
+      }
+    }
+  }
+}
+
 
 // ---- Templates Core ----------------
 
@@ -279,9 +326,13 @@ function createTemplate(markup, inserts) {
 }
 
 // Updates values in DOM nodes.
-function updateComponent(bindings, attributes, inserts) {
-  const escapedInserts = escapeStringsInArray(inserts);
-  loop(escapedInserts, updateChangedValues(bindings, attributes));
+function updateComponent(element, bindings, attributes, renderFn) {
+  return (state) => {
+    const { inserts } = renderFn(state);
+    const escapedInserts = escapeStringsInArray(inserts);
+    loop(escapedInserts, updateChangedValues(bindings, attributes));
+    return element;
+  }
 }
 
 // Updates values of an element and it's references.
@@ -454,78 +505,6 @@ function updateReference(index, bindings, attributes, newValue) {
 }
 
 
-export function debugElementsStore(key) {
-  if (key) return elements.get(key);
-
-  console.groupCollapsed("Elements registry");
-  console.log(elements.dump());
-  console.groupEnd();
-
-  console.groupCollapsed("Elements references");
-  console.log(elementsRefs);
-  console.groupEnd();
-
-  console.groupCollapsed("Terminate Interval");
-  console.log(html.__setTerminateInterval());
-  console.groupEnd();
-}
-
-
-// ---- Elements Store Factory ----------------
-
-
-// Manages elements storage.
-function elementsStore() {
-
-  const store = new Map();
-
-  function allowKey(key) {
-    if (key === null || key === undefined)
-      throw new Error("Key cannot be null or undefined");
-    return key;
-  }
-
-  function has(key) {
-    return store.has(allowKey(key));
-  }
-
-  function get(key) {
-    return store.get(allowKey(key));
-  }
-
-  function set(key, value) {
-    return store.set(allowKey(key), value);
-  }
-
-  function remove(key) {
-    return store.delete(allowKey(key));
-  }
-
-  function cleanup() {
-    for (const [key, value] of store) {
-      // Remove only detached nodes.
-      if (!document.body.contains(value.element)) {
-        elementsRefs.delete(value.element);
-        store.delete(key);
-      }
-    }
-  }
-
-  function dump() {
-    return store;
-  }
-
-  return Object.freeze({
-    set,
-    has,
-    get,
-    dump,
-    remove,
-    cleanup,
-  });
-}
-
-
 // ---- Helpers ----------------
 
 function updateChangedValues(bindings, attibutes) {
@@ -547,9 +526,7 @@ function getReferences(element) {
     }
   );
 
-  return refsElements.length
-    ? Object.freeze(refs)
-    : undefined;
+  return Object.freeze(refs);
 }
 
 // Simplify adding nodes at given index.
@@ -569,13 +546,12 @@ function updateAttributesTempate(node, attribute, bindings) {
     return (value === undefined || value === false) ? "" : value;
   });
 
-  // Inputs and textareas does not re-reder by "setAttribute" after user types content.
+  node.setAttribute(attribute.name, attributeValue);
+
+  // Inputs and textareas does set value prop when updating attribute with "setAttribute".
   if (attribute.name === "value") {
     node.value = attributeValue;
-  } else {
-    node.setAttribute(attribute.name, attributeValue);
   }
-
 }
 
 // Check if current provessing value in HTML is for attribute.
@@ -638,7 +614,7 @@ function getAllAttributes(node) {
 
     if (new RegExp("%#\\d+#%", "g").test(attr.value)) {
 
-      // match[1] is refere to the first capturing group of the RegExp.
+      // match[1] is reference to the first capturing group of the RegExp.
       const foundIndexes = Array.from(attr.value.matchAll(new RegExp("%#(\\d+)#%", "g"))).map(match => match[1]);
 
       const attributeBindind = {

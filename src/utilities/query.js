@@ -1,56 +1,67 @@
-// Parse search query into object. Repeating keys are stored as an array under one key.
-export function queryToObject(queryString) {
 
-  if (!queryString || !queryString.length) {
-    return {};
-  }
+// USAGE:
+//
+// import { getQueryParams } from "@ludekarts/utility-belt";
+//
+// const [id, filter] = getQueryParams("id", "filter", "http://exampla.com?id=123&user=admin&filter=age&filter=address");
+//
+// console.log(id, filter); // 123, "age"
 
-  const query = queryString.indexOf("?") === 0
-    ? queryString.slice(1)
-    : queryString;
+export function getQueryParams(...params) {
+  const url = params.pop();
+  const qIndex = url.indexOf("?");
 
-  return query
-    .split("&")
-    .reduce((acc, param) => {
-      const [key, value] = param.split("=");
-      const decodedValue = decodeURIComponent(value);
-      if (acc[key]) {
-        if (Array.isArray(acc[key])) {
-          acc[key].push(decodedValue);
-        } else {
-          acc[key] = [acc[key], decodedValue];
-        }
-      } else {
-        acc[key] = decodedValue;
-      }
-      return acc;
-    }, {});
+  if (qIndex == -1) return [];
+
+  const searchParams = new URLSearchParams(url.slice(qIndex + 1));
+  return params.map(param => {
+    const result = searchParams.getAll(param);
+    return result.length < 2 ? result[0] : result;
+  });
 }
 
 
-/**
- * Update query params in the URL.
- * NOTE: When updated value is "undefined" or "string" with zero-length then the param will be removed.
- * @param   {String/Object}  queryString   String with query params or object containing params.
- * @param   {Object}         updateObject  Object with params to update.
- * @return  {String}                       New query string.
- */
-export function updateQuery(queryString, updateObject) {
-  const queryObject = typeof queryString === "string"
-    ? queryToObject(queryString)
-    : queryString;
-  const params = new URLSearchParams();
-  const query = { ...queryObject, ...updateObject };
+// USAGE:
+//
+// import { updateQueryParams } from "@ludekarts/utility-belt";
+//
+// const query = updateQueryParams("http://exampla.com?id=123&user=admin&filter=age&filter=address", "id", "456");
+//
+// console.log(query); // "http://exampla.com?id=456user=admin&filter=age&filter=address"
 
-  Object.keys(query).forEach(param => {
-    const current = query[param];
-    if (current !== undefined) {
-      if (Array.isArray(current)) {
-        current.forEach(value => params.append(param, value));
-      } else if (typeof current !== "string" || current.length > 0) {
-        params.append(param, current);
+export function updateQueryParams(query, name, value) {
+  const head = query.slice(0, query.indexOf("?") + 1);
+  const tail = !head ? query : query.slice(query.indexOf("?") + 1, query.length);
+  const updaSingleParam = typeof name === "string";
+  const searchParams = new URLSearchParams(tail);
+
+  if (updaSingleParam) {
+    updateParam(searchParams, name, value);
+  }
+
+  else {
+    Object.keys(name).forEach(key => {
+      const propValue = name[key];
+
+      if (Array.isArray(propValue)) {
+        searchParams.delete(key);
+        propValue.forEach(value => searchParams.append(key, value));
       }
-    }
-  });
-  return params.toString();
+
+      else {
+        updateParam(searchParams, key, propValue);
+      }
+    });
+  }
+
+  return head + searchParams.toString();
+}
+
+function updateParam(searchParams, name, value) {
+  const removeExistingKey = value === undefined;
+  if (removeExistingKey) {
+    searchParams.delete(name);
+  } else {
+    searchParams.set(name, value);
+  }
 }

@@ -5,23 +5,25 @@ export { default as deepOverride } from "./utilities/deep-override.js";
 export { default as deepCopy } from "./utilities/deep-copy.js";
 
 // Abstractions.
-export { default as events } from "./utilities/events.js";
 export { default as loopstack } from "./utilities/loopstack.js";
-export { default as clipboard } from "./utilities/clipboard.js";
-export { default as domFilter } from "./utilities/dom-filter.js";
-export { default as createEventHandler } from "./utilities/event-handler.js";
 
 // Request.
 export { default as createRequest, RequestConfig, objectToFormData } from "./utilities/request.js";
 
 // Schema.
-export { default as schemaTypes, checkSchema } from "./utilities/schema-types.js";
+export { schemaTypes, checkSchema } from "./utilities/schema-types.js";
+
+// Event handling.
+export * from "./utilities/events.js";
 
 // Query.
 export * from "./utilities/query.js";
 
 // Arrays.
 export * from "./utilities/arrays.js";
+
+// Forms.
+export * from "./utilities/forms.js";
 
 // Components.
 export { default as highlight } from "./utilities/highlight.js";
@@ -33,9 +35,7 @@ export * from "./utilities/delay-events.js";
 // DOM Helpers.
 export * from "./utilities/template.js";
 export * from "./utilities/dom-helpers.js";
-export * from "./utilities/component.js";
 export { default as importHtml } from "./utilities/import-html.js";
-export { default as memoElement } from "./utilities/memo-element.js";
 export { default as createElement } from "./utilities/create-element.js";
 export { default as includeScriptTag } from "./utilities/include-script.js";
 

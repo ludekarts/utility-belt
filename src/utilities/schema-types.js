@@ -2,7 +2,7 @@ import { isObject } from "./general.js";
 
 // ---- Schema Types Validators ----------------
 
-export default {
+export const schemaTypes = {
   // Basic validators.
   isNull: value => value === null,
   isUndefined: value => value === undefined,

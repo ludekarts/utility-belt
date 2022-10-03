@@ -3,29 +3,33 @@ export default function PubSub(config = {}) {
   const { debug = false, logger } = config
 
   // Default namespace.
-  namespaces.set("/", new Map());
+  namespaces.set("/", {
+    observers: new Map(),
+    broadcasters: [],
+  });
 
-  const API = Object.freeze({
+  const API = {
     on(n, e, o) {
 
       const { namespace, event, observer } = getParams(n, e, o);
 
-      if (!namespaces.has(namespace)) {
-        namespaces.set(namespace, new Map());
-      }
+      !namespaces.has(namespace) && namespaces.set(namespace, {
+        observers: new Map(),
+        broadcasters: [],
+      });
 
       const currentNamespace = namespaces.get(namespace);
 
-      if (!currentNamespace.has(event)) {
-        currentNamespace.set(event, []);
+      if (event === "*") {
+        !currentNamespace.broadcasters.includes(observer) && currentNamespace.broadcasters.push(observer);
       }
 
-      currentNamespace.get(event).push(observer);
-
-      if (debug && logger) {
-        logger(`A new subscription "${event}" was added to namespace "${namespace}".`);
+      else {
+        !currentNamespace.observers.has(event) && currentNamespace.observers.set(event, []);
+        currentNamespace.observers.get(event).push(observer);
       }
 
+      debug && logger && logger(`A new subscription "${event}" was added to namespace "${namespace}".`);
       return API;
     },
 
@@ -34,16 +38,22 @@ export default function PubSub(config = {}) {
 
       if (namespaces.has(namespace)) {
         const currentNamespace = namespaces.get(namespace);
-        if (currentNamespace.has(event)) {
-          const observersList = currentNamespace.get(event);
+
+        if (currentNamespace.observers.has(event)) {
+
+          const observersList = currentNamespace.observers.get(event);
           const index = observersList.indexOf(observer);
+
           if (~index) {
             observersList.splice(index, 1);
+
             if (observersList.length) {
-              currentNamespace.set(event, observersList);
-            } else {
-              currentNamespace.delete(event);
-              if (currentNamespace.size === 0 && namespace !== "/") {
+              currentNamespace.observers.set(event, observersList);
+            }
+
+            else {
+              currentNamespace.observers.delete(event);
+              if (currentNamespace.observers.size === 0 && namespace !== "/") {
                 namespaces.delete(namespace);
               }
             }
@@ -60,19 +70,20 @@ export default function PubSub(config = {}) {
 
       if (namespaces.has(namespace)) {
         const currentNamespace = namespaces.get(namespace);
-        if (currentNamespace.has(event)) {
 
-          const observersList = currentNamespace.get(event);
+        currentNamespace.broadcasters.length &&
+          currentNamespace.broadcasters.forEach(broadcaster => broadcaster(message, event));
+
+        if (currentNamespace.observers.has(event)) {
+
+          const observersList = currentNamespace.observers.get(event);
           const length = observersList.length;
 
           for (let i = 0; i < length; i++) {
             observersList[i](message, event);
           }
 
-          if (debug && logger) {
-            logger("published", { namespace, event, message, observersList });
-          }
-
+          debug && logger && logger("published", { namespace, event, message, observersList });
         }
 
         else if (debug) {
@@ -83,21 +94,23 @@ export default function PubSub(config = {}) {
       return API;
     },
 
-    getNamespace(namespace, purge = false) {
-      if (!debug) return;
-      if (purge) {
-        namespace !== "/" && // This condition need to be here to not exit purge IF in case of "/".
-          namespaces.delete(namespace);
+  };
+
+  // Expose only in debug mode for testing.
+
+  if (debug) {
+    API.getNamespace = (namespace, { remove = false } = {}) => {
+      if (remove === true) {
+        namespace !== "/" && namespaces.delete(namespace);
         return namespaces;
       }
       return namespace ? namespaces.get(namespace) : namespaces;
-    }
-
-  });
+    };
+  }
 
   // ---- Public API ----------------
 
-  return API;
+  return Object.freeze(API);
 };
 
 

@@ -1,4 +1,4 @@
-import { importHtml, nodeListToArray, includeScriptTag, domFilter, highlight } from "./assets/ubm/utility-belt.js";
+import { importHtml, nodeListToArray, includeScriptTag } from "./assets/ubm/utility-belt.js";
 
 // Load related HTML documetation pages, and run <pre> tags transformations when all files are loaded.
 importHtml(transformPreTags);
