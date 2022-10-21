@@ -146,28 +146,27 @@ function createTemplate(markup, inserts) {
   const escapedInserts = escapeStringsInArray(inserts);
 
   // Combine HTML markup and add placeholders for external inputs.
+  // Binding Object Spec.
+  // {
+  //   value:         current value of given entry,
+  //   index:         index of inset in template,
+  //   type:          type of given entry: [ "text", "node", "list", "partial", "attribute", "attribute:bool" ],
+  //   ref:           reference to node holding given value; for attributes node with given attribute; for lists parent node,
+  //   container:     {
+  //     ref:         reference to the parent container,
+  //     index:       index on which the dynamic node is rendered,
+  //   },
+  //   attribute: {
+  //     name:        attribute name,
+  //     bool:        flag attribute as boolean: [ true, false ],
+  //     template:    attribute template to update,
+  //   },
+  // }
+
   const componentHtml = reduce(Array.from(markup), (acc, part, index, isLast) => {
     let value = escapedInserts[index];
     let html = acc += part;
     let binding = { value, index };
-
-
-    // Binding Object Spec.
-    // {
-    //   value:         current value of given entry,
-    //   index:         index of inset in template,
-    //   type:          type of given entry: [ "text", "node", "list", "attribute". "bool:attribute" ],
-    //   ref:           reference to node holding given value; for attributes node with given attribute; for lists parent node,
-    //   container:     {
-    //     ref:         reference to the parent container,
-    //     index:       index on wchih the dynamic node is rendered,
-    //   },
-    //   attribute: {
-    //     name:        attribute name,
-    //     bool:        flag attribute as boolean: [ true, false ],
-    //     template:    attribute template to update,
-    //   },
-    // }
 
     // Last element of markup array does not generate placeholder so we do not process it.
     // We only add produced HTML at the end.
@@ -215,6 +214,11 @@ function createTemplate(markup, inserts) {
         placeholder = `<i data-hk="${index}" data-typ3="list"></i>`;
       }
 
+      // Detect partial HTML
+      else if (isPartialTemplate(value)) {
+        placeholder = `<i data-hk="${index}" data-typ3="partial"></i>`;
+      }
+
       // Clamp other types into empty string (just skip them).
       else {
         placeholder = "";
@@ -256,7 +260,7 @@ function createTemplate(markup, inserts) {
 
         // Handle boolean attributes.
         if (attribute.bool) {
-          bindings[index].type = "bool:attribute";
+          bindings[index].type = "attribute:bool";
 
           hook.removeAttribute(`?${attribute.name}`);
 
@@ -309,6 +313,14 @@ function createTemplate(markup, inserts) {
         binding.container = createContainer(hook);
         insetrNodesBefore(binding.value, hook);
       }
+
+      // Partials.
+      else if (type === "partial") {
+        binding.type = "partial";
+        binding.ref = createPartialElement(binding.value.markup, binding.value.inserts);
+        binding.container = createContainer(hook);
+        binding.container.ref.replaceChild(binding.ref, hook);
+      }
     }
 
     hook.removeAttribute("data-hk");
@@ -325,6 +337,22 @@ function createTemplate(markup, inserts) {
   };
 }
 
+function createPartialElement(markup, inserts) {
+  const { element, bindings, attributes } = createTemplate(markup, inserts);
+  element.update = updatePartialComponent(element, bindings, attributes);
+  element.refs = getReferences(element);
+  return element;
+}
+
+// Updates values in DOM nodes.
+function updatePartialComponent(element, bindings, attributes) {
+  return (inserts) => {
+    const escapedInserts = escapeStringsInArray(inserts);
+    loop(escapedInserts, updateChangedValues(bindings, attributes));
+    return element;
+  }
+}
+
 // Updates values in DOM nodes.
 function updateComponent(element, bindings, attributes, renderFn) {
   return (state) => {
@@ -335,6 +363,7 @@ function updateComponent(element, bindings, attributes, renderFn) {
   }
 }
 
+
 // Updates values of an element and it's references.
 function updateReference(index, bindings, attributes, newValue) {
 
@@ -343,7 +372,7 @@ function updateReference(index, bindings, attributes, newValue) {
   if (!binding) return;
 
   // Update Boolean Attributes.
-  if (binding.type === "bool:attribute") {
+  if (binding.type === "attribute:bool") {
     const attribute = attributes[binding.index];
 
     binding.value
@@ -387,6 +416,14 @@ function updateReference(index, bindings, attributes, newValue) {
       binding.ref = newValue;
     }
 
+    // TextNode to -> Partial.
+    else if (isPartialTemplate(newValue)) {
+      const partialNode = createPartialElement(newValue.markup, newValue.inserts);
+      binding.type = "partial";
+      binding.container.ref.replaceChild(partialNode, binding.ref);
+      binding.ref = partialNode;
+    }
+
     // TextNode to -> Array of DOM Nodes.
     else if (Array.isArray(newValue)) {
       insetrNodesBefore(newValue, binding.ref);
@@ -418,8 +455,15 @@ function updateReference(index, bindings, attributes, newValue) {
     // Single DOM Node to -> DOM Node.
     else if (isDomNode(newValue)) {
       binding.container.ref.replaceChild(newValue, binding.ref);
-      binding.type = "node";
       binding.ref = newValue;
+    }
+
+    // Single DOM Node to -> Partial.
+    else if (isPartialTemplate(newValue)) {
+      const partialNode = createPartialElement(newValue.markup, newValue.inserts);
+      binding.container.ref.replaceChild(partialNode, binding.ref);
+      binding.type = "partial";
+      binding.ref = partialNode;
     }
 
     // Single DOM Node to -> Array of DOM Nodes.
@@ -458,6 +502,15 @@ function updateReference(index, bindings, attributes, newValue) {
       removeNodes(binding.value, binding.container.ref);
       binding.type = "node";
       binding.ref = newValue;
+    }
+
+    // Array of Nodes to -> Partial.
+    else if (isPartialTemplate(newValue)) {
+      const partialNode = createPartialElement(newValue.markup, newValue.inserts);
+      insertNodeAtIndex(binding.container.index, partialNode, binding.container.ref);
+      removeNodes(binding.value, binding.container.ref);
+      binding.type = "partial";
+      binding.ref = partialNode;
     }
 
     // Array of DOM Nodes to -> Array of DOM Nodes.
@@ -501,6 +554,47 @@ function updateReference(index, bindings, attributes, newValue) {
 
     }
   }
+
+
+  // Update Parial Nodes.
+  else if (binding.type === "partial") {
+
+    // Partial Node -> Empty TextNode.
+    if (newValue === undefined) {
+      const textNode = document.createTextNode("");
+      binding.container.ref.replaceChild(textNode, binding.ref);
+      binding.type = "text";
+      binding.ref = textNode;
+    }
+
+    // Partial Node -> TextNode (Strings || Numbers).
+    else if (isNumberOrString(newValue)) {
+      const textNode = document.createTextNode(newValue);
+      binding.container.ref.replaceChild(textNode, binding.ref);
+      binding.type = "text";
+      binding.ref = textNode;
+    }
+
+    // Partial Node -> DOM Node.
+    else if (isDomNode(newValue)) {
+      binding.container.ref.replaceChild(newValue, binding.ref);
+      binding.type = "node";
+      binding.ref = newValue;
+    }
+
+    // Partial Node -> Partial.
+    else if (isPartialTemplate(newValue)) {
+      binding.ref.update(newValue.inserts);
+    }
+
+    // Partial Node -> Array of DOM Nodes.
+    else if (Array.isArray(newValue)) {
+      insetrNodesBefore(newValue, binding.ref);
+      binding.type = "list";
+      binding.ref = newValue;
+    }
+  }
+
   binding.value = newValue;
 }
 
@@ -572,6 +666,14 @@ function isNumberOrString(value) {
 // Verify if given @node is instance of a Text or HTMLElement.
 function isDomNode(node) {
   return node instanceof HTMLElement || node instanceof Text;
+}
+
+// Verify if given @node is a template partial.
+function isPartialTemplate(node) {
+  return node.hasOwnProperty("markup")
+    && node.hasOwnProperty("inserts")
+    && Array.isArray(node.inserts)
+    && Array.isArray(node.markup);
 }
 
 function createContainer(node) {

@@ -3,17 +3,17 @@ const { html, dynamicElement, createRepeater } = window.utilityBelt;
 
 describe("Dynamic Elements", () => {
 
-  it("UTB should have an Dynamic Elements API", () => {
+  it("UTB Should have an Dynamic Elements API", () => {
     chai.expect(html).to.be.a("function");
     chai.expect(dynamicElement).to.be.a("function");
     chai.expect(createRepeater).to.be.a("function");
   });
 
-  it("createRepeater should have '__setTerminateInterval' method", () => {
+  it("createRepeater Should have '__setTerminateInterval' method", () => {
     chai.expect(createRepeater.__setTerminateInterval).to.be.a("function");
   });
 
-  it("html tag fn should create {inserts, markup} object", () => {
+  it("html tag fn Should create {inserts, markup} object", () => {
     const collection = html`<div class="${"hello"}"></div>`;
     chai.expect(collection.markup).to.be.an("array");
     chai.expect(collection.inserts).to.be.an("array");
@@ -21,28 +21,28 @@ describe("Dynamic Elements", () => {
     chai.expect(collection.inserts[0]).to.be.equal("hello");
   });
 
-  it("should create HTMLElement with calss 'hello'", () => {
+  it("Should create HTMLElement with calss 'hello'", () => {
     const element = dynamicElement(() => html`<div class="hello"></div>`);
     chai.expect(element).to.be.instanceof(HTMLElement);
     chai.expect(element.classList.contains("hello")).to.be.true;
   });
 
-  it("should create HTMLElement with 'update' method ", () => {
+  it("Should create HTMLElement with 'update' method ", () => {
     const element = dynamicElement(() => html`<div class="hello"></div>`);
     chai.expect(element.update).to.be.a("function");
   });
 
-  it("should create HTMLElement with 'refs' prop", () => {
+  it("Should create HTMLElement with 'refs' prop", () => {
     const element = dynamicElement(() => html`<div class="hello"></div>`);
     chai.expect(element.refs).to.be.a("object");
   });
 
-  it("should create HTMLElement with reference to 'input' element in 'refs' prop", () => {
+  it("Should create HTMLElement with reference to 'input' element in 'refs' prop", () => {
     const element = dynamicElement(() => html`<div class="hello"><input ref="input" type="text"></div>`);
     chai.expect(element.refs.input).to.be.instanceof(HTMLElement);
   });
 
-  it("should return two inputs wrapped with div", () => {
+  it("Should return two inputs wrapped with div", () => {
     const element = dynamicElement(() => html`<input type="text"><input type="password">`);
     chai.expect(element.nodeName).to.be.equal("DIV");
     chai.expect(element.children.length).to.be.equal(2);
@@ -50,7 +50,7 @@ describe("Dynamic Elements", () => {
     chai.expect(element.firstChild.nodeName).to.be.equal("INPUT");
   });
 
-  it("should embed HTMLElement into the template", () => {
+  it("Should embed HTMLElement into the template", () => {
     const paragraph = document.createElement("span");
     paragraph.textContent = "Hello i'm a paragraph of text";
     const element = dynamicElement(() => html`
@@ -63,7 +63,7 @@ describe("Dynamic Elements", () => {
     chai.expect(selectedElement).to.be.equal(paragraph);
   });
 
-  it("should dynamicly insert node into root HTML structure", () => {
+  it("Should dynamicly insert node into root HTML structure", () => {
     const paragraph = document.createElement("span");
     paragraph.textContent = "Hello i'm a paragraph of text";
     const element = dynamicElement(() => html`
@@ -76,19 +76,19 @@ describe("Dynamic Elements", () => {
     chai.expect(selectedElement).to.be.equal(paragraph);
   });
 
-  it("should render element with default content", () => {
+  it("Should render element with default content", () => {
     const element = dynamicElement(content => html`<span>${content}</span>`, "hi");
     chai.expect(element.textContent).to.be.equal("hi");
   });
 
-  it("should update element's content with update() method", () => {
+  it("Should update element's content with update() method", () => {
     const element = dynamicElement(content => html`<span>${content}</span>`, "hi");
     chai.expect(element.textContent).to.be.equal("hi");
     element.update("ho");
     chai.expect(element.textContent).to.be.equal("ho");
   });
 
-  it("should replace text node with block node", () => {
+  it("Should replace text node with block node", () => {
     const paragraph = document.createElement("p");
     paragraph.textContent = "paragraph";
     const element = dynamicElement(node => html`<div>${node}</div>`, "hello");
@@ -97,7 +97,7 @@ describe("Dynamic Elements", () => {
     chai.expect(element.innerHTML).to.be.equal("<p>paragraph</p>");
   });
 
-  it("should replace text node with array of elements", () => {
+  it("Should replace text node with array of elements", () => {
     const nodeA = document.createElement("span");
     const nodeB = document.createElement("strong");
     const list = [nodeA, nodeB];
@@ -107,7 +107,7 @@ describe("Dynamic Elements", () => {
     chai.expect(element.innerHTML).to.be.equal("<span></span><strong></strong>");
   });
 
-  it("should replace node with array of elements", () => {
+  it("Should replace node with array of elements", () => {
     const node = document.createElement("p");
     const nodeA = document.createElement("span");
     const nodeB = document.createElement("strong");
@@ -118,7 +118,7 @@ describe("Dynamic Elements", () => {
     chai.expect(element.innerHTML).to.be.equal("<span></span><strong></strong>");
   });
 
-  it("should replace node with text node", () => {
+  it("Should replace node with text node", () => {
     const node = document.createElement("p");
     const text = "hi";
     const element = dynamicElement(node => html`<div id="txt">${node}</div>`, node);
@@ -127,7 +127,7 @@ describe("Dynamic Elements", () => {
     chai.expect(element.innerHTML).to.be.equal("hi");
   });
 
-  it("should embed an array of HTMLElements into the template", () => {
+  it("Should embed an array of HTMLElements into the template", () => {
     const nodeA = document.createElement("span");
     const nodeB = document.createElement("strong");
     const list = [nodeA, nodeB];
@@ -136,7 +136,7 @@ describe("Dynamic Elements", () => {
     chai.expect(element.lastElementChild).to.be.equal(nodeB);
   });
 
-  it("should replace array of HTMLElements with single node", () => {
+  it("Should replace array of HTMLElements with single node", () => {
     const node = document.createElement("p");
     const nodeA = document.createElement("span");
     const nodeB = document.createElement("strong");
@@ -147,7 +147,7 @@ describe("Dynamic Elements", () => {
     chai.expect(element.innerHTML).to.be.equal("<p></p>");
   });
 
-  it("should alow for embeding 'strings' and 'numbers' into template", () => {
+  it("Should alow for embeding 'strings' and 'numbers' into template", () => {
     // Numbers.
     const elementA = dynamicElement(() => html`<div id="num">${1}</div>`);
     chai.expect(elementA.textContent).to.be.equal("1");
@@ -157,7 +157,7 @@ describe("Dynamic Elements", () => {
     chai.expect(elementB.textContent).to.be.equal("hello");
   });
 
-  it("should skip embeded into template 'functions' and 'objects'", () => {
+  it("Should skip embeded into template 'functions' and 'objects'", () => {
     // Objects.
     const elementA = dynamicElement(() => html`<div id="obj">${{}}</div>`);
     chai.expect(elementA.textContent).to.be.equal("");
@@ -167,19 +167,19 @@ describe("Dynamic Elements", () => {
     chai.expect(elementB.textContent).to.be.equal("");
   });
 
-  it("should handle dynaimc and static attibutes", () => {
+  it("Should handle dynaimc and static attibutes", () => {
     const element = dynamicElement(() => html`<input data-index="${0}" type="text" value="${10}">`);
     chai.expect(element.getAttribute("value")).to.be.equal("10");
     chai.expect(element.getAttribute("type")).to.be.equal("text");
     chai.expect(element.getAttribute("data-index")).to.be.equal("0");
   });
 
-  it("should not allow for non-sting and non-number attributes", () => {
+  it("Should not allow for non-sting and non-number attributes", () => {
     const t = () => dynamicElement(() => html`<input type="text" value="${document.createTextNode("hello")}">`);
     chai.expect(t).to.throw();
   });
 
-  it("should update multple attribute entries", () => {
+  it("Should update multple attribute entries", () => {
     const a = "add";
     const b = "two";
     const c = "four";
@@ -196,7 +196,7 @@ describe("Dynamic Elements", () => {
     chai.expect(container.dataset.action).to.be.equal("remove");
   });
 
-  it("should allow undefined attributes", () => {
+  it("Should allow undefined attributes", () => {
     const element = dynamicElement(type => html`<input type="${type}" value="${10}">`, "text");
 
     chai.expect(element.getAttribute("value")).to.be.equal("10");
@@ -209,7 +209,7 @@ describe("Dynamic Elements", () => {
     chai.expect(element.getAttribute("type")).to.be.equal("number");
   });
 
-  it("should update value prop when update attribute", () => {
+  it("Should update value prop when update attribute", () => {
     const element = dynamicElement(value => html`<input value="${value}">`, 10);
 
     chai.expect(element.getAttribute("value")).to.be.equal("10");
@@ -222,13 +222,82 @@ describe("Dynamic Elements", () => {
 
   });
 
-  it("should create repeaters", () => {
+
+
+  it("Should apply partial markup to main template", () => {
+    const element = dynamicElement(() => html`
+      <div>
+        <strong>Hello</strong>
+        ${html`<ul><li>1</li><li>2</li><li>3</li></ul>`}
+      </div>`
+    );
+
+    chai.expect(element.lastElementChild.textContent).to.be.equal("123");
+
+  });
+
+  it("Should update partial markup in main template", () => {
+    const items = [1, 2, 3];
+    const element = dynamicElement(items => html`
+      <div>
+        <strong>Hello</strong>
+        ${html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}</li></ul>`}
+      </div>`
+      , items);
+
+    element.update([4, 5, 6]);
+
+    chai.expect(element.lastElementChild.textContent).to.be.equal("456");
+
+  });
+
+  it("Should render nestes partials markups", () => {
+    const items = [1, 2, 3, 4, 5, 6];
+    const sublist = (a, b, c) => html`<span><strong>${a}</strong>${b}<em>${c}</em></span>`;
+    const list = (items) => html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}${sublist(items[3], items[4], items[5])}</li></ul>`;
+    const element = dynamicElement(items => html`
+      <div>
+        <strong>Hello</strong>
+        ${list(items)}
+      </div>`
+      , items);
+
+    chai.expect(element.lastElementChild.textContent).to.be.equal("123456");
+  });
+
+  it("Should update nestes partials markups", () => {
+    const items = [1, 2, 3, 4, 5, 6];
+    const sublist = (a, b, c) => html`<span><strong>${a}</strong>${b}<em>${c}</em></span>`;
+    const list = (items) => html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}${sublist(items[3], items[4], items[5])}</li></ul>`;
+    const element = dynamicElement(items => html`
+      <div>
+        <strong>Hello</strong>
+        ${list(items)}
+      </div>`
+      , items);
+
+    element.update([1, 2, 3, 4, "a", "b"]);
+
+    chai.expect(element.lastElementChild.textContent).to.be.equal("1234ab");
+  });
+
+  it("Should replace nestes partials with DOM node", () => {
+    const element = dynamicElement(usePartial => html`<div><strong>Hello</strong>${usePartial ? html`<span>Partial</span>` : "World"}</div>`, false);
+    chai.expect(element.textContent).to.be.equal("HelloWorld");
+    element.update(true);
+    chai.expect(element.textContent).to.be.equal("HelloPartial");
+    element.update(false);
+    chai.expect(element.textContent).to.be.equal("HelloWorld");
+  });
+
+
+  it("Should create repeaters", () => {
     const [repeaterA, repeaterB] = createRepeater(2);
     chai.expect(repeaterA).to.be.a("function");
     chai.expect(repeaterB).to.be.a("function");
   });
 
-  it("should repeat elements", () => {
+  it("Should repeat elements", () => {
     const items = [
       { id: 1, name: "Item 1" },
       { id: 2, name: "Item 2" },
@@ -246,7 +315,7 @@ describe("Dynamic Elements", () => {
 
   });
 
-  it("should reuse repeated elements", () => {
+  it("Should reuse repeated elements", () => {
     const items = [
       { id: 1, name: "Item 1" },
       { id: 2, name: "Item 2" },
@@ -268,7 +337,7 @@ describe("Dynamic Elements", () => {
     chai.expect(listB[1].textContent).to.be.equal("Changed");
   });
 
-  it("should destroy repeater elements after given time", done => {
+  it("Should destroy repeater elements after given time", done => {
 
     const items = [
       { id: 1, name: "Item 1" },
@@ -293,4 +362,5 @@ describe("Dynamic Elements", () => {
       done();
     }, 400);
   });
+
 });

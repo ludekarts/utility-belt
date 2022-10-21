@@ -104,7 +104,6 @@ export function sortByPhraseIndex(array, phrase, selector = x => x) {
   });
 }
 
-
 export function removeByIndex(array, index) {
   const clone = [...array];
   clone.splice(index, 1);

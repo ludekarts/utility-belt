@@ -45,6 +45,9 @@ export * from "./utilities/dom-manipulations.js";
 // Hashing.
 export * from "./utilities/hashing.js";
 
+// History.
+export { default as createHistory } from "./utilities/history.js";
+
 // Strings.
 export * from "./utilities/strings.js";
 

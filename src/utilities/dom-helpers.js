@@ -18,10 +18,14 @@ export function getNodesPath(stopSelector) {
 
 // Adds styles tag into <head/> element.
 export function attachStyle(style, name) {
-  const element = document.createElement("style");
+  let element;
+  element = name && document.querySelector(`style[data-style-name="${name}"]`);
+  element = element ? element : document.createElement("style");
+
   if (name) {
     element.dataset.styleName = name;
   }
-  document.head.appendChild(element).textContent = style;
+
+  document.head.appendChild(element).textContent += style;
   return element;
 }
