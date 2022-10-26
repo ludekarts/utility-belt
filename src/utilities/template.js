@@ -337,26 +337,18 @@ function createTemplate(markup, inserts) {
   };
 }
 
+
 function createPartialElement(markup, inserts) {
   const { element, bindings, attributes } = createTemplate(markup, inserts);
-  element.update = updatePartialComponent(element, bindings, attributes);
+  element.update = updateComponent(element, bindings, attributes);
   element.refs = getReferences(element);
   return element;
 }
 
 // Updates values in DOM nodes.
-function updatePartialComponent(element, bindings, attributes) {
-  return (inserts) => {
-    const escapedInserts = escapeStringsInArray(inserts);
-    loop(escapedInserts, updateChangedValues(bindings, attributes));
-    return element;
-  }
-}
-
-// Updates values in DOM nodes.
 function updateComponent(element, bindings, attributes, renderFn) {
   return (state) => {
-    const { inserts } = renderFn(state);
+    const inserts = renderFn ? renderFn(state).inserts : state;
     const escapedInserts = escapeStringsInArray(inserts);
     loop(escapedInserts, updateChangedValues(bindings, attributes));
     return element;
@@ -526,28 +518,47 @@ function updateReference(index, bindings, attributes, newValue) {
       */
 
       // Remove all nodes that does not exist in newValue array.
-      loop(binding.value, node => !newValue.includes(node) && node.remove());
+      loop(binding.value, node => isDomNode(node) && !newValue.includes(node) && node.remove());
 
       // Update remaining nodes.
       loop(newValue, (newNode, index) => {
-        const oldIndex = binding.value.indexOf(newNode);
 
         // Offset index value with container.index in case list is not only item in the element.
         const insertIndex = binding.container.index + index;
 
-        // Add (node does not exist -> append new node).
-        if (oldIndex === -1) {
-          insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
+        // Process Partials.
+        if (isPartialTemplate(newNode)) {
+          if (binding.value[index].update) {
+            binding.container.ref.childNodes[insertIndex].update(newNode.inserts);
+          }
+
+          else {
+            const partialNode = createPartialElement(newNode.markup, newNode.inserts);
+            binding.container.ref.replaceChild(partialNode, binding.container.ref.childNodes[insertIndex]);
+            binding.value[index] = newNode;
+          }
         }
 
-        // Move (node does not match old position).
-        else if (binding.value[index] !== newNode) {
-          insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
-        }
+        // Process DOM nodes.
+        else {
 
-        // Skip (new node matches its old position).
-        else if (binding.value[index] === newNode) {
-          /* Do nothing */
+          const oldIndex = binding.value.indexOf(newNode);
+
+
+          // Add (node does not exist -> append new node).
+          if (oldIndex === -1) {
+            insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
+          }
+
+          // Move (node does not match old position).
+          else if (binding.value[index] !== newNode) {
+            insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
+          }
+
+          // Skip (new node matches its old position).
+          else if (binding.value[index] === newNode) {
+            /* Do nothing */
+          }
         }
 
       });
@@ -690,7 +701,13 @@ function getNodeIndex(node) {
 }
 
 function insetrNodesBefore(nodes, pointer) {
-  loop(nodes, node => isDomNode(node) && pointer.before(node));
+  loop(nodes, node => {
+    isDomNode(node)
+      ? pointer.before(node)
+      : isPartialTemplate(node)
+        ? pointer.before(createPartialElement(node.markup, node.inserts))
+        : null;
+  });
   pointer.remove();
 }
 

@@ -35,7 +35,11 @@ export default function createElement(phrase, content) {
       element.innerHTML = content;
     }
     else if (content instanceof HTMLElement) {
-      element.appendChild(content);
+      element.append(content);
+    }
+
+    else if (content instanceof DocumentFragment) {
+      element.append(content);
     }
   }
 
