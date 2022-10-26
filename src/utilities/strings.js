@@ -9,4 +9,3 @@ export function placeStrBetween(source, value, position) {
   const tail = source.slice(position, source.length);
   return `${head}${value}${tail}`;
 }
-

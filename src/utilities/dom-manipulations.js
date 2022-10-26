@@ -1,4 +1,4 @@
-// Copy arributes 'from' one element 'to' another.
+// Copy attributes @from one element @to another without @excluded[] names.
 export function copyAttrs(from, to, excluded = []) {
   Array.from(from.attributes || []).forEach(attr => !~excluded.indexOf(attr.name) && to.setAttribute(attr.name, attr.value));
 }

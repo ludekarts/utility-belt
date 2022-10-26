@@ -1,5 +1,5 @@
 /*
-  [⚠️ NOTICE]:
+  ⚠️ NOTICE ⚠️:
   In case of checkboxes the value is replaced with "checked" state since in most cases this is what you want
   from toggle switch rather than the value that is not changing.
 
@@ -32,11 +32,11 @@ export function getFormFields(form, options = { includeCheckValues: false }) {
 }
 
 /*
-  [⚠️ NOTICE]:
+  ⚠️ NOTICE ⚠️:
   This is an imperative way to update a form. When providing a @source object all form's inputs that names matches
   fields in @source will be translated into the inputs "value".
 
-  [💡 HINT]:
+  💡 HINT :
   If you wnant to update other properties on the input e.g. "checked" field then use object notation
   instead a plain value like so:
 
@@ -48,9 +48,9 @@ export function getFormFields(form, options = { includeCheckValues: false }) {
     }
   });
 
-  [💡 HINT]:
+  💡 HINT:
   If you want to update a multiple radio buttons with same name then just treat them as a one files input
-  and set the velue normally e.g.:
+  and set the value normally e.g.:
 
   <form id="form">
     <input type="radio" name="mood" value="bad">

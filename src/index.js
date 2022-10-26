@@ -9,7 +9,7 @@ export { default as deepOverride } from "./utilities/deep-override.js";
 export { schemaTypes, checkSchema } from "./utilities/schema-types.js";
 
 // Request.
-export { default as createRequest, RequestConfig, objectToFormData } from "./utilities/request.js";
+export * from "./utilities/request.js";
 
 // URL Query.
 export * from "./utilities/query.js";
