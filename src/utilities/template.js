@@ -1,4 +1,4 @@
-import { loop, reduce, nodeListToArray } from "./arrays.js";
+import { loop, reduce, nodeListToArray, removeByInstance } from "./arrays.js";
 import { placeStrBetween } from "./strings.js";
 
 
@@ -26,71 +26,53 @@ const repeatersPool = [];
 let terminateElementsIntervel = 300_000;
 let terminateTimre = setInterval(cleanupRepeaters, terminateElementsIntervel);
 
-export function createRepeater(instanceCount = 1) {
-  return new Array(instanceCount).fill(true).map(() => {
-    repeatersPool.push(null);
-    return initializeRepeater(repeatersPool.length - 1);
-  });
-}
 
-function initializeRepeater(index) {
-  return function repeater(renderFn, collection, idSelector) {
+function createRepeater(renderFn, collection, keySelector) {
 
-    if (typeof idSelector === "function") {
+  repeatersPool.push({});
 
-      if (!repeatersPool[index]) {
-        repeatersPool[index] = {};
-        const elements = collection.map(item => {
-          const element = renderFn(item);
-          repeatersPool[index][idSelector(item)] = element;
-          return element;
-        });
+  const repeaterIndex = repeatersPool.length - 1;
 
-        return elements;
-      }
+  const elements = collection.map(item => {
+    const element = renderFn(item);
 
-      else {
-        const elements = collection.map(item => {
-          let element = repeatersPool[index][idSelector(item)];
-
-          if (!element) {
-            element = repeatersPool[index][idSelector(item)] = renderFn(item);
-            return element;
-          }
-
-          return element.update(item);
-        });
-
-        return elements;
-      }
-
+    if (isPartialTemplate(element)) {
+      const partialNode = repeatersPool[repeaterIndex][keySelector(item)] = createPartialElement(element.markup, element.inserts, renderFn);
+      return partialNode;
     }
 
     else {
-
-      if (!repeatersPool[index]) {
-        const elements = collection.map(renderFn);
-        repeatersPool[index] = elements;
-        return elements;
-      }
-
-      else {
-        const elements = collection.map((item, index) => {
-          return repeatersPool[index][index] ? repeatersPool[index][index].update(item) : renderFn(item);
-        });
-
-        if (elements.length > repeatersPool[index].length) {
-          repeatersPool[index] = elements;
-        }
-
-        return elements;
-      }
+      repeatersPool[repeaterIndex][keySelector(item)] = element;
+      return element;
     }
-  }
+
+  });
+
+  const updateRepeater = collection => {
+    return collection.map(item => {
+      let element = repeatersPool[repeaterIndex][keySelector(item)];
+
+      if (!element) {
+        const node = renderFn(item);
+        element = repeatersPool[repeaterIndex][keySelector(item)] = isPartialTemplate(node)
+          ? createPartialElement(node.markup, node.inserts, renderFn)
+          : node;
+        return element;
+      }
+
+      return element.update ? element.update(item) : element;
+    });
+
+  };
+
+  return {
+    elements,
+    updateRepeater,
+  };
 
 }
 
-createRepeater.__setTerminateInterval = function (time) {
+dynamicElement.__setTerminateInterval = function (time) {
   if (time === undefined) {
     return terminateElementsIntervel;
   }
@@ -145,28 +127,48 @@ function createTemplate(markup, inserts) {
   const wrapper = document.createElement("div");
   const escapedInserts = escapeStringsInArray(inserts);
 
-  // Combine HTML markup and add placeholders for external inputs.
-  // Binding Object Spec.
-  // {
-  //   value:         current value of given entry,
-  //   index:         index of inset in template,
-  //   type:          type of given entry: [ "text", "node", "list", "partial", "attribute", "attribute:bool" ],
-  //   ref:           reference to node holding given value; for attributes node with given attribute; for lists parent node,
-  //   container:     {
-  //     ref:         reference to the parent container,
-  //     index:       index on which the dynamic node is rendered,
-  //   },
-  //   attribute: {
-  //     name:        attribute name,
-  //     bool:        flag attribute as boolean: [ true, false ],
-  //     template:    attribute template to update,
-  //   },
-  // }
+  /*
 
+  Binding Object Spec.:
+
+  {
+    value:              current value of given binding,
+    index:              index of binding within template,
+    static:             flag that marks binding for update (TRUE mean no updates).
+    type:               type of given entry: [ "text", "node", "list", "partial", "repeater", "attribute", "attribute:bool", "attribute:repeater" ],
+    ref:                reference to DOM node holding given value; for attributes node with given attribute; for lists parent node,
+    container: {
+      ref:              reference to the parent container,
+      index:            child-node-index of rendered node withing this container,
+    },
+    repeater?: {
+      update:           update function used to generate a new array of nodes to display in repeater,
+      sourceIndex:      index of binding containing items for the repeater,
+    },
+    repeaterKey?:       flags value of current binding as function that retrieves uinque key for repeater's elements (for caching & reusing elements),
+    repeaterItems?:     flags value of current binding as reference to the array of items for the repeater to render,
+  }
+
+
+  Attribute Object Spec.:
+
+  {
+    name:             attribute name,
+    bool:             flag for attribute either regular or boolean,
+    template?:        attribute template to update,
+  }
+
+  **/
+
+  // Combine HTML markup and add placeholders for external inputs.
   const componentHtml = reduce(Array.from(markup), (acc, part, index, isLast) => {
     let value = escapedInserts[index];
     let html = acc += part;
-    let binding = { value, index };
+    let binding = {
+      value,
+      index,
+      static: false,
+    };
 
     // Last element of markup array does not generate placeholder so we do not process it.
     // We only add produced HTML at the end.
@@ -176,50 +178,46 @@ function createTemplate(markup, inserts) {
 
       // Detect attributes.
       if (isAttribute(html)) {
-        const splitIndex = html.lastIndexOf("<");
-        const head = html.slice(0, splitIndex);
-        const element = html.slice(splitIndex); // Markup of the element with current attribute.
+        const { head, element } = sliceHtml(html);
 
-        // Create new data-hk to keep track of attributes placeholders.
-        if (!element.includes("data-hk")) {
-          html = head + placeStrBetween(element, ` data-hk="${index}"`, element.indexOf(" "));
-        }
-
-        // Update data-hk attribute (multiple attributes in one element).
-        else {
-          html = head + element.replace(/data-hk="(.+?)"/, (_, refs) => `data-hk="${refs} ${index}"`);
-        }
+        html = !element.includes("data-hook-index")
+          ? addHookIndexAttribute(head, element, index)       // Keep track of attributes placeholders.
+          : updateHookIndexAttribute(head, element, index);   // Multiple attributes in one element
 
         placeholder = `%#${index}#%`;
-
       }
 
       // Allow for undefined values (treat them as an empty strings).
       else if (value === undefined) {
-        placeholder = `<i data-hk="${index}" data-typ3="text"></i>`;
+        placeholder = `<i data-hook-index="${index}" data-hook-type="text"></i>`;
       }
 
       // Detect Numbers & Strings.
       else if (isNumberOrString(value)) {
-        placeholder = `<i data-hk="${index}" data-typ3="text"></i>`;
+        placeholder = `<i data-hook-index="${index}" data-hook-type="text"></i>`;
       }
 
       // Detect HTML Elements.
       else if (isDomNode(value)) {
-        placeholder = `<i data-hk="${index}" data-typ3="node"></i>`;
+        placeholder = `<i data-hook-index="${index}" data-hook-type="node"></i>`;
       }
 
       // Detect Array of Nodes.
       else if (Array.isArray(value)) {
-        placeholder = `<i data-hk="${index}" data-typ3="list"></i>`;
+        placeholder = `<i data-hook-index="${index}" data-hook-type="list"></i>`;
       }
 
       // Detect partial HTML
       else if (isPartialTemplate(value)) {
-        placeholder = `<i data-hk="${index}" data-typ3="partial"></i>`;
+        placeholder = `<i data-hook-index="${index}" data-hook-type="partial"></i>`;
       }
 
-      // Clamp other types into empty string (just skip them).
+      // Detect repeater render function.
+      else if (isRepeaterFunction(value, html)) {
+        placeholder = `<i data-hook-index="${index}" data-hook-type="repeater"></i>`;
+      }
+
+      // Clamp other types into empty string (skip them).
       else {
         placeholder = "";
       }
@@ -237,41 +235,62 @@ function createTemplate(markup, inserts) {
   // Parese HTML template into DOM elements.
   wrapper.insertAdjacentHTML("beforeend", componentHtml);
 
-  // Map data-hk elements and attributes into their external inputs + complete bindings configuration.
-  const dataHooks = nodeListToArray(wrapper.querySelectorAll("[data-hk]"));
+  // Map data-hook-index elements and attributes into their external inputs .
+  const dataHooks = nodeListToArray(wrapper.querySelectorAll("[data-hook-index]"));
 
+  // Complete bindings configuration (assign proper types, node references and containers).
   loop(dataHooks, hook => {
-    const type = hook.dataset.typ3;
-
+    const type = hook.dataset.hookType;
 
     // Attributes.
     if (type === undefined) {
 
-      const localAttributes = getAllAttributes(hook);
+      let localAttributes = getAllAttributes(hook);
 
-      // Set Boolean attributes.
+      loop(Object.keys(localAttributes), index => {
 
-      Object.keys(localAttributes).forEach(index => {
-        const { value } = bindings[index];
+        const binding = bindings[index];
+
+        binding.ref = hook;
+        binding.container = createContainer(hook);
+
         const attribute = localAttributes[index];
-
-        bindings[index].ref = hook;
-        bindings[index].container = createContainer(hook);
 
         // Handle boolean attributes.
         if (attribute.bool) {
-          bindings[index].type = "attribute:bool";
+          binding.type = "attribute:bool";
 
           hook.removeAttribute(`?${attribute.name}`);
 
-          value
+          binding.value
             ? hook.setAttribute(attribute.name, attribute.name)
             : hook.removeAttribute(attribute.name);
         }
 
+        // Handle special case for repeaters attirbutes $key and $items.
+        else if (isRepeaterAttribute(attribute.name, binding.value)) {
+
+          // Mark as repeater Key, block for updates and cleanup.
+          if (attribute.name === "$key") {
+            binding.static = true;
+            binding.repeaterKey = true;
+            binding.type = "attribute:repeater";
+            hook.removeAttribute(attribute.name);
+          }
+
+          // Mark as repeater Items and cleanup.
+          if (attribute.name === "$items") {
+            binding.repeaterItems = true;
+            binding.type = "attribute:repeater";
+            hook.removeAttribute(attribute.name);
+          }
+
+          delete localAttributes[index];
+        }
+
         // Handle non-boolean attributes.
-        else if (isValidAttributeValue(value)) {
-          bindings[index].type = "attribute";
+        else if (isValidAttributeValue(binding.value)) {
+          binding.type = "attribute";
           updateAttributesTempate(hook, attribute, bindings);
         }
 
@@ -288,7 +307,8 @@ function createTemplate(markup, inserts) {
     // Nodes.
     else {
 
-      const binding = bindings[Number(hook.dataset.hk)];
+      const bindingIndex = Number(hook.dataset.hookIndex);
+      const binding = bindings[bindingIndex];
 
       // Insert TextNode for Strings, Numbers & Undefined.
       if (type === "text") {
@@ -321,13 +341,32 @@ function createTemplate(markup, inserts) {
         binding.container = createContainer(hook);
         binding.container.ref.replaceChild(binding.ref, hook);
       }
+
+      // Repeaters.
+      else if (type === "repeater") {
+        binding.type = "repeater";
+        binding.ref = hook.parentNode;
+        binding.container = createContainer(hook);
+
+        const renderFn = binding.value;
+        const { items, itemsIndex, keySelector } = getRepeaterProperties(hook, bindings);
+        const { elements, updateRepeater } = createRepeater(renderFn, items, keySelector);
+        binding.value = elements;
+
+        binding.repeater = {
+          update: updateRepeater,
+          sourceIndex: itemsIndex,
+        };
+
+        insetrNodesBefore(binding.value, hook);
+      }
     }
 
-    hook.removeAttribute("data-hk");
+    hook.removeAttribute("data-hook-index");
 
   });
 
-  // // Strip wrapper node if not needed.
+  // Strip wrapper node if not needed.
   const element = stripWrapper(wrapper);
 
   return {
@@ -338,10 +377,11 @@ function createTemplate(markup, inserts) {
 }
 
 
-function createPartialElement(markup, inserts) {
+function createPartialElement(markup, inserts, renderFn) {
   const { element, bindings, attributes } = createTemplate(markup, inserts);
-  element.update = updateComponent(element, bindings, attributes);
+  element.update = updateComponent(element, bindings, attributes, renderFn);
   element.refs = getReferences(element);
+  element.update.isPartial = true;
   return element;
 }
 
@@ -349,6 +389,8 @@ function createPartialElement(markup, inserts) {
 function updateComponent(element, bindings, attributes, renderFn) {
   return (state) => {
     const inserts = renderFn ? renderFn(state).inserts : state;
+    if (!inserts)
+      throw new Error("Cannot update component. Invalid input");
     const escapedInserts = escapeStringsInArray(inserts);
     loop(escapedInserts, updateChangedValues(bindings, attributes));
     return element;
@@ -361,16 +403,21 @@ function updateReference(index, bindings, attributes, newValue) {
 
   const binding = bindings[index];
 
+  // console.log(binding);
+
   if (!binding) return;
 
   // Update Boolean Attributes.
   if (binding.type === "attribute:bool") {
     const attribute = attributes[binding.index];
-
     binding.value
       ? binding.ref.setAttribute(attribute.name, attribute.name)
       : binding.ref.removeAttribute(attribute.name);
+  }
 
+  // Update Repeater items.
+  if (binding.type === "attribute:repeater" && binding.repeaterItems === true) {
+    binding.value = newValue;
   }
 
   // Update Attributes.
@@ -423,6 +470,9 @@ function updateReference(index, bindings, attributes, newValue) {
       binding.ref = newValue;
     }
 
+    // Update current binding value.
+    binding.value = newValue;
+
   }
 
   // Update Single DOM Node.
@@ -464,6 +514,9 @@ function updateReference(index, bindings, attributes, newValue) {
       binding.type = "list";
       binding.ref = newValue;
     }
+
+    // Update current binding value.
+    binding.value = newValue;
 
   }
 
@@ -507,65 +560,12 @@ function updateReference(index, bindings, attributes, newValue) {
 
     // Array of DOM Nodes to -> Array of DOM Nodes.
     else if (Array.isArray(newValue)) {
-
-      /*
-        Implement 4 basic update actions to update DOM tree.
-
-        - ADD:      when node is the new one.
-        - SKIP:     when node matches old position.
-        - MOVE:     when node position changed.
-        - REVMOE:   when node does not esist.
-      */
-
-      // Remove all nodes that does not exist in newValue array.
-      loop(binding.value, node => isDomNode(node) && !newValue.includes(node) && node.remove());
-
-      // Update remaining nodes.
-      loop(newValue, (newNode, index) => {
-
-        // Offset index value with container.index in case list is not only item in the element.
-        const insertIndex = binding.container.index + index;
-
-        // Process Partials.
-        if (isPartialTemplate(newNode)) {
-          if (binding.value[index].update) {
-            binding.container.ref.childNodes[insertIndex].update(newNode.inserts);
-          }
-
-          else {
-            const partialNode = createPartialElement(newNode.markup, newNode.inserts);
-            binding.container.ref.replaceChild(partialNode, binding.container.ref.childNodes[insertIndex]);
-            binding.value[index] = newNode;
-          }
-        }
-
-        // Process DOM nodes.
-        else {
-
-          const oldIndex = binding.value.indexOf(newNode);
-
-
-          // Add (node does not exist -> append new node).
-          if (oldIndex === -1) {
-            insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
-          }
-
-          // Move (node does not match old position).
-          else if (binding.value[index] !== newNode) {
-            insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
-          }
-
-          // Skip (new node matches its old position).
-          else if (binding.value[index] === newNode) {
-            /* Do nothing */
-          }
-        }
-
-      });
-
+      updateArrayOfNodes(binding, newValue);
     }
-  }
 
+    // Update current binding value.
+    binding.value = newValue;
+  }
 
   // Update Parial Nodes.
   else if (binding.type === "partial") {
@@ -604,34 +604,131 @@ function updateReference(index, bindings, attributes, newValue) {
       binding.type = "list";
       binding.ref = newValue;
     }
+
+    // Update current binding value.
+    binding.value = newValue;
   }
 
-  binding.value = newValue;
+  // Update Parial Nodes.
+  else if (binding.type === "repeater") {
+    const value = binding.repeater.update(bindings[binding.repeater.sourceIndex].value);
+    updateArrayOfNodes(binding, value);
+    binding.value = value;
+  }
+
 }
 
 
 // ---- Helpers ----------------
 
 function updateChangedValues(bindings, attibutes) {
-  return (insert, index) => insert !== bindings[index].value
-    && updateReference(index, bindings, attibutes, insert);
+  return (insert, index) => {
+    return Boolean(bindings[index].static) === false
+      && insert !== bindings[index].value
+      && updateReference(index, bindings, attibutes, insert);
+  }
 }
 
 // Pull out and cleanup "ref" hooks.
 function getReferences(element) {
   const refs = {};
-  const refsElements = nodeListToArray(element.querySelectorAll("[ref]"));
+  const refsElements = nodeListToArray(element.querySelectorAll("[\\$ref]"));
 
   loop(
     refsElements,
     refNode => {
-      const refName = refNode.getAttribute("ref");
+      const refName = refNode.getAttribute("$ref");
       refs[refName] = refNode;
-      refNode.removeAttribute("ref");
+      refNode.removeAttribute("$ref");
     }
   );
 
   return Object.freeze(refs);
+}
+
+
+function updateArrayOfNodes(binding, newValue) {
+
+  /*
+    Implements 4 basic actions to update DOM tree.
+
+    - ADD:      when node is the new one.
+    - SKIP:     when node matches old position.
+    - MOVE:     when node position changed.
+    - REVMOE:   when node does not exist in new structure.
+  */
+
+  let markForDeletion = [];
+
+  // Remove all nodes that does not exist in newValue array.
+  loop(binding.value, (node, index) => {
+    const childIndex = binding.container.index + index;
+    if ((isDomNode(node) && !newValue.includes(node)) || isPartialTemplate(node)) {
+      binding.value = removeByInstance(binding.value, node);
+      markForDeletion.push(binding.container.ref.childNodes[childIndex]);
+    }
+  });
+
+  // Update remaining nodes.
+  loop(newValue, (newNode, index) => {
+
+    // Offset index value with container.index in case list is not only item in the element.
+    const insertIndex = binding.container.index + index;
+
+    // Check for new node.
+    const isNewNode = binding.value.indexOf(newNode) === -1;
+
+    // Add (node does not exist -> append new node).
+    if (isNewNode) {
+      isPartialTemplate(newNode)
+        ? insertNodeAtIndex(insertIndex, createPartialElement(newNode.markup, newNode.inserts), binding.container.ref)
+        : insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
+    }
+
+    // Move (node does not match old position).
+    else if (binding.value[index] !== newNode) {
+      insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
+    }
+
+    // Skip (new node matches its old position).
+    else if (binding.value[index] === newNode) {
+      /* Do nothing */
+    }
+
+  });
+
+  // Remove marked nodes.
+  loop(markForDeletion, node => node.remove());
+}
+
+function getRepeaterProperties(hook, bindings) {
+  // Current Bindin Index - 1;
+  let index = Number(hook.dataset.hookIndex) - 1;
+  let keySelector;
+  let itemsIndex;
+  let items;
+
+  while (index > -1) {
+
+    if (bindings[index].repeaterItems === true) {
+      items = bindings[index].value;
+      itemsIndex = index;
+    }
+
+    if (bindings[index].repeaterKey === true) {
+      keySelector = bindings[index].value;
+      break;
+    }
+
+    index--;
+  }
+
+  return {
+    items,
+    itemsIndex,
+    keySelector,
+  };
+
 }
 
 // Simplify adding nodes at given index.
@@ -669,9 +766,20 @@ function isValidAttributeValue(value) {
   return value === undefined || value === false || typeof value === "number" || typeof value === "string";
 }
 
+// Verify if value is valid for repeater attribute.
+function isRepeaterAttribute(name, value) {
+  return (name === "$key" && typeof value === "function") || (name === "$items" && Array.isArray(value));
+}
+
 // Allow Strings and Numbers.
 function isNumberOrString(value) {
   return typeof value === "number" || typeof value === "string";
+}
+
+// Verify if given @value is repeater render function.
+function isRepeaterFunction(value, html) {
+  const lastNodeHtml = html.slice(html.lastIndexOf("<"));
+  return typeof value === "function" && lastNodeHtml.includes("$items");
 }
 
 // Verify if given @node is instance of a Text or HTMLElement.
@@ -687,6 +795,22 @@ function isPartialTemplate(node) {
     && Array.isArray(node.markup);
 }
 
+
+function sliceHtml(html) {
+  const splitIndex = html.lastIndexOf("<");
+  const head = html.slice(0, splitIndex);
+  const element = html.slice(splitIndex); // Markup of the element with current attribute.
+  return { head, element };
+}
+
+function addHookIndexAttribute(head, element, index) {
+  return head + placeStrBetween(element, ` data-hook-index="${index}"`, element.indexOf(" "));
+}
+
+function updateHookIndexAttribute(head, element, index) {
+  return head + element.replace(/data-hook-index="(.+?)"/, (_, refs) => `data-hook-index="${refs} ${index}"`);
+}
+
 function createContainer(node) {
   return {
     ref: node.parentNode,
@@ -700,6 +824,7 @@ function getNodeIndex(node) {
   return index;
 }
 
+// Insert only DOM nodes, Text nodes, and Partials.
 function insetrNodesBefore(nodes, pointer) {
   loop(nodes, node => {
     isDomNode(node)
@@ -712,12 +837,9 @@ function insetrNodesBefore(nodes, pointer) {
 }
 
 // Remove only direct nodes of the container element.
-// NOTE: This additional check is required forth case where DOM node is reused elsewhere,
-// so we need to avoid removing it from other container.
 function removeNodes(nodes, container) {
   loop(nodes, node => node.parentNode === container && node.remove());
 }
-
 
 // Remove element wrapper if not needed.
 function stripWrapper(wrapper) {
