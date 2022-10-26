@@ -5,14 +5,14 @@ import { isObject } from "./general.js";
   headers: {};                   // Request headers.
   method: "GET";                 // GET, POST, PUT, DELETE, etc.
   redirect: "follow";            // manual, follow, error
-  mode: "no-cors";               // no-cors, cors, same-origin  
+  mode: "no-cors";               // no-cors, cors, same-origin
   credentials: "omit";           // include, same-origin, omit
-  cache: false;                  // default, no-cache, reload, force-cache, only-if-cached 
+  cache: false;                  // default, no-cache, reload, force-cache, only-if-cached
   referrerPolicy: "no-referrer"; // no-referrer, no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
   responseProcessor: [],         // Array of processor functions
   requestHash: "",
   fallback: false,
-  cacheRequests: false,    
+  cacheRequests: false,
   useErrorWrapper: false,
   doNotParseResponse: false,
 */
@@ -66,7 +66,7 @@ export class RequestConfig {
     }
   };
 
-  __updateResponseProcessor(target, sourceValue) {
+  #updateResponseProcessor(target, sourceValue) {
     if (typeof sourceValue === "function") {
       target.responseProcessor = [sourceValue];
     } else if (Array.isArray(sourceValue)) {
@@ -76,7 +76,7 @@ export class RequestConfig {
     }
   };
 
-  __updateHeaders(target, sourceValue) {
+  #updateHeaders(target, sourceValue) {
     if (typeof sourceValue === "function") {
       target.headers = sourceValue({ ...target.headers });
     } else if (isObject(sourceValue)) {
@@ -89,11 +89,11 @@ export class RequestConfig {
   update(key, value) {
 
     if (key === "responseProcessor") {
-      this.__updateResponseProcessor(this, value);
+      this.#updateResponseProcessor(this, value);
     }
 
     else if (key === "headers") {
-      this.__updateHeaders(this, value);
+      this.#updateHeaders(this, value);
     }
 
     else if (requestAllowProps.includes(key)) {
@@ -132,7 +132,7 @@ export class RequestConfig {
 };
 
 
-export default function createRequest(config) {
+export function createRequest(config) {
 
   if (config && !(config instanceof RequestConfig)) {
     throw new Error("Configuration object should be instace of RequestConfig");
@@ -190,9 +190,9 @@ export default function createRequest(config) {
   }
 
 
-  // -------------------------- 
+  // --------------------------
   // ---- GET -----------------
-  // -------------------------- 
+  // --------------------------
 
   function get(url, configuration) {
     if (configuration && !(configuration instanceof RequestConfig)) {
@@ -210,9 +210,9 @@ export default function createRequest(config) {
   }
 
 
-  // -------------------------- 
+  // --------------------------
   // ---- POST ----------------
-  // -------------------------- 
+  // --------------------------
 
   function post(url, config, body) {
 
@@ -372,17 +372,17 @@ function encodeBody(body, headers = {}) {
   }
 
   else {
-    return isObject(body) ? objectToFormData(body) : JSON.stringify(body);
+    return isObject(body) ? encodeObject(body) : JSON.stringify(body);
   }
 }
 
-export function objectToFormData(body) {
-  const formData = new FormData();
+export function encodeObject(body) {
+  const searchParams = new URLSearchParams();
   Object.keys(body).forEach(name => {
     const data = isBasicType(body[name]) ? body[name] : JSON.stringify(body[name]);
-    formData.append(name, data);
+    searchParams.append(name, data);
   });
-  return formData;
+  return searchParams;
 }
 
 function isBasicType(value) {
@@ -396,9 +396,9 @@ function paramsDetection(config, body) {
       ? body
       : undefined;
 
-  const bodyContent = (body && !(body instanceof RequestConfig))
+  const bodyContent = (body !== undefined && !(body instanceof RequestConfig))
     ? body
-    : (config && !(config instanceof RequestConfig))
+    : (config !== undefined && !(config instanceof RequestConfig))
       ? config
       : undefined;
 

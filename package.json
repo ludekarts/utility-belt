@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.3.0-beta.4",
+  "version": "0.4.0-beta.1",
   "description": "JavaScript Utilities Collection",
   "source": "src/index.js",
   "main": "dist/utility-belt.js",
@@ -27,7 +27,6 @@
   ],
   "author": "Wojciech Ludwin @ludekarts, ludekarts@gmail.com",
   "license": "ISC",
-  "dependencies": {},
   "devDependencies": {
     "copy-files-from-to": "^3.2.1",
     "gh-pages": "^3.2.3",
