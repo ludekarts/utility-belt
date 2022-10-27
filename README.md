@@ -5,46 +5,40 @@ JavaScript Utilities Collection see [full documentation](https://ludekarts.githu
 ### Note
 
 - Docs uses native [JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules) implementation. If something does not work it may be that you're using outdated browser.
-- This package is **not isomorphic** it can be used only for frontend tech (for now).
-
-## Installation
+- This package is **not fully isomorphic** so some of the methods will not work on the server.
 
 
-With NPM
+## Use with bundler
+
+**Installation**
 
 ```
 npm install @ludekarts/utility-belt;
 ```
 
-With Browser (unpkg)
+**Code**
+
+```
+import { copyText } from "@ludekarts/utility-belt";
+
+copyText("Hello! I'm copied text.");
+```
+
+
+## Use with browser
+
+**Installation**
 
 ```
 <script src="https://unpkg.com/@ludekarts/utility-belt@latest/dist/utility-belt.umd.js"></script>
 ```
 
-
-## Usage
-
-With bundler
+**Code**
 
 ```
-import { clipboard } from "@ludekarts/utility-belt";
+const { copyText } = window.utilityBelt;
 
-const copy = clipboard();
-
-copy("Hello! I'm copied text.");
-
-```
-
-With browser
-
-```
-const { clipboard } = window.utilityBelt;
-
-const copy = clipboard();
-
-copy("Hello! I'm copied text.");
-
+copyText("Hello! I'm copied text.");
 ```
 
 See methods [full documentation](https://ludekarts.github.io/utility-belt).
