@@ -57,11 +57,7 @@ export class RequestConfig {
       Object.freeze(this.responseProcessor);
     }
 
-    else if (!Boolean(config)) {
-      return this;
-    }
-
-    else {
+    else if (config !== undefined) {
       throw new Error("Config argument should be Undefuned or an Object");
     }
   };
@@ -151,7 +147,24 @@ export function createRequest(config) {
   // Default request.
   function request(url, config) {
 
-    const { native, requestConfig, headers, responseProcessor } = globalConfiguration.merge(config);
+    let { native, requestConfig, headers, responseProcessor } = globalConfiguration.merge(config);
+
+    // Set proper request body.
+    if (requestConfig.body) {
+
+      if (requestConfig.method.toLowerCase() === "get") {
+        const { body, ...rqConfig } = requestConfig;
+        url += typeof body === "string" ? `?${body}` : `?${objectToUrlString(body)}`;
+        requestConfig = rqConfig;
+      }
+      else {
+        requestConfig = {
+          ...requestConfig,
+          body: encodeBody(requestConfig.body, headers)
+        };
+      }
+    }
+
     const requestHash = `${url}${native.requestHash || ""}`;
     const cachedResponse = native.cacheRequests && requestCache.has(requestHash)
 
@@ -167,7 +180,9 @@ export function createRequest(config) {
       return response;
     };
 
-    const fetchPromise = fetch(url, { ...requestConfig, headers, signal })
+    const finalRequestCofig = { ...requestConfig, headers, signal };
+
+    const fetchPromise = fetch(url, finalRequestCofig)
       // Remove from requests queue.
       .then(requestCleanup)
       // Parse response.
@@ -194,18 +209,12 @@ export function createRequest(config) {
   // ---- GET -----------------
   // --------------------------
 
-  function get(url, configuration) {
-    if (configuration && !(configuration instanceof RequestConfig)) {
-      throw new Error("Configuration object should be instace of RequestConfig");
-    }
-
-    const getConfig = new RequestConfig({
-      method: "GET",
-    });
-
-    const requestConfig = configuration ? configuration.merge(getConfig) : getConfig;
-
-
+  function get(url, body) {
+    const requestConfig = body instanceof RequestConfig
+      ? body.merge(new RequestConfig({ method: "GET" }))
+      : Boolean(body)
+        ? new RequestConfig({ method: "GET", body })
+        : new RequestConfig({ method: "GET" });
     return request(url, requestConfig);
   }
 
@@ -214,22 +223,15 @@ export function createRequest(config) {
   // ---- POST ----------------
   // --------------------------
 
-  function post(url, config, body) {
-
-    const { configuration, bodyContent } = paramsDetection(config, body);
-
-    if (configuration && !(configuration instanceof RequestConfig)) {
-      throw new Error("Configuration object should be instace of RequestConfig");
-    }
-
-    const postConfig = new RequestConfig({
-      method: "POST",
-      body: encodeBody(bodyContent, configuration?.headers)
-    });
-
-    const requestConfig = configuration ? configuration.merge(postConfig) : postConfig;
+  function post(url, body) {
+    const requestConfig = body instanceof RequestConfig
+      ? body.merge(new RequestConfig({ method: "POST" }))
+      : Boolean(body)
+        ? new RequestConfig({ method: "POST", body })
+        : new RequestConfig({ method: "POST" });
     return request(url, requestConfig);
   }
+
 
   // Allows to abort given request.
   function abort(requestToCancel) {
@@ -322,7 +324,7 @@ async function parseResponse(response, fallback, useErrorWrapper = false) {
   }
 
   else {
-    console.warn(`Not recognized content-type: ${response.headers.get("content-type")}`);
+    console.warn(`Not recognized content - type: ${response.headers.get("content-type")} `);
     result = response;
   }
 
@@ -372,11 +374,12 @@ function encodeBody(body, headers = {}) {
   }
 
   else {
-    return isObject(body) ? encodeObject(body) : JSON.stringify(body);
+    return isObject(body) ? objectToRequestBody(body) : JSON.stringify(body);
   }
 }
 
-export function encodeObject(body) {
+
+export function objectToRequestBody(body) {
   const searchParams = new URLSearchParams();
   Object.keys(body).forEach(name => {
     const data = isBasicType(body[name]) ? body[name] : JSON.stringify(body[name]);
@@ -385,25 +388,89 @@ export function encodeObject(body) {
   return searchParams;
 }
 
-function isBasicType(value) {
-  return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+function arrayToUrl(array, prefix = "") {
+  let result = "";
+
+  array.forEach((item, index) => {
+    if (notAllowed(item)) {
+      throw new Error(`objectToUrlString: Encounter not allowed value at: ${prefix} index: ${index}`);
+    }
+
+    else if (isBasicType(item)) {
+      result += prefix + `[]=${item}&`;
+    }
+
+    else if (Array.isArray(item)) {
+      result += arrayToUrl(item, prefix + `[${index}]`);
+    }
+
+    else {
+      result += objectToUrl(item, prefix + `[${index}]`);
+    }
+  });
+
+  return result;
 }
 
-function paramsDetection(config, body) {
-  const configuration = config instanceof RequestConfig
-    ? config
-    : body instanceof RequestConfig
-      ? body
-      : undefined;
+function objectToUrl(object, prefix = "") {
 
-  const bodyContent = (body !== undefined && !(body instanceof RequestConfig))
-    ? body
-    : (config !== undefined && !(config instanceof RequestConfig))
-      ? config
-      : undefined;
+  let result = "";
 
-  return {
-    bodyContent,
-    configuration,
-  };
+  Object.keys(object).forEach(key => {
+
+    if (notAllowed(object[key])) {
+      throw new Error(`objectToUrlString: Encounter not allowed value at: ${prefix}`);
+    }
+
+    else if (isBasicType(object[key])) {
+      result += prefix + `[${key}]=${object[key]}&`;
+    }
+
+    else if (Array.isArray(object[key])) {
+      result += arrayToUrl(object[key], prefix + `[${key}]`);
+    }
+
+    else {
+      result += objectToUrl(object[key], prefix + `[${key}]`);
+    }
+
+    return result;
+
+  });
+
+  return result;
+}
+
+
+function objectToUrlString(json) {
+  if (isBasicType(json) || notAllowed(json) || Array.isArray(json)) {
+    throw new Error("objectToUrlString: Given value is not a JSON object");
+  }
+
+  return Object.keys(json).map(key => {
+    return sliceEndAnd(
+      isBasicType(json[key])
+        ? `${key}=${json[key]}`
+        : Array.isArray(json[key])
+          ? arrayToUrl(json[key], key)
+          : objectToUrl(json[key], key)
+    );
+  }).join("&");
+}
+
+function sliceEndAnd(value) {
+  return value.replace(/&$/g, "");
+}
+
+function notAllowed(value) {
+  return value === null
+    || value === undefined
+    || typeof value === "symbol"
+    || typeof value === "function";
+}
+
+function isBasicType(value) {
+  return typeof value === "string"
+    || typeof value === "number"
+    || typeof value === "boolean";
 }

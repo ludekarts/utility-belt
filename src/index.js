@@ -1,3 +1,8 @@
+import { version } from "../package.json"
+
+// Version
+export const version_utb = version;
+
 // General.
 export * from "./utilities/general.js";
 export { default as deepCopy } from "./utilities/deep-copy.js";
@@ -42,9 +47,9 @@ export { default as createHistory } from "./utilities/history.js";
 
 // DOM Helpers.
 export * from "./utilities/template.js";
+export * from "./utilities/component.js";
 export * from "./utilities/dom-helpers.js";
 export * from "./utilities/dom-manipulations.js";
-export { default as component } from "./utilities/component.js";
 export { default as highlight } from "./utilities/highlight.js";
 export { default as importHtml } from "./utilities/import-html.js";
 export { default as createElement } from "./utilities/create-element.js";

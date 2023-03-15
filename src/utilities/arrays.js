@@ -113,9 +113,7 @@ export function removeByIndex(array, index) {
 export function removeByInstance(array, instance) {
   const index = array.indexOf(instance);
   if (index === -1) return array;
-  const clone = [...array];
-  clone.splice(index, 1);
-  return clone;
+  return removeByIndex(array, index);
 }
 
 export function replaceByIndex(array, index, item) {
@@ -135,4 +133,8 @@ export function insertAtIndex(array, index, item) {
   const clone = [...array];
   clone.splice(index, 0, item);
   return clone;
+}
+
+export function zipArray(arrayA, arrayB) {
+  return arrayA.map((element, index) => [element, arrayB[index]]);
 }

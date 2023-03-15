@@ -51,14 +51,16 @@ export function createReducer(initState) {
   };
 
   api.done = function () {
-    return function reducer(state = initState, action) {
+    return function reducer(state = initState, action, globalState) {
 
       if (!action) {
         throw new Error("Action is required to run a reducer");
       }
 
       return actions.has(action.type)
-        ? actions.get(action.type)(state, action)
+        ? globalState
+          ? actions.get(action.type)(state, action, globalState)
+          : actions.get(action.type)(state, action)
         : state;
     }
   }
@@ -129,7 +131,8 @@ export function createStore(reducer) {
     state = dispatchCore(action, state);
 
     // Prevents from state updates when internal actions are dispatched.
-    isExternalAction(action) && listeners.forEach(listener => listener(state));
+    isExternalAction(action) &&
+      listeners.forEach(listener => listener(state));
   }
 
 
@@ -141,25 +144,42 @@ export function createStore(reducer) {
       return dispatchCore(action, newState);
     }, state);
 
-    // Prevents from state updates when internal actions are dispatched.
     listeners.forEach(listener => listener(state));
   }
 
 
   // Core dispatch functionality.
   function dispatchCore(action, oldState) {
-    actionListeners.dispatch(action.type, oldState);
 
+    // Update state.
     const finalState = reducers.reduce((newState, reducer) => {
       // Handles defineReducer logic.
       if (typeof reducer.setter === "function") {
-        reducer.setter(newState, reducer(newState, action));
-        return newState;
+        const intermediateState = reducer(newState, action);
+
+        // When you wan to update global state from local reducer.
+        if (typeof intermediateState === "function") {
+          return intermediateState(newState);
+        }
+
+        else {
+          reducer.setter(newState, intermediateState);
+          return newState;
+        }
       }
       return reducer(newState, action);
     }, oldState);
 
-    actionListeners.dispatch(`${action.type}::afterupdate`, finalState);
+    // PubSub on update notification.
+    // ⚠️ NOTICE: ⚠️
+    // This event is async and can't be used to sync actions. It exist only for notification purpose.
+    setTimeout(() => {
+      actionListeners.dispatch(action.type, {
+        state: finalState,
+        action: action.type,
+        payload: action.payload,
+      });
+    }, 0);
 
     return finalState;
   }
@@ -300,7 +320,7 @@ export function createStore(reducer) {
   */
 
   function defineReducer(reducer, getter, setter) {
-    const definedReducer = (state, action) => reducer(getter(state), action);
+    const definedReducer = (state, action) => reducer(getter(state), action, state);
     definedReducer.setter = setter;
     reducers.push(definedReducer);
     dispatch("defineReducer:true");

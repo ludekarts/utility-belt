@@ -188,7 +188,7 @@ function createTemplate(markup, inserts) {
       }
 
       // Allow for undefined values (treat them as an empty strings).
-      else if (value === undefined) {
+      else if (isAsEmpty(value)) {
         placeholder = `<i data-hook-index="${index}" data-hook-type="text"></i>`;
       }
 
@@ -313,7 +313,7 @@ function createTemplate(markup, inserts) {
       // Insert TextNode for Strings, Numbers & Undefined.
       if (type === "text") {
         binding.type = "text";
-        binding.ref = document.createTextNode(binding.value || "");
+        binding.ref = document.createTextNode(isAsEmpty(binding.value) ? "" : binding.value);
         binding.container = createContainer(hook);
         binding.container.ref.replaceChild(binding.ref, hook);
       }
@@ -439,7 +439,7 @@ function updateReference(index, bindings, attributes, newValue) {
   else if (binding.type === "text") {
 
     // TextNode to -> Empty String (undefined).
-    if (newValue === undefined) {
+    if (isAsEmpty(newValue)) {
       binding.ref.textContent = "";
     }
 
@@ -479,7 +479,7 @@ function updateReference(index, bindings, attributes, newValue) {
   else if (binding.type === "node") {
 
     // Single DOM Node to -> Empty TextNode.
-    if (newValue === undefined) {
+    if (isAsEmpty(newValue)) {
       const textNode = document.createTextNode("");
       binding.container.ref.replaceChild(textNode, binding.ref);
       binding.type = "text";
@@ -524,7 +524,7 @@ function updateReference(index, bindings, attributes, newValue) {
   else if (binding.type === "list") {
 
     // Array of DOM Nodes to -> Empty TextNode.
-    if (newValue === undefined) {
+    if (isAsEmpty(newValue)) {
       const textNode = document.createTextNode("");
       insertNodeAtIndex(binding.container.index, textNode, binding.container.ref);
       removeNodes(binding.value, binding.container.ref);
@@ -571,7 +571,7 @@ function updateReference(index, bindings, attributes, newValue) {
   else if (binding.type === "partial") {
 
     // Partial Node -> Empty TextNode.
-    if (newValue === undefined) {
+    if (isAsEmpty(newValue)) {
       const textNode = document.createTextNode("");
       binding.container.ref.replaceChild(textNode, binding.ref);
       binding.type = "text";
@@ -759,6 +759,11 @@ function updateAttributesTempate(node, attribute, bindings) {
 // Check if current provessing value in HTML is for attribute.
 function isAttribute(html) {
   return html.lastIndexOf("<") > html.lastIndexOf(">");
+}
+
+// Check if current provessing value in HTML is for attribute.
+function isAsEmpty(value) {
+  return value === undefined || value === false;
 }
 
 // Verify if value is valid for attribute.
