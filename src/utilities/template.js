@@ -1,6 +1,15 @@
 import { loop, reduce, nodeListToArray, removeByInstance } from "./arrays.js";
 import { placeStrBetween } from "./strings.js";
 
+/*
+⚠️ NOTICE:⚠️
+
+When using partials inside templates, it is important to remember that you cannot use conditional partials.
+This is because, currently, it is impossible to distinguish one partial from another, and as a result,
+the renderer will not be able to properly display the data.
+In the future, we plan to introduce HTML with IDs (e.g. html("id")<span>hello</span>) to mitigate this issue.
+
+*/
 
 export function html(markup, ...inserts) {
   const notTemplateString = markup === undefined || !Boolean(markup.raw);
@@ -135,7 +144,7 @@ function createTemplate(markup, inserts) {
     value:              current value of given binding,
     index:              index of binding within template,
     static:             flag that marks binding for update (TRUE mean no updates).
-    type:               type of given entry: [ "text", "node", "list", "partial", "repeater", "attribute", "attribute:bool", "attribute:repeater" ],
+    type:               type of given entry: [ "text", "node", "list", "partial", "repeater", "attribute", "attribute:bool", "attribute:repeater", "attribute:callback" ],
     ref:                reference to DOM node holding given value; for attributes node with given attribute; for lists parent node,
     container: {
       ref:              reference to the parent container,
@@ -286,6 +295,20 @@ function createTemplate(markup, inserts) {
           }
 
           delete localAttributes[index];
+        }
+
+        // Handle callback attributes.
+        else if (isCallbackAttribute(attribute.name, binding.value)) {
+          binding.static = true;
+          binding.type = "attribute:callback";
+
+          // Clenup.
+          hook.removeAttribute(attribute.name);
+          delete localAttributes[index];
+
+          // Connect callbck with reference element.
+          hook[attribute.name] = binding.value;
+
         }
 
         // Handle non-boolean attributes.
@@ -774,6 +797,11 @@ function isValidAttributeValue(value) {
 // Verify if value is valid for repeater attribute.
 function isRepeaterAttribute(name, value) {
   return (name === "$key" && typeof value === "function") || (name === "$items" && Array.isArray(value));
+}
+
+// Verify attribute is a callback.
+function isCallbackAttribute(name, value) {
+  return name.startsWith("on") && typeof value === "function";
 }
 
 // Allow Strings and Numbers.

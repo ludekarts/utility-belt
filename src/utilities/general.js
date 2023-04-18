@@ -29,6 +29,14 @@ export function isObject(object) {
     !Array.isArray(object);
 }
 
+// Check for promise value.
+export function isPromise(value) {
+  return value !== null
+    && typeof value === "object"
+    && typeof value.then === "function"
+    && typeof value.catch === "function"
+}
+
 // Check if piont [x,y] is in polygon [[x,y],...].
 export function inPolygon(point, vs) {
   let [x, y] = point

@@ -130,7 +130,7 @@ export function createStore(reducer) {
     const action = isActionObject(actionType) ? actionType : { type: actionType, payload };
     state = dispatchCore(action, state);
 
-    // Prevents from state updates when internal actions are dispatched.
+    // Do not send state notifications when internal actions are dispatched.
     isExternalAction(action) &&
       listeners.forEach(listener => listener(state));
   }
