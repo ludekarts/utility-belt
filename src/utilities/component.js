@@ -51,7 +51,9 @@ function createInternalStateManager(render) {
 
         if (isPromise(unwrapedValue)) {
           values.push(undefined);
+
           let index = values.length - 1;
+
           unwrapedValue
             .then(value => {
               values[index] = value;
@@ -81,7 +83,7 @@ function createInternalStateManager(render) {
         },
 
         function setValue(v) {
-          values[index] = v;
+          values[index] = typeof v === "function" ? v(values[index]) : v;
           render();
         }
 
