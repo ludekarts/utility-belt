@@ -4,31 +4,51 @@ import { isPromise } from "./general.js";
 export function component(cmpFn) {
   let element;
   let prevState;
-  let createValue = createInternalStateManager(render);
+  let createValue;
 
-  function render(state) {
+  function render(state, ...children) {
+
+    if (state instanceof HTMLElement) {
+      children.unshift(state);
+      state = undefined;
+    }
+
+    if (!createValue) {
+      createValue = createInternalStateManager(render);
+    }
 
     // Create new dynamic element.
     if (!element) {
       // console.log("create");
-      element = dynamicElement(cmpFn, { state, createValue });
+      element = dynamicElement(cmpFn, { state, children, createValue });
       prevState = state;
     }
 
     // Re-render with previouse state.
     else if (state === undefined) {
       // console.log("re-render");
-      element.update({ state: prevState, createValue });
+      element.update({ state: prevState, children, createValue });
     }
 
     // Update only for state change.
     else if (prevState !== state) {
       // console.log("update");
-      element.update({ state, createValue });
+      element.update({ state, children, createValue });
       prevState = state;
     }
 
     return element;
+  }
+
+  // Cleanup.
+
+  render.cleanup = function () {
+    element.remove();
+    element.refs = null;
+    element.update = null;
+    element = null;
+    prevState = null;
+    createValue = null;
   }
 
   return render;

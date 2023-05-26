@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "JavaScript Utilities Collection",
   "source": "src/index.js",
   "main": "dist/utility-belt.js",
@@ -37,5 +37,8 @@
       "from": "./dist/utility-belt.module.js",
       "to": "./docs/assets/ubm/utility-belt.js"
     }
-  ]
+  ],
+  "copyFilesSettings": {
+    "whenFileExists": "overwrite"
+  }
 }
