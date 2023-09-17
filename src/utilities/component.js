@@ -2,9 +2,15 @@ import { dynamicElement } from "./template.js";
 import { isPromise } from "./general.js";
 
 export function component(cmpFn) {
+
+  let useRef;
   let element;
   let prevState;
   let createValue;
+
+  let onCreate;
+  let onCleanupCallback;
+  let onCreateCallback;
 
   function render(state, ...children) {
 
@@ -17,23 +23,30 @@ export function component(cmpFn) {
       createValue = createInternalStateManager(render);
     }
 
+    if (!onCreate) {
+      onCreate = callback => !onCreateCallback && (onCreateCallback = callback);
+    }
+
     // Create new dynamic element.
     if (!element) {
       // console.log("create");
-      element = dynamicElement(cmpFn, { state, children, createValue });
+
+      useRef = (refName, callback) => element && callback(element.refs[refName]);
+      element = dynamicElement(cmpFn, { state, children, createValue, useRef, onCreate });
+      onCleanupCallback = onCreateCallback?.(element, element.refs, state);
       prevState = state;
     }
 
-    // Re-render with previouse state.
+    // Re-render with previouse State.
     else if (state === undefined) {
       // console.log("re-render");
-      element.update({ state: prevState, children, createValue });
+      element.update({ state: prevState, children, createValue, useRef, onCreate });
     }
 
-    // Update only for state change.
+    // Update only when State changes.
     else if (prevState !== state) {
       // console.log("update");
-      element.update({ state, children, createValue });
+      element.update({ state, children, createValue, useRef, onCreate });
       prevState = state;
     }
 
@@ -43,16 +56,28 @@ export function component(cmpFn) {
   // Cleanup.
 
   render.cleanup = function () {
+    onCleanupCallback?.();
+
     element.remove();
     element.refs = null;
     element.update = null;
     element = null;
+
     prevState = null;
     createValue = null;
+
+    onCreate = null;
+    onCreateCallback = null;
+    onCleanupCallback = null;
+
+    useRef = null;
   }
 
   return render;
 }
+
+
+// ---- Internal State Manager ----------------
 
 function createInternalStateManager(render) {
   let states = new Map();
@@ -60,15 +85,18 @@ function createInternalStateManager(render) {
 
   return (key, initValue) => {
 
+    // On re-render.
     if (states.has(key)) {
       return states.get(key);
     }
 
+    // On first render.
     else {
 
       if (typeof initValue === "function") {
         const unwrapedValue = initValue();
 
+        // Resolve & store promise value.
         if (isPromise(unwrapedValue)) {
           values.push(undefined);
 
@@ -84,6 +112,8 @@ function createInternalStateManager(render) {
               render();
             });
         }
+
+        // Store sync value.
         else {
           values.push(unwrapedValue);
         }
@@ -102,9 +132,10 @@ function createInternalStateManager(render) {
             : values[index];
         },
 
-        function setValue(v) {
-          values[index] = typeof v === "function" ? v(values[index]) : v;
+        function setValue(value) {
+          values[index] = typeof value === "function" ? value(values[index]) : value;
           render();
+          return values[index];
         }
 
       ];

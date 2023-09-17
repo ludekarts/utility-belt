@@ -7,7 +7,7 @@ import { placeStrBetween } from "./strings.js";
 When using partials inside templates, it is important to remember that you cannot use conditional partials.
 This is because, currently, it is impossible to distinguish one partial from another, and as a result,
 the renderer will not be able to properly display the data.
-In the future, we plan to introduce HTML with IDs (e.g. html("id")<span>hello</span>) to mitigate this issue.
+In the future, we plan to introduce HTML with IDs (e.g. html("id")`<span>hello</span>`) to mitigate this issue.
 
 */
 

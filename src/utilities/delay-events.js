@@ -1,16 +1,15 @@
 // Debounce callback fn.
-export function debounce (callback, delay, immediate) {
+export function debounce(callback, delay) {
   let timeout;
-  return (...args) => {
-    const later = () => {
-      timeout = null;
-      !immediate && callback(...args);
-    };
+  return function (...args) {
+    const context = this;
     clearTimeout(timeout);
-    timeout = setTimeout(later, delay);
-    immediate && !timeout && callback(...args);
+    timeout = setTimeout(() => {
+      callback.apply(context, args);
+    }, delay);
   };
 };
+
 
 // Call callback function if it is called within delta time range.
 export const inDeltaTime = (callback, delta) => {
@@ -26,7 +25,7 @@ export const inDeltaTime = (callback, delta) => {
 };
 
 // Call callback function on firt call & wait for given amount of time, to call it again.
-export function throttle (callback, wait) {
+export function throttle(callback, wait) {
   let timeout, block = false;
   return (...args) => {
     if (!block) {
