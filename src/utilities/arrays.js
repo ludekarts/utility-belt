@@ -135,6 +135,14 @@ export function insertAtIndex(array, index, item) {
   return clone;
 }
 
+export function swapItems(array, indexA, indexB) {
+  const clone = [...array];
+  const temp = clone[indexA];
+  clone[indexA] = clone[indexB];
+  clone[indexB] = temp;
+  return clone;
+}
+
 export function zipArray(arrayA, arrayB) {
   return arrayA.map((element, index) => [element, arrayB[index]]);
 }
