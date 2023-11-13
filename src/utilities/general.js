@@ -68,10 +68,10 @@ export function getRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Generates unique ID in `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` format.
-// From: https://stackoverflow.com/questions/105034/how-to-create-guid-uuid
-export function uid() {
-  return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-  );
+// Generates unique IDs
+// -> UUID-4 (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx)
+// -> or short (8-chars).
+
+export function uid(config = "") {
+  return config.includes("--short") ? Math.floor(Math.random() * Date.now()).toString(36) : crypto.randomUUID();
 }

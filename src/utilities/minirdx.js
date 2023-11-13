@@ -1,6 +1,4 @@
-import PubSub from "./pubsub.js";
-
-// Inspired by Redux, a mini library for managing global state.
+// Inspired by Redux library for managing global state.
 // by @ludekarts 02.2022
 
 /*
@@ -103,7 +101,6 @@ export function createStore(reducer) {
   let state;
   let listeners = [];
   let reducers = [reducer];
-  let actionListeners = PubSub();
 
   if (!reducer) {
     throw new Error("MiniRDXError: The Main Reducer is required to create a store");
@@ -132,7 +129,7 @@ export function createStore(reducer) {
 
     // Do not send state notifications when internal actions are dispatched.
     isExternalAction(action) &&
-      listeners.forEach(listener => listener(state));
+      listeners.forEach(listener => listener(state, actionType));
   }
 
 
@@ -144,7 +141,7 @@ export function createStore(reducer) {
       return dispatchCore(action, newState);
     }, state);
 
-    listeners.forEach(listener => listener(state));
+    listeners.forEach(listener => listener(state, args));
   }
 
 
@@ -169,17 +166,6 @@ export function createStore(reducer) {
       }
       return reducer(newState, action);
     }, oldState);
-
-    // PubSub on update notification.
-    // ⚠️ NOTICE: ⚠️
-    // This event is async and can't be used to sync actions. It exist only for notification purpose.
-    setTimeout(() => {
-      actionListeners.dispatch(action.type, {
-        state: finalState,
-        action: action.type,
-        payload: action.payload,
-      });
-    }, 0);
 
     return finalState;
   }
@@ -326,19 +312,10 @@ export function createStore(reducer) {
     dispatch("defineReducer:true");
   }
 
-
-  // Tap to dispatch call and action
-  function on(actionName, callback) {
-    actionListeners.on(actionName, callback);
-    return function destroy() {
-      actionListeners.off(actionName, callback);
-    }
-  }
-
   // setupAction -> initialize reducers.
   dispatch("initialize:true");
 
-  return { getState, subscribe, dispatch, defineReducer, on };
+  return { getState, subscribe, dispatch, defineReducer };
 }
 
 

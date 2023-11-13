@@ -1,6 +1,33 @@
 import { dynamicElement } from "./template.js";
 import { isPromise } from "./general.js";
 
+
+
+
+/*
+// USAGE:
+
+  import { component, html } from "@ludekarts/utility-belt";
+
+  const MyComponent = component(props => {
+
+    const { createValue } = props;
+
+    const [helloMessage, setHelloMessage] = createValue("helloMessage", "Hello for the first time");
+
+    const newHelloMessage = () => {
+      setHelloMessage(oldState => oldState.replace("first", "next"));
+    };
+
+    return html`
+      <button onclick="${newHelloMessage}">${helloMessage()}</button>
+    `;
+  });
+
+  document.body.append(MyComponent());
+
+*/
+
 export function component(cmpFn) {
 
   let useRef;
@@ -20,7 +47,7 @@ export function component(cmpFn) {
     }
 
     if (!createValue) {
-      createValue = createInternalStateManager(render);
+      createValue = createInternalStateManager(render, children);
     }
 
     if (!onCreate) {
@@ -79,7 +106,7 @@ export function component(cmpFn) {
 
 // ---- Internal State Manager ----------------
 
-function createInternalStateManager(render) {
+function createInternalStateManager(render, children) {
   let states = new Map();
   let values = [];
 
@@ -105,11 +132,11 @@ function createInternalStateManager(render) {
           unwrapedValue
             .then(value => {
               values[index] = value;
-              render();
+              render(undefined, ...children);
             })
             .catch(error => {
               values[index] = error;
-              render();
+              render(undefined, ...children);
             });
         }
 
@@ -134,7 +161,7 @@ function createInternalStateManager(render) {
 
         function setValue(value) {
           values[index] = typeof value === "function" ? value(values[index]) : value;
-          render();
+          render(undefined, ...children);
           return values[index];
         }
 

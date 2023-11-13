@@ -1,4 +1,7 @@
-export default function createHistory(debugMode = false) {
+// Config options:
+// --debug: Enable debug mode.
+
+export default function createHistory(config = "") {
   let pointer = -1;
   let history = [];
   let api = {};
@@ -40,7 +43,15 @@ export default function createHistory(debugMode = false) {
     history = [];
   };
 
-  if (Boolean(debugMode)) {
+  api.length = function () {
+    return history.length;
+  };
+
+  api.pointerIndex = function () {
+    return pointer;
+  };
+
+  if (config.includes("--debug")) {
     api.debug = function () {
       return {
         history,
