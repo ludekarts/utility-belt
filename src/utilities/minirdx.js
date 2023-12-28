@@ -3,6 +3,9 @@
 
 /*
 
+  [🧩 METHOD]:
+  createReducer();
+
   [📓 DESC]:
   Creates reducer with chaining API instead go switch staments.
 
@@ -69,6 +72,9 @@ export function createReducer(initState) {
 
 /*
 
+  [🧩 METHOD]:
+  createStore();
+
   [📓 DESC]:
   Creates store object that handles all action and data.
 
@@ -119,8 +125,6 @@ export function createStore(reducer) {
     }
   }
 
-
-
   // Base on given @action triggers all reducers to perform state update, then notifies all listeners with new state.
   function dispatch(actionType, payload) {
 
@@ -154,7 +158,9 @@ export function createStore(reducer) {
       if (typeof reducer.setter === "function") {
         const intermediateState = reducer(newState, action);
 
-        // When you wan to update global state from local reducer.
+        // [💡 HINT]:
+        // Use fn notation when you wan to access GLOBAL state in LOCAL reducer.
+        // In that case you also need to return a full global state.
         if (typeof intermediateState === "function") {
           return intermediateState(newState);
         }
@@ -173,9 +179,12 @@ export function createStore(reducer) {
 
   /*
 
+    [🧩 METHOD]:
+    defineReducer;
+
     [📓 DESC]:
     Allows user to add reducer after "mainReducer" is defined.
-    Works same as "addReducer" but in this case you need to add  manually.
+    Works same as "addReducer" but in this case you need to add it manually.
 
     [⚙️ USAGE]:
 
@@ -187,7 +196,7 @@ export function createStore(reducer) {
       users: [],
       some: {
         deep: {
-          settings: "no settings",
+          settings: "no setting",
         },
       },
     };
@@ -209,14 +218,14 @@ export function createStore(reducer) {
 
     [💡 HINT]:
     Method "defineReducer" could be used when the preformance might be an issue.
-    - PROS: Better perfomance than "addReducer".Allows for more complicated state queries like nested arrays e.g.: state => state.list[2][3].name;
+    - PROS: Better perfomance than "addReducer". Allows for more complicated state queries like nested arrays e.g.: state => state.list[2][3].name;
     - CONS: Requires to manualy supply getter() and setter() fns.
 
     [💡 HINT]:
     Remmember that when defining new reducer you may want to initialize it with an initial state.
     However keep in mind that if global state already have an instance under where your reducer's getter() points,
     then the initial state WILL NOT be applied. You may still update the state after an action is dispatched but
-    the state pushed to your defined reducer will be one from global state e.g.
+    the state pushed to your defined reducer will be one from global state e.g.:
 
     const initState = {
       hello: "world",
@@ -330,9 +339,18 @@ function isExternalAction(action) {
 }
 
 
-// USAGE:
 /*
+
+  [🧩 METHOD]:
+  createSelector();
+
+  [📓 DESC]:
+  Helper that allow automatically create getter and setter fns required for defineReducer().
+
+  [⚙️ USAGE]:
+
   import { createSelector } from "minirdx";
+
   . . .
 
   const state = {
@@ -391,6 +409,9 @@ function setArrayProp(source, prop, value) {
 }
 
 /*
+
+  [🧩 METHOD]:
+  action();
 
   [📓 DESC]:
   Action Creator - creates action object in standardize format.

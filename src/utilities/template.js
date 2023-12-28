@@ -144,7 +144,17 @@ function createTemplate(markup, inserts) {
     value:              current value of given binding,
     index:              index of binding within template,
     static:             flag that marks binding for update (TRUE mean no updates).
-    type:               type of given entry: [ "text", "node", "list", "partial", "repeater", "attribute", "attribute:bool", "attribute:repeater", "attribute:callback" ],
+    type:               type of given entry: [
+                            "text",
+                            "node",
+                            "list",
+                            "partial",
+                            "repeater",
+                            "attribute",
+                            "attribute:bool",
+                            "attribute:repeater",
+                            "attribute:callback",
+                        ],
     ref:                reference to DOM node holding given value; for attributes node with given attribute; for lists parent node,
     container: {
       ref:              reference to the parent container,

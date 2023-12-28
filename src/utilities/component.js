@@ -2,8 +2,6 @@ import { dynamicElement } from "./template.js";
 import { isPromise } from "./general.js";
 
 
-
-
 /*
 // USAGE:
 
@@ -41,11 +39,13 @@ export function component(cmpFn) {
 
   function render(state, ...children) {
 
+    // If no state - only children.
     if (state instanceof HTMLElement) {
       children.unshift(state);
       state = undefined;
     }
 
+    // Set internal API methods.
     if (!createValue) {
       createValue = createInternalStateManager(render, children);
     }
