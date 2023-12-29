@@ -2,6 +2,38 @@
 // by @ludekarts 02.2022
 
 
+/*
+
+  [🧩 METHOD]:
+  createReducer();
+
+  [📓 DESC]:
+  Creates reducer with chaining API instead of switch statements.
+
+  [💡 HINT]:
+  When used with extendReducer() providing @initailState will override property pointed by the selector with given @initialState.
+  If you want to preserve existing state object structure DO NOT pass any initialState to the creator.
+
+  [⚙️ USAGE]:
+
+  import { createReducer } from "@ludekarts/utility-belt";
+  . . .
+
+  const inistState = {
+    name: "John",
+  };
+
+  const myReducer = createReducer(inistState)
+    .on("change-name", (state, action) => {
+      return { ...state, name: action.payload };
+    })
+    .on("add-age", (state, action) => {
+      return { ...state, age: action.payload };
+    })
+    .done();
+
+*/
+
 export function createReducer(initState) {
   const api = {};
   const actions = new Map();
@@ -38,6 +70,38 @@ export function createReducer(initState) {
 
   return api;
 }
+
+
+/*
+
+  [🧩 METHOD]:
+  createStore();
+
+  [📓 DESC]:
+  Creates store object that handles all action and delegates state updates to reducers.
+
+  [⚙️ USAGE]:
+
+  import { createStore, createReducer, action } from "@ludekarts/utility-belt";
+  . . .
+
+  const inistState = {
+    name: "John",
+  };
+
+  const mainReducer = createReducer(initState)
+    .on("change-name", (state, action) => {
+      return { ...state, name: action.payload };
+    })
+    .done();
+
+  const store = createStore(mainReducer);
+
+  store.subscribe(console.log); // Print out whole state.
+
+  store.dispatch("change-name", "Annie"); // { name: "Annie" }
+
+*/
 
 export function createStore(reducer) {
   let state;
@@ -133,6 +197,62 @@ export function createStore(reducer) {
   }
 
 
+  /*
+
+    [🧩 METHOD]:
+    extendReducer();
+
+    [📓 DESC]:
+    Allows user to add reducer after "mainReducer" is defined.
+
+    [⚙️ USAGE]:
+
+    import { createStore, createReducer } from "@ludekarts/utility-belt";
+    . . .
+
+     const initState = {
+      currentUser: 0,
+      users: [],
+      some: {
+        deep: {
+          settings: "no setting",
+        },
+      },
+    };
+
+    const deepState = {
+      mode: "dark",
+      cookies: false,
+    };
+
+    const mainReducer = createReducer(initState).done();
+    const store = createStore(mainReducer);
+
+    const deepReducer = createReducer(deepState).done();
+    store.extendReducer(deepReducer,"some.deep.settings");
+
+    console.log(store.getState());
+
+    // {
+    //   currentUser: 0,
+    //   users: [],
+    //   some: {
+    //     deep: {
+    //       settings: {     // 👈 Part of global state replaced with "deepState".
+    //         mode: "dark",
+    //         cookies: false,
+    //       }
+    //     },
+    //   },
+    // }
+
+    [💡 HINT]:
+    If you do not provide @initialState for "createReducer(undefined).on(....).done()" then
+    reduces will connect to the part of the global state object specified by the selector.
+    This way you can modify this part of global state.
+
+  */
+
   function extendReducer(reducer, selector) {
 
     if (typeof selector === "string") {
@@ -157,6 +277,8 @@ export function createStore(reducer) {
 }
 
 
+// ---- Helpers ----------------
+
 export function createSelector(selector) {
   if (typeof selector === "string" && /^[\w\[\]\d\.]+$/.test(selector)) {
     return {
@@ -167,8 +289,6 @@ export function createSelector(selector) {
 
   throw new Error("MiniRDXError: Selector should be a string with dot notation e.g.: 'user.cars[1].name' ");
 }
-
-// ---- Helpers ----------------
 
 function isExternalAction(action) {
   return action.type !== "initialize:true" && action.type !== "extendReducer:true";
