@@ -1,34 +1,6 @@
-// Inspired by Redux library for managing global state.
+// Inspired by Redux a library for state management.
 // by @ludekarts 02.2022
 
-/*
-
-  [🧩 METHOD]:
-  createReducer();
-
-  [📓 DESC]:
-  Creates reducer with chaining API instead go switch staments.
-
-  [💡 HINT]:
-  When used with "addReducer" or "defineReducer" providing @initailState will override
-  property pointed by the selector with given initialState.
-  If you want to preserve existing state object structure DO NOT pass any initialState to the creator.
-
-  [⚙️ USAGE]:
-
-  import { createReducer } from "minirdx";
-  . . .
-
-  const inistState = {
-    name: "John",
-  };
-
-  const myReducer = createReducer(inistState)
-    .on("change-name", (state, action) => ({ ..state, name: action.payload }))
-    .on("add-age", (state, action) => ({ ..state, age: action.payload }))
-    .done();
-
-*/
 
 export function createReducer(initState) {
   const api = {};
@@ -36,15 +8,15 @@ export function createReducer(initState) {
 
   api.on = (action, reducer) => {
     if (actions.has(action)) {
-      throw new Error(`Action name "${action}" already exist`);
+      throw new Error(`MiniRDXError: Action name "${action}" already exist`);
     }
 
     if (typeof action !== "string") {
-      throw new Error(`Action name should be a string`);
+      throw new Error(`MiniRDXError: Action name should be a string`);
     }
 
     if (typeof reducer !== "function") {
-      throw new Error(`Action reducer should be a function`);
+      throw new Error(`MiniRDXError: Action reducer should be a function`);
     }
 
     actions.set(action, reducer);
@@ -52,56 +24,20 @@ export function createReducer(initState) {
   };
 
   api.done = function () {
-    return function reducer(state = initState, action, globalState) {
+    return function reducer(state = initState, action) {
 
       if (!action) {
-        throw new Error("Action is required to run a reducer");
+        throw new Error("MiniRDXError: Action is required to run a reducer");
       }
 
       return actions.has(action.type)
-        ? globalState
-          ? actions.get(action.type)(state, action, globalState)
-          : actions.get(action.type)(state, action)
+        ? actions.get(action.type)(state, action)
         : state;
     }
   }
 
   return api;
 }
-
-
-/*
-
-  [🧩 METHOD]:
-  createStore();
-
-  [📓 DESC]:
-  Creates store object that handles all action and data.
-
-  [⚙️ USAGE]:
-
-  import { createStore, createReducer, action } from "minirdx";
-  . . .
-
-
-  const inistState = {
-    name: "John",
-  };
-
-  const mainReducer = createReducer(initState)
-    .on("change-name", (state, action) => ({ ..state, name: action.payload }))
-    .done();
-
-  const store = createStore(mainReducer);
-
-  store.subscribe(console.log); // Print out whole state.
-
-  store.dispatch(action("change-name", "Annie"));
-
-  // Alternatively without action helper.
-  store.dispatch("change-name", "Annie");
-
-*/
 
 export function createStore(reducer) {
   let state;
@@ -128,12 +64,12 @@ export function createStore(reducer) {
   // Base on given @action triggers all reducers to perform state update, then notifies all listeners with new state.
   function dispatch(actionType, payload) {
 
-    const action = isActionObject(actionType) ? actionType : { type: actionType, payload };
+    const action = { type: actionType, payload };
     state = dispatchCore(action, state);
 
     // Do not send state notifications when internal actions are dispatched.
     isExternalAction(action) &&
-      listeners.forEach(listener => listener(state, actionType));
+      listeners.forEach(listener => listener(state, action));
   }
 
 
@@ -141,11 +77,11 @@ export function createStore(reducer) {
   dispatch.batch = function batchDispatch(...args) {
 
     state = args.reduce((newState, [actionType, payload]) => {
-      const action = isActionObject(actionType) ? actionType : { type: actionType, payload };
+      const action = { type: actionType, payload };
       return dispatchCore(action, newState);
     }, state);
 
-    listeners.forEach(listener => listener(state, args));
+    listeners.forEach(listener => listener(state, batchArgsToAction(args)));
   }
 
 
@@ -154,9 +90,25 @@ export function createStore(reducer) {
 
     // Update state.
     const finalState = reducers.reduce((newState, reducer) => {
-      // Handles defineReducer logic.
+
+      // Handles extendReducer logic.
       if (typeof reducer.setter === "function") {
-        const intermediateState = reducer(newState, action);
+
+        let intermediateState;
+
+        // If new reducer was added try to set it's default state.
+        // In case new state is undefinded use old state as a default.
+        if (reducer.isNew && action.type === "extendReducer:true") {
+          delete reducer.isNew;
+          intermediateState = reducer(undefined, action);
+          if (intermediateState === undefined) {
+            intermediateState = reducer(newState, action);
+          }
+        }
+
+        else {
+          intermediateState = reducer(newState, action);
+        }
 
         // [💡 HINT]:
         // Use fn notation when you wan to access GLOBAL state in LOCAL reducer.
@@ -170,260 +122,58 @@ export function createStore(reducer) {
           return newState;
         }
       }
-      return reducer(newState, action);
+
+      else {
+        return reducer(newState, action);
+      }
+
     }, oldState);
 
     return finalState;
   }
 
 
-  /*
+  function extendReducer(reducer, selector) {
 
-    [🧩 METHOD]:
-    defineReducer;
-
-    [📓 DESC]:
-    Allows user to add reducer after "mainReducer" is defined.
-    Works same as "addReducer" but in this case you need to add it manually.
-
-    [⚙️ USAGE]:
-
-    import { createStore, createReducer } from "minirdx";
-    . . .
-
-     const initState = {
-      currentUser: 0,
-      users: [],
-      some: {
-        deep: {
-          settings: "no setting",
-        },
-      },
-    };
-
-    const deepState = {
-      mode: "dark",
-      cookies: false,
-    };
-
-    const mainReducer = createReducer(initState).done();
-    const store = createStore(mainReducer);
-    const deepReducer = createReducer(deepState).done();
-
-    store.defineReducer(
-      deepReducer,                                          // Reducer.
-      (state) => state.some.deep.settings,                  // Getter.
-      (state, value) => state.some.deep.settings = value,   // Setter.
-    );
-
-    [💡 HINT]:
-    Method "defineReducer" could be used when the preformance might be an issue.
-    - PROS: Better perfomance than "addReducer". Allows for more complicated state queries like nested arrays e.g.: state => state.list[2][3].name;
-    - CONS: Requires to manualy supply getter() and setter() fns.
-
-    [💡 HINT]:
-    Remmember that when defining new reducer you may want to initialize it with an initial state.
-    However keep in mind that if global state already have an instance under where your reducer's getter() points,
-    then the initial state WILL NOT be applied. You may still update the state after an action is dispatched but
-    the state pushed to your defined reducer will be one from global state e.g.:
-
-    const initState = {
-      hello: "world",
-      some: {
-        deep: {
-          value: "🦖",
-        },
-      },
-    };
-
-    const foodState = {
-      food: "🍌",
-    };
-
-    const mainReducer = createReducer(initState).done();
-    const store = createStore(mainReducer);
-    const deepReducer = createReducer(foodState)
-      .on("add-food", (state, action) => {
-        state.food = action.payload;
-        return state;
-      })
-      .done();
-
-    const getter = (state) => state.some;
-    const setter = (state, value) => state.some = value;
-
-    store.defineReducer(deepReducer, getter, setter);
-    console.log(store.getState());
-
-    // >>
-    // {
-    //   hello: "world",
-    //   some: {
-    //     deep: {
-    //       value: "🦖"
-    //     }
-    // }
-
-    store.dispatch(action("add-food", "🍇"));
-    console.log(store.getState());
-
-    // >>
-    // {
-    //   hello: "world",
-    //   some: {
-    //     deep: {
-    //       value: "🦖"
-    //     },
-    //     food: "🍇"
-    // }
-
-
-    [💡 HINT]:
-    Working with multiple defined reducers remmember to keep in mind what part of the global state you're modifying.
-    It is very easy to override some state high up in the tree for example in one value just by returning this value
-    from the reducer e.g.:
-
-    const globalState = {
-      hello: "world",
-      some: {
-        deep: {
-          value: "🦖"
-        }
-      }
+    if (typeof selector === "string") {
+      const { setter, getter } = createSelector(selector);
+      const newReducer = (state, action) => reducer(state === undefined ? undefined : getter(state), action);
+      newReducer.setter = setter;
+      newReducer.isNew = true;
+      reducers.push(newReducer);
+      dispatch("extendReducer:true");
     }
 
-    . . .
+    else {
+      throw new Error("MiniRDXError: Reducer's statePath should bw a string with dot notation e.g.: 'user.cars[1].name' ");
+    }
 
-    const getter = (state) => state.some;
-    const setter = (state, value) => state.some = value;
-
-    const deepReducer = createReducer()
-      .on("update", (state, action) => "👾") // 👈 ❌ Part of the state this reducer is handling will be replaced by the invader.
-      .done();
-
-    store.defineReducer(deepReducer, getter, setter);
-    store.dispatch(action("update"));
-
-    console.log(store.getState());
-
-    // >>
-    // {
-    //   hello: "world",
-    //   some: "👾"
-    // }
-
-  */
-
-  function defineReducer(reducer, getter, setter) {
-    const definedReducer = (state, action) => reducer(getter(state), action, state);
-    definedReducer.setter = setter;
-    reducers.push(definedReducer);
-    dispatch("defineReducer:true");
   }
 
   // setupAction -> initialize reducers.
   dispatch("initialize:true");
 
-  return { getState, subscribe, dispatch, defineReducer };
+  return { getState, subscribe, dispatch, extendReducer };
 }
 
+
+export function createSelector(selector) {
+  if (typeof selector === "string" && /^[\w\[\]\d\.]+$/.test(selector)) {
+    return {
+      getter: new Function("state", `return state.${selector}`),
+      setter: new Function("state", "value", `state.${selector} = value`),
+    };
+  }
+
+  throw new Error("MiniRDXError: Selector should be a string with dot notation e.g.: 'user.cars[1].name' ");
+}
 
 // ---- Helpers ----------------
 
-function isActionObject(object) {
-  return typeof object === "object" && object.hasOwnProperty("type") && object.hasOwnProperty("payload");
-}
-
 function isExternalAction(action) {
-  return action.type !== "initialize:true" && action.type !== "defineReducer:true";
+  return action.type !== "initialize:true" && action.type !== "extendReducer:true";
 }
 
-
-/*
-
-  [🧩 METHOD]:
-  createSelector();
-
-  [📓 DESC]:
-  Helper that allow automatically create getter and setter fns required for defineReducer().
-
-  [⚙️ USAGE]:
-
-  import { createSelector } from "minirdx";
-
-  . . .
-
-  const state = {
-    settings: {
-      cookies: true
-    }
-  };
-
-  . . .
-
-  const { getter, setter } = createSelector("settings.cookies");
-  store.defineReducer(reducer, getter, setter);
-
-*/
-
-export function createSelector(selector) {
-  const parts = selector.split(".");
-
-  const getter = state =>
-    parts.reduce((acc, part) => /\w+\[\d+\]/.test(part)
-      ? getArrayProp(acc, part)
-      : acc[part],
-      state);
-
-  const setter = (state, value) => {
-    const lastElement = parts.length - 1;
-    parts.reduce((acc, part, index) => {
-      if (index === lastElement) {
-        if (/\w+\[\d+\]/.test(part)) {
-          setArrayProp(acc, part, value);
-        } else {
-          acc[part] = value;
-        }
-      }
-      return /\w+\[\d+\]/.test(part)
-        ? getArrayProp(acc, part)
-        : acc[part];
-    }, state);
-  };
-
-  return { getter, setter };
+function batchArgsToAction(args) {
+  return args.reduce((acc, [type, payload]) => [...acc, { type, payload }], []);
 }
-
-function getArrayProp(source, prop) {
-  const bracketIndex = prop.indexOf("[");
-  const name = prop.slice(0, bracketIndex);
-  const index = Number(prop.slice(bracketIndex + 1, prop.length - 1));
-  return source[name][index];
-}
-
-function setArrayProp(source, prop, value) {
-  const bracketIndex = prop.indexOf("[");
-  const name = prop.slice(0, bracketIndex);
-  const index = Number(prop.slice(bracketIndex + 1, prop.length - 1));
-  source[name][index] = value;
-}
-
-/*
-
-  [🧩 METHOD]:
-  action();
-
-  [📓 DESC]:
-  Action Creator - creates action object in standardize format.
-
-  [⚙️ USAGE]:
-
-  import { action } from "minirdx";
-  . . .
-
-  store.dispatch(action("change-name", "Annie"));
-
-*/
-
-export const action = (type, payload) => ({ type, payload });
-
