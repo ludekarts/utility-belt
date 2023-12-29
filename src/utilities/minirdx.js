@@ -11,8 +11,9 @@
   Creates reducer with chaining API instead of switch statements.
 
   [💡 HINT]:
-  When used with extendReducer() providing @initailState will override property pointed by the selector with given @initialState.
-  If you want to preserve existing state object structure DO NOT pass any initialState to the creator.
+  Notice that .on() method takes action name and reducer function as arguments, however unlike in Redux
+  reducer function as second parameter (for simplicity purpose) takes "action.payload" instead full action object:
+  .on("action_name", (oldState, actionPayload) => newState);
 
   [⚙️ USAGE]:
 
@@ -24,11 +25,11 @@
   };
 
   const myReducer = createReducer(inistState)
-    .on("change-name", (state, action) => {
-      return { ...state, name: action.payload };
+    .on("change-name", (state, name) => {
+      return { ...state, name };
     })
-    .on("add-age", (state, action) => {
-      return { ...state, age: action.payload };
+    .on("add-age", (state, age) => {
+      return { ...state, age };
     })
     .done();
 
@@ -63,7 +64,7 @@ export function createReducer(initState) {
       }
 
       return actions.has(action.type)
-        ? actions.get(action.type)(state, action)
+        ? actions.get(action.type)(state, action.payload)
         : state;
     }
   }
@@ -82,7 +83,7 @@ export function createReducer(initState) {
 
   [⚙️ USAGE]:
 
-  import { createStore, createReducer, action } from "@ludekarts/utility-belt";
+  import { createStore, createReducer } from "@ludekarts/utility-belt";
   . . .
 
   const inistState = {
@@ -90,8 +91,8 @@ export function createReducer(initState) {
   };
 
   const mainReducer = createReducer(initState)
-    .on("change-name", (state, action) => {
-      return { ...state, name: action.payload };
+    .on("change-name", (state, name) => {
+      return { ...state, name };
     })
     .done();
 
@@ -205,6 +206,10 @@ export function createStore(reducer) {
     [📓 DESC]:
     Allows user to add reducer after "mainReducer" is defined.
 
+    [💡 HINT]:
+    When used with extendReducer() providing @initailState will override property pointed by the selector with given @initialState.
+    If you want to preserve existing state object structure DO NOT pass any initialState to the creator.
+
     [⚙️ USAGE]:
 
     import { createStore, createReducer } from "@ludekarts/utility-belt";
@@ -246,10 +251,7 @@ export function createStore(reducer) {
     //   },
     // }
 
-    [💡 HINT]:
-    If you do not provide @initialState for "createReducer(undefined).on(....).done()" then
-    reduces will connect to the part of the global state object specified by the selector.
-    This way you can modify this part of global state.
+
 
   */
 
@@ -260,6 +262,16 @@ export function createStore(reducer) {
       const newReducer = (state, action) => reducer(state === undefined ? undefined : getter(state), action);
       newReducer.setter = setter;
       newReducer.isNew = true;
+      reducers.push(newReducer);
+      dispatch("extendReducer:true");
+
+    }
+
+    // [⚠️ NOTE]:
+    // When selector is undefined then reducer will connected to the glonal state,
+    // howewer it @initialState will not override global state.
+    else if (selector === undefined) {
+      const newReducer = (state, action) => reducer(state, action);
       reducers.push(newReducer);
       dispatch("extendReducer:true");
     }

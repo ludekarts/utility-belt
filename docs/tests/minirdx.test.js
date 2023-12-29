@@ -15,9 +15,8 @@ describe("MiniRDX", () => {
   it("CreateReducer:: Should create reducer handling 'update' action", () => {
     const state = { name: "state" };
     const mainReducer = createReducer(state)
-      .on("update", (state, action) => {
-        state.name = action.payload;
-        return state;
+      .on("update", (state, name) => {
+        return { ...state, name };
       })
       .done();
 
@@ -30,11 +29,14 @@ describe("MiniRDX", () => {
 
 
   it("CreateReducer:: Should create reducer handling multiple actions", () => {
-    const state = { name: "state", counter: 0 };
+    const state = {
+      name: "state",
+      counter: 0,
+    };
+
     const mainReducer = createReducer(state)
-      .on("update", (state, action) => {
-        state.name = action.payload;
-        return state;
+      .on("update", (state, name) => {
+        return { ...state, name };
       })
       .on("increment", (state) => {
         state.counter = state.counter + 1;
@@ -255,6 +257,37 @@ describe("MiniRDX", () => {
   });
 
 
+  it("ExtendReducer:: Should connect to global state without overriding it", () => {
+    const initState = {
+      hello: "world",
+    };
+
+    const mainReducer = createReducer(initState).done();
+    const store = createStore(mainReducer);
+
+    // Check for proper initial state.
+    chai.expect(store.getState()).to.have.property("hello", "world");
+
+    // ---- Extend ------------
+
+    // Define new extended reducer.
+    const extendedReducer = createReducer({ bad: "state" })
+      .on("update_global", (state) => {
+        return {
+          ...state,
+          hello: "there"
+        }
+      })
+      .done();
+
+    store.extendReducer(extendedReducer);
+    chai.expect(store.getState()).to.not.have.property("bad", "state");
+
+    store.dispatch("update_global");
+    chai.expect(store.getState()).to.have.property("hello", "there");
+
+  });
+
   it("Store:: Subscriber should recieve new state object along with dispatched action", () => {
 
     const newState = { isNew: true };
@@ -274,7 +307,11 @@ describe("MiniRDX", () => {
 
 
   it("Store:: Should dipatch multiple actions as one batch", () => {
-    const initState = { counter: 0, title: "none" };
+    const initState = {
+      counter: 0,
+      title: "none",
+    };
+
     const mainReducer = createReducer(initState)
       .on("add", state => {
         state.counter++;
@@ -284,9 +321,8 @@ describe("MiniRDX", () => {
         state.counter--;
         return { ...state };
       })
-      .on("rename", (state, action) => {
-        state.title = action.payload;
-        return { ...state };
+      .on("rename", (state, title) => {
+        return { ...state, title };
       })
       .done();
 
