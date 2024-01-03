@@ -1,6 +1,7 @@
 import { loop, reduce, nodeListToArray, removeByInstance } from "./arrays.js";
 import { placeStrBetween } from "./strings.js";
 
+
 /*
 ⚠️ NOTICE:⚠️
 
@@ -144,7 +145,17 @@ function createTemplate(markup, inserts) {
     value:              current value of given binding,
     index:              index of binding within template,
     static:             flag that marks binding for update (TRUE mean no updates).
-    type:               type of given entry: [ "text", "node", "list", "partial", "repeater", "attribute", "attribute:bool", "attribute:repeater", "attribute:callback" ],
+    type:               type of given entry: [
+                            "text",
+                            "node",
+                            "list",
+                            "partial",
+                            "repeater",
+                            "attribute",
+                            "attribute:bool",
+                            "attribute:repeater",
+                            "attribute:callback",
+                        ],
     ref:                reference to DOM node holding given value; for attributes node with given attribute; for lists parent node,
     container: {
       ref:              reference to the parent container,
@@ -179,8 +190,8 @@ function createTemplate(markup, inserts) {
       static: false,
     };
 
-    // Last element of markup array does not generate placeholder so we do not process it.
-    // We only add produced HTML at the end.
+    // Last element of markup array does not generate placeholder so we do not process it,
+    // only append produced HTML at the end.
     if (!isLast) {
 
       let placeholder;
@@ -196,7 +207,7 @@ function createTemplate(markup, inserts) {
         placeholder = `%#${index}#%`;
       }
 
-      // Allow for undefined values (treat them as an empty strings).
+      // Allow for undefined values - treat them as empty strings.
       else if (isAsEmpty(value)) {
         placeholder = `<i data-hook-index="${index}" data-hook-type="text"></i>`;
       }
@@ -226,7 +237,7 @@ function createTemplate(markup, inserts) {
         placeholder = `<i data-hook-index="${index}" data-hook-type="repeater"></i>`;
       }
 
-      // Clamp other types into empty string (skip them).
+      // Clamp other types into empty string - skip them.
       else {
         placeholder = "";
       }
@@ -424,9 +435,10 @@ function updateComponent(element, bindings, attributes, renderFn) {
 // Updates values of an element and it's references.
 function updateReference(index, bindings, attributes, newValue) {
 
+
   const binding = bindings[index];
 
-  // console.log(binding);
+  console.log(binding);
 
   if (!binding) return;
 
@@ -884,26 +896,26 @@ function stripWrapper(wrapper) {
 // Pull out all attribute's of given @node that contains template in their value and map them onto index-object.
 // Each key in index-object represents the "binding.index" to be matched during renders and updates.
 function getAllAttributes(node) {
-  return Array.prototype.slice.call(node.attributes).reduce((acc, attr) => {
+  return Array.from(node.attributes).reduce((acc, attr) => {
 
     if (new RegExp("%#\\d+#%", "g").test(attr.value)) {
 
       // match[1] is reference to the first capturing group of the RegExp.
       const foundIndexes = Array.from(attr.value.matchAll(new RegExp("%#(\\d+)#%", "g"))).map(match => match[1]);
 
-      const attributeBindind = {
+      const attributeBinding = {
         name: attr.name,
         template: attr.value,
       };
 
       // Mark boolean attributes.
-      if (attributeBindind.name.indexOf("?") === 0) {
-        attributeBindind.name = attributeBindind.name.slice(1);
-        attributeBindind.bool = true;
+      if (attributeBinding.name.indexOf("?") === 0) {
+        attributeBinding.name = attributeBinding.name.slice(1);
+        attributeBinding.bool = true;
       }
 
       for (const index of foundIndexes) {
-        acc[index] = attributeBindind;
+        acc[index] = attributeBinding;
       }
     }
 
