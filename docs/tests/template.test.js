@@ -344,31 +344,54 @@ describe("Dynamic Elements", () => {
     chai.expect(listA.children[1].textContent).to.be.equal("Changed");
   });
 
+  it("Should re-render reperater when $items attribute changes", () => {
 
-  it("Should re-render-reperater only when items changes", () => {
-
+    let spy = chai.spy();
     let items = [1, 2, 3, 4];
-
     let ListItemUi = item => {
-      console.log("render LitItemUi");
-      return html`<li>${item}</li>`
-    };
-    const ItemsList = items => {
-      console.log("render ItemsList");
-      return html`<div><ul class="${"style"}" $key="${i => i}" $items="${items}">${ListItemUi}</ul><span>xoxo</span></div>`
-    };
-    const element = dynamicElement(ItemsList, items);
-    console.log(element.outerHTML);
+      spy();
+      return html`<li>${item}</li>`;
+    }
+    let List = items => html`<ul $key="${i => i}" $items="${items}">${ListItemUi}</ul>`
 
-    setTimeout(() => {
-      // items[1] = "x";
-      // items = [1, 2, 3, 4];
-      items.push(5)
-      ListItemUi = () => html`<li>XXX</li>`;
-      element.update(items);
-      console.log(element.innerHTML);
-    }, 1000);
+    const listElement = dynamicElement(List, items);
+    chai.expect(spy).to.have.been.called(4);
 
+    listElement.update(items);
+    chai.expect(spy).to.have.been.called(4);
+
+    items[1] = "X";
+    listElement.update(items);
+    chai.expect(spy).to.have.been.called(4);
+
+    listElement.update([1, 2, 3, 4, 5]);
+    chai.expect(spy).to.have.been.called(9);
+
+  });
+
+  it("Should not re-render reperater when repeater fn changes", () => {
+
+    let spyA = chai.spy();
+    let spyB = chai.spy();
+    let items = [1];
+
+    let ListItem = item => {
+      spyA();
+      return html`<li>${item}</li>`;
+    }
+
+    let List = items => html`<ul $key="${i => i}" $items="${items}">${ListItem}</ul>`
+
+    const listElement = dynamicElement(List, items);
+    chai.expect(spyA).to.have.been.called(1);
+
+    ListItem = item => {
+      spyB();
+      return html`<li>${item}</li>`;
+    }
+
+    listElement.update(items);
+    chai.expect(spyB).to.not.have.been.called;
 
   });
 
