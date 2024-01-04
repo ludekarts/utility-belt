@@ -153,20 +153,23 @@ function createTemplate(markup, inserts) {
                             "repeater",
                             "attribute",
                             "attribute:bool",
-                            "attribute:repeater",
                             "attribute:callback",
+                            "attribute:repeaterKey",    // flags value of current binding as function that retrieves uinque key for repeater's elements (for caching & reusing elements),
+                            "attribute:repeaterItems",  // flags value of current binding as reference to the array of items for the repeater to render,
                         ],
-    ref:                reference to DOM node holding given value; for attributes node with given attribute; for lists parent node,
+    ref:                reference to DOM node holding given value:
+                         - for attributes node with given attribute;
+                         - for lists parent node,
+
     container: {
-      ref:              reference to the parent container,
-      index:            child-node-index of rendered node withing this container,
+      ref:              reference to the node's parent element,
+      childIndex:       child-node-index of rendered node within this container,
     },
+
     repeater?: {
       update:           update function used to generate a new array of nodes to display in repeater,
       sourceIndex:      index of binding containing items for the repeater,
     },
-    repeaterKey?:       flags value of current binding as function that retrieves uinque key for repeater's elements (for caching & reusing elements),
-    repeaterItems?:     flags value of current binding as reference to the array of items for the repeater to render,
   }
 
 
@@ -184,11 +187,13 @@ function createTemplate(markup, inserts) {
   const componentHtml = reduce(Array.from(markup), (acc, part, index, isLast) => {
     let value = escapedInserts[index];
     let html = acc += part;
-    let binding = {
+
+    // Create binding object for each external input.
+    bindings.push({
       value,
       index,
       static: false,
-    };
+    });
 
     // Last element of markup array does not generate placeholder so we do not process it,
     // only append produced HTML at the end.
@@ -242,13 +247,10 @@ function createTemplate(markup, inserts) {
         placeholder = "";
       }
 
-      bindings.push(binding);
       return html + placeholder;
-
     }
 
     return html;
-
   }, "");
 
 
@@ -265,7 +267,7 @@ function createTemplate(markup, inserts) {
     // Attributes.
     if (type === undefined) {
 
-      let localAttributes = getAllAttributes(hook);
+      const localAttributes = getAllAttributes(hook);
 
       loop(Object.keys(localAttributes), index => {
 
@@ -293,15 +295,13 @@ function createTemplate(markup, inserts) {
           // Mark as repeater Key, block for updates and cleanup.
           if (attribute.name === "$key") {
             binding.static = true;
-            binding.repeaterKey = true;
-            binding.type = "attribute:repeater";
+            binding.type = "attribute:repeaterKey";
             hook.removeAttribute(attribute.name);
           }
 
           // Mark as repeater Items and cleanup.
           if (attribute.name === "$items") {
-            binding.repeaterItems = true;
-            binding.type = "attribute:repeater";
+            binding.type = "attribute:repeaterItems";
             hook.removeAttribute(attribute.name);
           }
 
@@ -379,17 +379,18 @@ function createTemplate(markup, inserts) {
       // Repeaters.
       else if (type === "repeater") {
         binding.type = "repeater";
+        binding.static = true;
         binding.ref = hook.parentNode;
         binding.container = createContainer(hook);
 
         const renderFn = binding.value;
-        const { items, itemsIndex, keySelector } = getRepeaterProperties(hook, bindings);
+        const { items, itemsIndex, keySelector } = findRepeaterPropertiesInBindings(hook, bindings);
         const { elements, updateRepeater } = createRepeater(renderFn, items, keySelector);
         binding.value = elements;
 
-        binding.repeater = {
-          update: updateRepeater,
-          sourceIndex: itemsIndex,
+        bindings[itemsIndex].repeater = {
+          updateFn: updateRepeater,
+          updateIndex: binding.index,
         };
 
         insetrNodesBefore(binding.value, hook);
@@ -438,7 +439,7 @@ function updateReference(index, bindings, attributes, newValue) {
 
   const binding = bindings[index];
 
-  console.log(binding);
+  // console.log(binding);
 
   if (!binding) return;
 
@@ -451,8 +452,12 @@ function updateReference(index, bindings, attributes, newValue) {
   }
 
   // Update Repeater items.
-  if (binding.type === "attribute:repeater" && binding.repeaterItems === true) {
+  if (binding.type === "attribute:repeaterItems") {
     binding.value = newValue;
+    const { updateFn, updateIndex } = binding.repeater;
+    const repeaterValue = updateFn(newValue);
+    updateArrayOfNodes(bindings[updateIndex], repeaterValue);
+    bindings[updateIndex].value = repeaterValue;
   }
 
   // Update Attributes.
@@ -561,7 +566,7 @@ function updateReference(index, bindings, attributes, newValue) {
     // Array of DOM Nodes to -> Empty TextNode.
     if (isAsEmpty(newValue)) {
       const textNode = document.createTextNode("");
-      insertNodeAtIndex(binding.container.index, textNode, binding.container.ref);
+      insertNodeAtIndex(binding.container.childIndex, textNode, binding.container.ref);
       removeNodes(binding.value, binding.container.ref);
       binding.type = "text";
       binding.ref = textNode;
@@ -570,7 +575,7 @@ function updateReference(index, bindings, attributes, newValue) {
     // Array of DOM Nodes to -> TextNode (Strings || Numbers).
     else if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
-      insertNodeAtIndex(binding.container.index, textNode, binding.container.ref);
+      insertNodeAtIndex(binding.container.childIndex, textNode, binding.container.ref);
       removeNodes(binding.value, binding.container.ref);
       binding.type = "text";
       binding.ref = textNode;
@@ -578,7 +583,7 @@ function updateReference(index, bindings, attributes, newValue) {
 
     // Array of Nodes to -> Single DOM Node.
     else if (isDomNode(newValue)) {
-      insertNodeAtIndex(binding.container.index, newValue, binding.container.ref);
+      insertNodeAtIndex(binding.container.childIndex, newValue, binding.container.ref);
       removeNodes(binding.value, binding.container.ref);
       binding.type = "node";
       binding.ref = newValue;
@@ -587,7 +592,7 @@ function updateReference(index, bindings, attributes, newValue) {
     // Array of Nodes to -> Partial.
     else if (isPartialTemplate(newValue)) {
       const partialNode = createPartialElement(newValue.markup, newValue.inserts);
-      insertNodeAtIndex(binding.container.index, partialNode, binding.container.ref);
+      insertNodeAtIndex(binding.container.childIndex, partialNode, binding.container.ref);
       removeNodes(binding.value, binding.container.ref);
       binding.type = "partial";
       binding.ref = partialNode;
@@ -602,7 +607,7 @@ function updateReference(index, bindings, attributes, newValue) {
     binding.value = newValue;
   }
 
-  // Update Parial Nodes.
+  // Update Partial Nodes.
   else if (binding.type === "partial") {
 
     // Partial Node -> Empty TextNode.
@@ -642,13 +647,6 @@ function updateReference(index, bindings, attributes, newValue) {
 
     // Update current binding value.
     binding.value = newValue;
-  }
-
-  // Update Parial Nodes.
-  else if (binding.type === "repeater") {
-    const value = binding.repeater.update(bindings[binding.repeater.sourceIndex].value);
-    updateArrayOfNodes(binding, value);
-    binding.value = value;
   }
 
 }
@@ -697,7 +695,7 @@ function updateArrayOfNodes(binding, newValue) {
 
   // Remove all nodes that does not exist in newValue array.
   loop(binding.value, (node, index) => {
-    const childIndex = binding.container.index + index;
+    const childIndex = binding.container.childIndex + index;
     if ((isDomNode(node) && !newValue.includes(node)) || isPartialTemplate(node)) {
       binding.value = removeByInstance(binding.value, node);
       markForDeletion.push(binding.container.ref.childNodes[childIndex]);
@@ -707,8 +705,8 @@ function updateArrayOfNodes(binding, newValue) {
   // Update remaining nodes.
   loop(newValue, (newNode, index) => {
 
-    // Offset index value with container.index in case list is not only item in the element.
-    const insertIndex = binding.container.index + index;
+    // Offset index value with container.childIndex in case list is not only item in the element.
+    const insertIndex = binding.container.childIndex + index;
 
     // Check for new node.
     const isNewNode = binding.value.indexOf(newNode) === -1;
@@ -736,8 +734,9 @@ function updateArrayOfNodes(binding, newValue) {
   loop(markForDeletion, node => node.remove());
 }
 
-function getRepeaterProperties(hook, bindings) {
-  // Current Bindin Index - 1;
+function findRepeaterPropertiesInBindings(hook, bindings) {
+
+  // Current Binding Index - 1;
   let index = Number(hook.dataset.hookIndex) - 1;
   let keySelector;
   let itemsIndex;
@@ -745,12 +744,12 @@ function getRepeaterProperties(hook, bindings) {
 
   while (index > -1) {
 
-    if (bindings[index].repeaterItems === true) {
+    if (bindings[index].type === "attribute:repeaterItems") {
       items = bindings[index].value;
       itemsIndex = index;
     }
 
-    if (bindings[index].repeaterKey === true) {
+    if (bindings[index].type === "attribute:repeaterKey") {
       keySelector = bindings[index].value;
       break;
     }
@@ -859,7 +858,7 @@ function updateHookIndexAttribute(head, element, index) {
 function createContainer(node) {
   return {
     ref: node.parentNode,
-    index: getNodeIndex(node),
+    childIndex: getNodeIndex(node),
   };
 }
 

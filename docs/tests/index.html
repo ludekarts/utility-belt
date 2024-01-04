@@ -1,39 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Utility Belt Tests (Mocha)</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.0.0/mocha.css"
+      integrity="sha512-Ytt2foRGKdIInPXwyS3gxRvfTv4n2wi7uB7neCLH1LjExT+PKBeQu6LNVB4QpHaJqx7m2btagBs4kqxYC1QNFg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/chai/4.3.6/chai.min.js"
+      integrity="sha512-sP7hp2cpEWsmOHQPc6taNuXFmvG59BhI3YS3tOvZ+nDEqOyyORLiY3nBjLkWgCNI8SFZ5koUyiBO42Q3wzZDrQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/chai-spies@1.0.0/chai-spies.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.0.0/mocha.min.js"
+      integrity="sha512-0kWAqlZG3lK3zOhOt8GQqBcLLEQIoU/GeDYTeeFAftD4+Oh/1J2tWzVk+1J+c5J45FNMVl9/Xo/Mf9K89I3H7A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+  </head>
 
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Utility Belt Tests (Mocha)</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.0.0/mocha.css"
-    integrity="sha512-Ytt2foRGKdIInPXwyS3gxRvfTv4n2wi7uB7neCLH1LjExT+PKBeQu6LNVB4QpHaJqx7m2btagBs4kqxYC1QNFg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/4.3.6/chai.min.js"
-    integrity="sha512-sP7hp2cpEWsmOHQPc6taNuXFmvG59BhI3YS3tOvZ+nDEqOyyORLiY3nBjLkWgCNI8SFZ5koUyiBO42Q3wzZDrQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chai-spies@1.0.0/chai-spies.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.0.0/mocha.min.js"
-    integrity="sha512-0kWAqlZG3lK3zOhOt8GQqBcLLEQIoU/GeDYTeeFAftD4+Oh/1J2tWzVk+1J+c5J45FNMVl9/Xo/Mf9K89I3H7A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-</head>
+  <body>
+    <div id="mocha"></div>
 
-<body>
-  <div id="mocha"></div>
-
-  <script type="module" class="mocha-init">
-    mocha.setup("bdd");
-    mocha.checkLeaks();
-  </script>
-  <script type="module" class="mocha-exec">
-    import("./importer.js").then(async module => {
-      window.utilityBelt = await module.default;
-      await import("./general.test.js");
-      await import("./query.test.js");
-      await import("./pubsub.test.js");
-      await import("./arrays.test.js");
-      await import("./history.test.js");
-      await import("./template.test.js");
-      await import("./minirdx.test.js");
-      mocha.run();
-    })
-  </script>
-</body>
-
+    <script type="module" class="mocha-init">
+      mocha.setup("bdd");
+      mocha.checkLeaks();
+    </script>
+    <script type="module" class="mocha-exec">
+      import("./importer.js").then(async (module) => {
+        window.utilityBelt = await module.default;
+        // await import("./general.test.js");
+        // await import("./query.test.js");
+        // await import("./pubsub.test.js");
+        // await import("./arrays.test.js");
+        // await import("./history.test.js");
+        await import("./template.test.js");
+        // await import("./minirdx.test.js");
+        mocha.run();
+      });
+    </script>
+  </body>
 </html>

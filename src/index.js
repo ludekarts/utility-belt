@@ -1,7 +1,7 @@
-import { version } from "../package.json"
+// import { version } from "../package.json"
 
 // Version
-export const version_utb = version;
+export const version_utb = 0 //version;
 
 // General.
 export * from "./utilities/general.js";

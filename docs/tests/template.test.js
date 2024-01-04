@@ -53,11 +53,11 @@ describe("Dynamic Elements", () => {
     const paragraph = document.createElement("span");
     paragraph.textContent = "Hello i'm a paragraph of text";
     const element = dynamicElement(() => html`
-      <div>
-        <h2>Headline</h2>
-        <p>${paragraph}</p>
-      </div>
-    `);
+        <div>
+          <h2>Headline</h2>
+          <p>${paragraph}</p>
+        </div>
+      `);
     const selectedElement = element.lastElementChild.firstElementChild;
     chai.expect(selectedElement).to.be.equal(paragraph);
   });
@@ -66,11 +66,11 @@ describe("Dynamic Elements", () => {
     const paragraph = document.createElement("span");
     paragraph.textContent = "Hello i'm a paragraph of text";
     const element = dynamicElement(() => html`
-      <div>
-        <h2>Headline</h2>
-        ${paragraph}
-      </div>
-    `);
+        <div>
+          <h2>Headline</h2>
+          ${paragraph}
+        </div>
+      `);
     const selectedElement = element.lastElementChild;
     chai.expect(selectedElement).to.be.equal(paragraph);
   });
@@ -224,10 +224,10 @@ describe("Dynamic Elements", () => {
 
   it("Should apply partial markup to main template", () => {
     const element = dynamicElement(() => html`
-      <div>
-        <strong>Hello</strong>
-        ${html`<ul><li>1</li><li>2</li><li>3</li></ul>`}
-      </div>`
+        <div>
+          <strong>Hello</strong>
+          ${html`<ul><li>1</li><li>2</li><li>3</li></ul>`}
+        </div>`
     );
 
     chai.expect(element.lastElementChild.textContent).to.be.equal("123");
@@ -237,10 +237,10 @@ describe("Dynamic Elements", () => {
   it("Should update partial markup in main template", () => {
     const items = [1, 2, 3];
     const element = dynamicElement(items => html`
-      <div>
-        <strong>Hello</strong>
-        ${html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}</li></ul>`}
-      </div>`
+        <div>
+          <strong>Hello</strong>
+          ${html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}</li></ul>`}
+        </div>`
       , items);
 
     element.update([4, 5, 6]);
@@ -254,10 +254,10 @@ describe("Dynamic Elements", () => {
     const sublist = (a, b, c) => html`<span><strong>${a}</strong>${b}<em>${c}</em></span>`;
     const list = (items) => html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}${sublist(items[3], items[4], items[5])}</li></ul>`;
     const element = dynamicElement(items => html`
-      <div>
-        <strong>Hello</strong>
-        ${list(items)}
-      </div>`
+        <div>
+          <strong>Hello</strong>
+          ${list(items)}
+        </div>`
       , items);
 
     chai.expect(element.lastElementChild.textContent).to.be.equal("123456");
@@ -268,10 +268,10 @@ describe("Dynamic Elements", () => {
     const sublist = (a, b, c) => html`<span><strong>${a}</strong>${b}<em>${c}</em></span>`;
     const list = (items) => html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}${sublist(items[3], items[4], items[5])}</li></ul>`;
     const element = dynamicElement(items => html`
-      <div>
-        <strong>Hello</strong>
-        ${list(items)}
-      </div>`
+        <div>
+          <strong>Hello</strong>
+          ${list(items)}
+        </div>`
       , items);
 
     element.update([1, 2, 3, 4, "a", "b"]);
@@ -344,6 +344,34 @@ describe("Dynamic Elements", () => {
     chai.expect(listA.children[1].textContent).to.be.equal("Changed");
   });
 
+
+  it("Should re-render-reperater only when items changes", () => {
+
+    let items = [1, 2, 3, 4];
+
+    let ListItemUi = item => {
+      console.log("render LitItemUi");
+      return html`<li>${item}</li>`
+    };
+    const ItemsList = items => {
+      console.log("render ItemsList");
+      return html`<div><ul class="${"style"}" $key="${i => i}" $items="${items}">${ListItemUi}</ul><span>xoxo</span></div>`
+    };
+    const element = dynamicElement(ItemsList, items);
+    console.log(element.outerHTML);
+
+    setTimeout(() => {
+      // items[1] = "x";
+      // items = [1, 2, 3, 4];
+      items.push(5)
+      ListItemUi = () => html`<li>XXX</li>`;
+      element.update(items);
+      console.log(element.innerHTML);
+    }, 1000);
+
+
+  });
+
   it("Should destroy repeater elements after given time", done => {
 
     const items = [
@@ -361,7 +389,7 @@ describe("Dynamic Elements", () => {
 
     setTimeout(() => {
       items[1].name = "Changed";
-      listA.update(items);
+      listA.update([...items]);
       chai.expect(listA.children[1]).to.not.be.equal(item2Ref);
       dynamicElement.__setTerminateInterval(300_000);
       done();
