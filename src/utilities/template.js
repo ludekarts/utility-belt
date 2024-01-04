@@ -3,15 +3,29 @@ import { placeStrBetween } from "./strings.js";
 
 
 /*
-⚠️ NOTICE:⚠️
+  [💡 HINT]:
+  When using partials inside template, make sure to use extended version of html helper (with ID):
 
-When using partials inside templates, it is important to remember that you cannot use conditional partials.
-This is because, currently, it is impossible to distinguish one partial from another, and as a result,
-the renderer will not be able to properly display the data.
-In the future, we plan to introduce HTML with IDs (e.g. html("id")`<span>hello</span>`) to mitigate this issue.
+    html("id")`<span>Hello</span>`;
 
+  This will allow for partials to be reused and updated properly e.g.:
+
+    function render(count) {
+      return html`
+        <div>
+          <span>Hello ${count}</span>
+          ${html("id")`<span>World</span>`}
+        </div>
+      `;
+    }
+
+    const element = dynamicElement(render, 0);
+    element.update(1);
+    element.update(2);
+    element.update(3);
+
+  In Above example partial (with ID) will be created only once and only updated later on.
 */
-
 
 export function html(markup, ...inserts) {
 
@@ -36,7 +50,6 @@ export function dynamicElement(renderFn, initState) {
   const { markup, inserts, id } = renderFn(initState);
   const { element, bindings, attributes } = createTemplate(markup, inserts);
   element.d = {};
-  if (id) element.d.id = id;
   element.d.refs = getReferences(element);
   element.d.update = updateComponent(element, bindings, attributes, renderFn);
   return element;
@@ -451,7 +464,6 @@ function updateComponent(element, bindings, attributes, renderFn) {
 // Updates values of an element and it's references.
 function updateReference(index, bindings, attributes, newValue) {
 
-
   const binding = bindings[index];
 
   // console.log(binding);
@@ -466,7 +478,7 @@ function updateReference(index, bindings, attributes, newValue) {
       : binding.ref.removeAttribute(attribute.name);
   }
 
-  // Update Repeater items.
+  // Update Repeater $items.
   if (binding.type === "attribute:repeaterItems") {
     binding.value = newValue;
     const { updateFn, updateIndex } = binding.repeater;
@@ -650,11 +662,19 @@ function updateReference(index, bindings, attributes, newValue) {
 
     // Partial -> Partial.
     else if (isPartialTemplate(newValue)) {
-      // binding.ref.update(newValue.inserts);
-      const partialNode = createPartialElement(newValue.markup, newValue.inserts);
-      binding.container.ref.replaceChild(partialNode, binding.ref);
-      binding.type = "partial";
-      binding.ref = partialNode;
+
+      // Partial -> Partial with same ID.
+      if (isSameDymaicId(binding.value, newValue)) {
+        binding.ref.update(newValue.inserts);
+      }
+
+      // Partial -> Partial with different ID.
+      else {
+        const partialNode = createPartialElement(newValue.markup, newValue.inserts);
+        binding.container.ref.replaceChild(partialNode, binding.ref);
+        binding.type = "partial";
+        binding.ref = partialNode;
+      }
     }
 
     // Partial -> Array of DOM Nodes.
@@ -858,6 +878,10 @@ function isPartialTemplate(node) {
     && Array.isArray(node.markup);
 }
 
+// Verify if given @partials have same ID.
+function isSameDymaicId(partialA, partialB) {
+  return partialA.id && partialB.id && partialA.id === partialB.id;
+}
 
 function sliceHtml(html) {
   const splitIndex = html.lastIndexOf("<");

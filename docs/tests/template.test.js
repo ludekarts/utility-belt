@@ -1,5 +1,5 @@
 
-const { html, dynamicElement, createRepeater } = window.utilityBelt;
+const { html, dynamicElement, createRepeater, fragment } = window.utilityBelt;
 
 describe("Dynamic Elements", () => {
 
@@ -44,13 +44,6 @@ describe("Dynamic Elements", () => {
     const element = dynamicElement(() => html`<div class="hello"></div>`);
     chai.expect(element).to.be.instanceof(HTMLElement);
     chai.expect(element.classList.contains("hello")).to.be.true;
-  });
-
-  it("Should create HTMLElement with dynamic ID ", () => {
-    const elementA = dynamicElement(() => html`<div class="hello"></div>`);
-    const elementB = dynamicElement(() => html("did")`<div class="hello"></div>`);
-    chai.expect(elementA.d.id).to.not.exist;
-    chai.expect(elementB.d.id).to.be.a("string");
   });
 
   it("Should create HTMLElement with 'update' method ", () => {
@@ -333,20 +326,45 @@ describe("Dynamic Elements", () => {
     chai.expect(element.lastElementChild.textContent).to.be.equal("1x3");
   });
 
-
   it("Should udate one partial with another", () => {
     let toggle = false;
-
     const ToggleUi = toggle => html`<div><span>Hello</span>${toggle ? html`<span>World(${toggle + ""})</span>` : html`<span>Partial(${toggle + ""})</span>`}</div>`;
-
     const element = dynamicElement(ToggleUi, toggle);
 
     chai.expect(element.lastElementChild.textContent).to.be.equal("Partial(false)");
     element.d.update(true);
     chai.expect(element.lastElementChild.textContent).to.be.equal("World(true)");
-
   });
 
+  it("Should not udate partials with same ID", () => {
+    let renderPartial = () => html("PTL")`<span>Partial</span>`;
+
+    chai.expect(renderPartial()).to.have.have.property("id", "PTL");
+
+    const PartialWrapper = () => html`
+      <div>
+        ${renderPartial()}
+      </div>
+    `;
+
+    const element = dynamicElement(PartialWrapper);
+    chai.expect(element.firstElementChild.textContent).to.be.equal("Partial");
+
+    renderPartial = () => html("PTL")`<span>Changed</span>`;
+    chai.expect(renderPartial().markup[0]).to.contains("Changed");
+
+    element.d.update();
+    // Same ID no update
+    chai.expect(element.firstElementChild.textContent).to.be.equal("Partial");
+
+    renderPartial = () => html("PTL2")`<span>Changed</span>`;
+    chai.expect(renderPartial()).to.have.have.property("id", "PTL2");
+
+    element.d.update();
+    // Different ID - partial updated
+    chai.expect(element.firstElementChild.textContent).to.be.equal("Changed");
+
+  });
 
   it("Should repeat elements", () => {
     const items = [
