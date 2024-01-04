@@ -12,12 +12,32 @@ describe("Dynamic Elements", () => {
     chai.expect(dynamicElement.__setTerminateInterval).to.be.a("function");
   });
 
-  it("html tag fn Should create {inserts, markup} object", () => {
+  it("html`` tag fn Should create { inserts, markup } object", () => {
     const collection = html`<div class="${"hello"}"></div>`;
     chai.expect(collection.markup).to.be.an("array");
     chai.expect(collection.inserts).to.be.an("array");
     chai.expect(collection.markup[0]).to.be.equal("<div class=\"");
     chai.expect(collection.inserts[0]).to.be.equal("hello");
+  });
+
+  it("html(id)`` tag fn Should create { inserts, markup, markupId } object", () => {
+    const collection = html("myId")`<div class="${"hello"}"></div>`;
+    chai.expect(collection.markup).to.be.an("array");
+    chai.expect(collection.inserts).to.be.an("array");
+    chai.expect(collection.markupId).to.be.an("string");
+    chai.expect(collection.markup[0]).to.be.equal("<div class=\"");
+    chai.expect(collection.inserts[0]).to.be.equal("hello");
+    chai.expect(collection.markupId).to.be.equal("myId");
+  });
+
+  it("html`` Should throw if not used corectly", () => {
+    const testA = () => html();
+    const testB = () => html(1);
+    const testC = () => html(1)`x`;
+
+    chai.expect(testA).to.throw();
+    chai.expect(testB).to.throw();
+    chai.expect(testC).to.throw();
   });
 
   it("Should create HTMLElement with calss 'hello'", () => {
@@ -304,6 +324,20 @@ describe("Dynamic Elements", () => {
     element.update([1, "x", 3]);
 
     chai.expect(element.lastElementChild.textContent).to.be.equal("1x3");
+  });
+
+
+  it("Should udate one partial with another", () => {
+    let toggle = false;
+
+    const ToggleUi = toggle => html`<div><span>Hello</span>${toggle ? html`<span>World(${toggle + ""})</span>` : html`<span>Partial(${toggle + ""})</span>`}</div>`;
+
+    const element = dynamicElement(ToggleUi, toggle);
+
+    chai.expect(element.lastElementChild.textContent).to.be.equal("Partial(false)");
+    element.update(true);
+    chai.expect(element.lastElementChild.textContent).to.be.equal("World(true)");
+
   });
 
 

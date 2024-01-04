@@ -12,12 +12,25 @@ In the future, we plan to introduce HTML with IDs (e.g. html("id")`<span>hello</
 
 */
 
+
 export function html(markup, ...inserts) {
-  const notTemplateString = markup === undefined || !Boolean(markup.raw);
-  if (notTemplateString)
-    throw new Error("html helper should be used as a tagFunction");
-  return { markup: markup.raw, inserts };
+
+  if (markup && Boolean(markup.raw)) {
+    return { markup: markup.raw, inserts };
+  }
+
+  else if (typeof markup === "string") {
+    const markupId = markup;
+    return function (keyedMarkup, ...keyedInserts) {
+      if (keyedMarkup && Boolean(keyedMarkup.raw)) {
+        return { markup: keyedMarkup.raw, inserts: keyedInserts, markupId };
+      }
+      throw new Error("HtmlHelperError: Invalid usage of html helper. Try html(\"id\")`` instead.");
+    }
+  }
+  throw new Error("HtmlHelperError: Invalid usage of html helper. Try html`` or html(\"id\")`` instead.");
 }
+
 
 export function dynamicElement(renderFn, initState) {
   const { markup, inserts } = renderFn(initState);
@@ -607,10 +620,10 @@ function updateReference(index, bindings, attributes, newValue) {
     binding.value = newValue;
   }
 
-  // Update Partial Nodes.
+  // Update Partials.
   else if (binding.type === "partial") {
 
-    // Partial Node -> Empty TextNode.
+    // Partial -> Empty TextNode.
     if (isAsEmpty(newValue)) {
       const textNode = document.createTextNode("");
       binding.container.ref.replaceChild(textNode, binding.ref);
@@ -618,7 +631,7 @@ function updateReference(index, bindings, attributes, newValue) {
       binding.ref = textNode;
     }
 
-    // Partial Node -> TextNode (Strings || Numbers).
+    // Partial -> TextNode (Strings || Numbers).
     else if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
       binding.container.ref.replaceChild(textNode, binding.ref);
@@ -626,19 +639,23 @@ function updateReference(index, bindings, attributes, newValue) {
       binding.ref = textNode;
     }
 
-    // Partial Node -> DOM Node.
+    // Partial -> DOM Node.
     else if (isDomNode(newValue)) {
       binding.container.ref.replaceChild(newValue, binding.ref);
       binding.type = "node";
       binding.ref = newValue;
     }
 
-    // Partial Node -> Partial.
+    // Partial -> Partial.
     else if (isPartialTemplate(newValue)) {
-      binding.ref.update(newValue.inserts);
+      // binding.ref.update(newValue.inserts);
+      const partialNode = createPartialElement(newValue.markup, newValue.inserts);
+      binding.container.ref.replaceChild(partialNode, binding.ref);
+      binding.type = "partial";
+      binding.ref = partialNode;
     }
 
-    // Partial Node -> Array of DOM Nodes.
+    // Partial -> Array of DOM Nodes.
     else if (Array.isArray(newValue)) {
       insetrNodesBefore(newValue, binding.ref);
       binding.type = "list";
