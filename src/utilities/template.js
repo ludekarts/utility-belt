@@ -20,10 +20,10 @@ export function html(markup, ...inserts) {
   }
 
   else if (typeof markup === "string") {
-    const markupId = markup;
+    const id = markup;
     return function (keyedMarkup, ...keyedInserts) {
       if (keyedMarkup && Boolean(keyedMarkup.raw)) {
-        return { markup: keyedMarkup.raw, inserts: keyedInserts, markupId };
+        return { markup: keyedMarkup.raw, inserts: keyedInserts, id };
       }
       throw new Error("HtmlHelperError: Invalid usage of html helper. Try html(\"id\")`` instead.");
     }
@@ -33,10 +33,12 @@ export function html(markup, ...inserts) {
 
 
 export function dynamicElement(renderFn, initState) {
-  const { markup, inserts } = renderFn(initState);
+  const { markup, inserts, id } = renderFn(initState);
   const { element, bindings, attributes } = createTemplate(markup, inserts);
-  element.update = updateComponent(element, bindings, attributes, renderFn);
-  element.refs = getReferences(element);
+  element.d = {};
+  if (id) element.d.id = id;
+  element.d.refs = getReferences(element);
+  element.d.update = updateComponent(element, bindings, attributes, renderFn);
   return element;
 }
 
