@@ -72,6 +72,7 @@ describe("PubSub", () => {
     pubsub.dispatch("custom", "hi", "This is HI message!");
     pubsub.dispatch("custom", "ho", "This is HO message!");
     pubsub.dispatch("custom", "he", "This is HE message!");
+    pubsub.dispatch("other", "er", "This should not be registered!");
     chai.expect(spy).to.have.been.called(3);
   });
 

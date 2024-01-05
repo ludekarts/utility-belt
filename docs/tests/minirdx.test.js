@@ -1,7 +1,8 @@
-const { createReducer, createStore, action } = window.utilityBelt;
+const { createReducer, createStore, createSelector } = window.utilityBelt;
 
+const action = (type, payload) => ({ type, payload });
 
-describe("Mini RDX", () => {
+describe("MiniRDX", () => {
 
   it("CreateReducer:: Should create 'empty' reducer", () => {
     const state = { name: "state" };
@@ -11,12 +12,11 @@ describe("Mini RDX", () => {
   });
 
 
-  it("CreateReducer:: Should create reduce handling 'update' action", () => {
+  it("CreateReducer:: Should create reducer handling 'update' action", () => {
     const state = { name: "state" };
     const mainReducer = createReducer(state)
-      .on("update", (state, action) => {
-        state.name = action.payload;
-        return state;
+      .on("update", (state, name) => {
+        return { ...state, name };
       })
       .done();
 
@@ -28,12 +28,15 @@ describe("Mini RDX", () => {
   });
 
 
-  it("CreateReducer:: Should create reduce handling multiple actions", () => {
-    const state = { name: "state", counter: 0 };
+  it("CreateReducer:: Should create reducer handling multiple actions", () => {
+    const state = {
+      name: "state",
+      counter: 0,
+    };
+
     const mainReducer = createReducer(state)
-      .on("update", (state, action) => {
-        state.name = action.payload;
-        return state;
+      .on("update", (state, name) => {
+        return { ...state, name };
       })
       .on("increment", (state) => {
         state.counter = state.counter + 1;
@@ -48,18 +51,25 @@ describe("Mini RDX", () => {
     chai.expect(finalState).to.have.property("counter", 1);
   });
 
+
   it("CreateReducer:: Should return initState if reducing state is undefined", () => {
-    const initState = { name: "initState" };
+    const initState = {
+      name: "initState",
+    };
+
     const mainReducer = createReducer(initState).done();
+
     chai.expect(mainReducer(undefined, {})).to.equal(initState);
   });
+
 
   it("CreateReducer:: Should throw when state or acrion are not applied", () => {
     const mainReducer = createReducer().done();
     chai.expect(() => mainReducer()).to.throw();
   });
 
-  it("CreateReducer:: Should throw when creating case with duplicated action", () => {
+
+  it("CreateReducer:: Should throw if two or more cases try to handle same action", () => {
     const identity = a => a;
     const create = () => createReducer()
       .on("action", identity)
@@ -68,68 +78,172 @@ describe("Mini RDX", () => {
     chai.expect(create).to.throw();
   });
 
-  it("CreateReducer:: Should throw when creating case with action not being a 'string'", () => {
+
+  it("CreateReducer:: When creating new case it should throw if action is not a 'string'", () => {
     const create = () => createReducer().on(10, () => { }).done();
     chai.expect(create).to.throw();
   });
 
-  it("CreateReducer:: Should throw when creating case with resucer not being a 'function'", () => {
+
+  it("CreateReducer:: When creating new case it should throw if reducer is not a 'function'", () => {
     const create = () => createReducer().on("action_name", {}).done();
     chai.expect(create).to.throw();
   });
 
 
-  it("Store:: Should create Store with Main reducer", () => {
-    const initState = { hello: "world" };
-    const mainReducer = createReducer(initState).done();
-    const store = createStore(mainReducer);
-    chai.expect(store.getState()).to.have.property("hello", "world");
-  });
+  it("ExtendReducer:: Should extend main reducer", () => {
 
+    const initState = {
+      hello: "world",
+    };
 
-  it("Store:: Should define new reducer", () => {
-    const initState = { hello: "world" };
     const mainReducer = createReducer(initState).done();
     const store = createStore(mainReducer);
 
+    // Check for proper initial state.
     chai.expect(store.getState()).to.have.property("hello", "world");
 
+    // ---- Extend ------------
 
-    const deepReducer = createReducer({ some: { deep: { value: "👻" } } })
-      .on("rex", state => {
-        state.rex = "🦖"
-        return state;
-      })
-      .done();
-    store.defineReducer(deepReducer, state => state.enter, (state, value) => state.enter = value, "deep");
+    const extendState = {
+      some: {
+        deep: {
+          value: "👻",
+        },
+      },
+    };
 
-    const someReducer = createReducer({ invader: "👾" })
-      .on("punch", state => {
-        state.punch = "🥊"
-        return state;
-      })
-      .done();
+    // Define new extended reducer.
+    const extendedReducer = createReducer(extendState).done();
 
-    store.defineReducer(someReducer, state => state.enter.some, (state, value) => state.enter.some = value, "some");
-    chai.expect(store.getState().enter.some).to.not.have.property("invader");
+    store.extendReducer(extendedReducer, "ext");
 
-    store.dispatch(action("punch"));
-    chai.expect(store.getState().enter.some).to.have.property("punch");
-
-
-    const userReducer = createReducer({ name: "John" }).done();
-    store.defineReducer(userReducer, state => state.user, (state, value) => state.user = value, "user");
-    chai.expect(store.getState()).to.have.property("user");
-
-    store.dispatch(action("rex"));
-
-    // console.log("STORE:", store.getState());
-    chai.expect(store.getState().user).to.have.property("name", "John");
+    // Check for extended state.
+    chai.expect(store.getState()).to.have.property("ext");
+    chai.expect(store.getState().ext.some.deep).to.have.property("value", "👻");
 
   });
 
 
-  it("Store:: Should subscribe to Store updates", () => {
+  it("ExtendReducer:: Should handle actions from extended reducer", () => {
+
+    const initState = {
+      hello: "world",
+    };
+
+    const mainReducer = createReducer(initState).done();
+    const store = createStore(mainReducer);
+
+    // Check for proper initial state.
+    chai.expect(store.getState()).to.have.property("hello", "world");
+
+    // ---- Extend ------------
+
+    const extendState = {
+      some: {
+        deep: {
+          value: "👻",
+        },
+      },
+    };
+
+    // Define new extended reducer.
+    const extendedReducer = createReducer(extendState)
+      .on("update_extended", (state) => {
+        state.some.deep.value = "🦖";
+        return { ...state };
+      })
+      .done();
+
+    store.extendReducer(extendedReducer, "ext");
+
+    store.dispatch("update_extended");
+
+    chai.expect(store.getState().ext.some.deep).to.have.property("value", "🦖");
+  });
+
+
+  it("ExtendReducer:: Should update global state from extended reducer", () => {
+
+    const initState = {
+      hello: "world",
+    };
+
+    const mainReducer = createReducer(initState).done();
+    const store = createStore(mainReducer);
+
+    // Check for proper initial state.
+    chai.expect(store.getState()).to.have.property("hello", "world");
+
+    // ---- Extend ------------
+
+    const extendState = {
+      some: {
+        deep: {
+          value: "👻",
+        },
+      },
+    };
+
+    // Define new extended reducer.
+    const extendedReducer = createReducer(extendState)
+      .on("update_global", (state) => (globalState) => ({
+        ...globalState,
+        hello: "🍕",
+      }))
+      .done();
+
+    store.extendReducer(extendedReducer, "ext");
+
+    store.dispatch("update_global");
+
+    chai.expect(store.getState()).to.have.property("hello", "🍕");
+  });
+
+
+  it("ExtendReducer:: Should extend reducer but not override default state", () => {
+
+    const initState = {
+      hello: "world",
+    };
+
+    const mainReducer = createReducer(initState).done();
+    const store = createStore(mainReducer);
+
+    // Check for proper initial state.
+    chai.expect(store.getState()).to.have.property("hello", "world");
+
+    // ---- Extend ------------
+
+    const extendState = {
+      some: {
+        deep: {
+          value: "👻",
+        },
+      },
+    };
+
+    // Define new extended reducer.
+    const extendedReducer = createReducer(extendState).done();
+    store.extendReducer(extendedReducer, "ext");
+    chai.expect(store.getState().ext.some.deep).to.have.property("value", "👻");
+
+    // ---- Extend 2 ------------
+
+    const hookReducer = createReducer()
+      .on("update_hook", (state) => {
+        return "🦖";
+      })
+      .done();
+
+    // Define another extended reducer which only modify part of global state.
+    store.extendReducer(hookReducer, "ext.some.deep.value");
+    store.dispatch("update_hook");
+    chai.expect(store.getState().ext.some.deep).to.have.property("value", "🦖");
+  });
+
+
+  it("Store:: Should allow to subscribe to Store updates", () => {
     const mainReducer = createReducer({})
       .on("update", () => ({}))
       .done();
@@ -142,22 +256,62 @@ describe("Mini RDX", () => {
     chai.expect(spy).to.have.been.called(2);
   });
 
-  it("Store:: Should dipatch action withouth actionCreator", () => {
-    const initState = { text: "World" };
-    const mainReducer = createReducer(initState)
-      .on("greet", state => {
-        state.text = "Hello" + state.text;
-        return { ...state };
+
+  it("ExtendReducer:: Should connect to global state without overriding it", () => {
+    const initState = {
+      hello: "world",
+    };
+
+    const mainReducer = createReducer(initState).done();
+    const store = createStore(mainReducer);
+
+    // Check for proper initial state.
+    chai.expect(store.getState()).to.have.property("hello", "world");
+
+    // ---- Extend ------------
+
+    // Define new extended reducer.
+    const extendedReducer = createReducer({ bad: "state" })
+      .on("update_global", (state) => {
+        return {
+          ...state,
+          hello: "there"
+        }
       })
       .done();
 
-    const store = createStore(mainReducer);
-    store.dispatch("greet");
-    chai.expect(store.getState()).to.have.property("text", "HelloWorld");
+    store.extendReducer(extendedReducer);
+    chai.expect(store.getState()).to.not.have.property("bad", "state");
+
+    store.dispatch("update_global");
+    chai.expect(store.getState()).to.have.property("hello", "there");
+
   });
 
+  it("Store:: Subscriber should recieve new state object along with dispatched action", () => {
+
+    const newState = { isNew: true };
+
+    const mainReducer = createReducer({})
+      .on("update", () => newState)
+      .done();
+
+    const store = createStore(mainReducer);
+    const spy = chai.spy();
+    store.subscribe(spy);
+    store.dispatch("update");
+    store.dispatch("update");
+    chai.expect(spy).to.have.been.called(2);
+    chai.expect(spy).to.have.been.called.with(newState, { type: "update", payload: undefined });
+  });
+
+
   it("Store:: Should dipatch multiple actions as one batch", () => {
-    const initState = { counter: 0, title: "none" };
+    const initState = {
+      counter: 0,
+      title: "none",
+    };
+
     const mainReducer = createReducer(initState)
       .on("add", state => {
         state.counter++;
@@ -167,17 +321,14 @@ describe("Mini RDX", () => {
         state.counter--;
         return { ...state };
       })
-      .on("rename", (state, action) => {
-        state.title = action.payload;
-        return { ...state };
+      .on("rename", (state, title) => {
+        return { ...state, title };
       })
       .done();
 
     const store = createStore(mainReducer);
-    const spyActionListeners = chai.spy();
     const spyStoreListener = chai.spy();
 
-    store.on("add", spyActionListeners);
     store.subscribe(spyStoreListener);
 
     store.dispatch.batch(
@@ -187,7 +338,6 @@ describe("Mini RDX", () => {
       ["rename", "batch"]
     );
 
-    chai.expect(spyActionListeners).to.have.been.called(2);
     chai.expect(spyStoreListener).to.have.been.called.once;
     chai.expect(store.getState()).to.have.property("counter", 1);
     chai.expect(store.getState()).to.have.property("title", "batch");
@@ -195,87 +345,60 @@ describe("Mini RDX", () => {
   });
 
 
-  it("Action creator:: Should create new action with proper format", () => {
-    const updateAction = action("update", "newValue");
-    chai.expect(updateAction).to.have.property("type", "update");
-    chai.expect(updateAction).to.have.property("payload", "newValue");
-  });
+  it("Store:: Subscriber should recieve new state object along with list of dispatched action (batch dispatch)", () => {
 
+    const newState = { isNew: true };
+    const actions = [
+      { type: "this", payload: undefined },
+      { type: "is", payload: undefined },
+      { type: "batch", payload: true },
+    ];
 
-  it("Action listener:: Should detect 'hello' action being dispatched", () => {
-    const mainReducer = createReducer({}).done();
-    const store = createStore(mainReducer);
-    const spy = chai.spy();
-
-    store.on("hello", spy);
-
-    store.dispatch("fake.action");
-    chai.expect(spy).to.not.have.been.called();
-
-    store.dispatch("hello");
-    chai.expect(spy).to.have.been.called();
-  });
-
-
-  it("Action listener:: Should fire many callback attached to single action", () => {
-    const mainReducer = createReducer({}).done();
-    const store = createStore(mainReducer);
-    const spy1 = chai.spy();
-    const spy2 = chai.spy();
-
-    store.on("hello", spy1);
-    store.on("hello", spy2);
-
-    store.dispatch("hello");
-
-    chai.expect(spy1).to.have.been.called();
-    chai.expect(spy2).to.have.been.called();
-  });
-
-  it("Action listener:: Should destroy action handler", () => {
-    const mainReducer = createReducer({}).done();
-    const store = createStore(mainReducer);
-    const spy = chai.spy();
-    const destory = store.on("hello", spy);
-
-    store.dispatch("fake.action");
-    chai.expect(spy).to.not.been.called();
-
-    destory();
-
-    store.dispatch("hello");
-    chai.expect(spy).to.have.not.been.called();
-  });
-
-
-  it("Action listener:: Should pass to action handler current state value", () => {
-    const mainReducer = createReducer("one")
-      .on("change", () => "two")
+    const mainReducer = createReducer({})
+      .on("is", () => newState) // Any action from batch list will trigger subscriber.
       .done();
+
     const store = createStore(mainReducer);
     const spy = chai.spy();
-
-    store.on("change", spy);
-    chai.expect(store.getState()).to.equal("one");
-
-    store.dispatch("change");
-    chai.expect(spy).to.have.been.called.with("one", "change");
-  });
-
-  it("Action listener:: Should handle '::afterupdate' action with new state value", () => {
-    const mainReducer = createReducer("one")
-      .on("change", () => "two")
-      .done();
-    const store = createStore(mainReducer);
-    const spy = chai.spy();
-
-    store.on("change::afterupdate", spy);
-    chai.expect(store.getState()).to.equal("one");
-
-    store.dispatch("change");
-    chai.expect(spy).to.have.been.called.with("two", "change::afterupdate");
+    store.subscribe(spy);
+    store.dispatch.batch(["this"], ["is"], ["batch", true]);
+    chai.expect(spy).to.have.been.called.with(newState, actions);
   });
 
 
+  it("Create Selector:: Should fail with invalid selector", () => {
+    chai.expect(() => createSelector("alert(1);")).to.throw();
+  });
+
+
+  it("Create Selector:: Should create various selectros", () => {
+    chai.expect(() => createSelector("a")).to.not.throw();
+    chai.expect(() => createSelector("a[0]")).to.not.throw();
+    chai.expect(() => createSelector("a.b.c")).to.not.throw();
+    chai.expect(() => createSelector("a.b[1].c[2]")).to.not.throw();
+  });
+
+
+  it("Create Selector:: Should create propper getter & setter", () => {
+    const state = {
+      user: {
+        name: "John",
+        age: 25,
+        address: {
+          city: "London",
+          street: "Baker Street"
+        }
+      }
+    };
+
+    const { getter, setter } = createSelector("user.address.city");
+
+    // Getter.
+    chai.expect(getter(state)).to.equal("London");
+
+    // Setter.
+    setter(state, "New York");
+    chai.expect(getter(state)).to.equal("New York");
+  });
 
 });
