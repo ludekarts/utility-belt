@@ -73,11 +73,11 @@ describe("Dynamic Elements", () => {
     const paragraph = document.createElement("span");
     paragraph.textContent = "Hello i'm a paragraph of text";
     const element = dynamicElement(() => html`
-        <div>
-          <h2>Headline</h2>
-          <p>${paragraph}</p>
-        </div>
-      `);
+          <div>
+            <h2>Headline</h2>
+            <p>${paragraph}</p>
+          </div>
+        `);
     const selectedElement = element.lastElementChild.firstElementChild;
     chai.expect(selectedElement).to.be.equal(paragraph);
   });
@@ -86,11 +86,11 @@ describe("Dynamic Elements", () => {
     const paragraph = document.createElement("span");
     paragraph.textContent = "Hello i'm a paragraph of text";
     const element = dynamicElement(() => html`
-        <div>
-          <h2>Headline</h2>
-          ${paragraph}
-        </div>
-      `);
+          <div>
+            <h2>Headline</h2>
+            ${paragraph}
+          </div>
+        `);
     const selectedElement = element.lastElementChild;
     chai.expect(selectedElement).to.be.equal(paragraph);
   });
@@ -244,10 +244,10 @@ describe("Dynamic Elements", () => {
 
   it("Should apply partial markup to main template", () => {
     const element = dynamicElement(() => html`
-        <div>
-          <strong>Hello</strong>
-          ${html`<ul><li>1</li><li>2</li><li>3</li></ul>`}
-        </div>`
+          <div>
+            <strong>Hello</strong>
+            ${html`<ul><li>1</li><li>2</li><li>3</li></ul>`}
+          </div>`
     );
 
     chai.expect(element.lastElementChild.textContent).to.be.equal("123");
@@ -257,10 +257,10 @@ describe("Dynamic Elements", () => {
   it("Should update partial markup in main template", () => {
     const items = [1, 2, 3];
     const element = dynamicElement(items => html`
-        <div>
-          <strong>Hello</strong>
-          ${html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}</li></ul>`}
-        </div>`
+          <div>
+            <strong>Hello</strong>
+            ${html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}</li></ul>`}
+          </div>`
       , items);
 
     element.d.update([4, 5, 6]);
@@ -274,10 +274,10 @@ describe("Dynamic Elements", () => {
     const sublist = (a, b, c) => html`<span><strong>${a}</strong>${b}<em>${c}</em></span>`;
     const list = (items) => html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}${sublist(items[3], items[4], items[5])}</li></ul>`;
     const element = dynamicElement(items => html`
-        <div>
-          <strong>Hello</strong>
-          ${list(items)}
-        </div>`
+          <div>
+            <strong>Hello</strong>
+            ${list(items)}
+          </div>`
       , items);
 
     chai.expect(element.lastElementChild.textContent).to.be.equal("123456");
@@ -288,10 +288,10 @@ describe("Dynamic Elements", () => {
     const sublist = (a, b, c) => html`<span><strong>${a}</strong>${b}<em>${c}</em></span>`;
     const list = (items) => html`<ul><li>${items[0]}</li><li>${items[1]}</li><li>${items[2]}${sublist(items[3], items[4], items[5])}</li></ul>`;
     const element = dynamicElement(items => html`
-        <div>
-          <strong>Hello</strong>
-          ${list(items)}
-        </div>`
+          <div>
+            <strong>Hello</strong>
+            ${list(items)}
+          </div>`
       , items);
 
     element.d.update([1, 2, 3, 4, "a", "b"]);
@@ -342,10 +342,10 @@ describe("Dynamic Elements", () => {
     chai.expect(renderPartial()).to.have.have.property("id", "PTL");
 
     const PartialWrapper = () => html`
-      <div>
-        ${renderPartial()}
-      </div>
-    `;
+        <div>
+          ${renderPartial()}
+        </div>
+      `;
 
     const element = dynamicElement(PartialWrapper);
     chai.expect(element.firstElementChild.textContent).to.be.equal("Partial");
@@ -403,7 +403,7 @@ describe("Dynamic Elements", () => {
     chai.expect(listA.children[1].textContent).to.be.equal("Changed");
   });
 
-  it("Should re-render reperater when $items attribute changes", () => {
+  it("Should re-render repeater when $items attribute changes", () => {
 
     let spy = chai.spy();
     let items = [1, 2, 3, 4];
@@ -428,7 +428,7 @@ describe("Dynamic Elements", () => {
 
   });
 
-  it("Should not re-render reperater when repeater fn changes", () => {
+  it("Should not re-render repeater when repeater fn changes", () => {
 
     let spyA = chai.spy();
     let spyB = chai.spy();
@@ -454,6 +454,8 @@ describe("Dynamic Elements", () => {
 
   });
 
+
+
   it("Should destroy repeater elements after given time", done => {
 
     const items = [
@@ -477,5 +479,4 @@ describe("Dynamic Elements", () => {
       done();
     }, 400);
   });
-
 });

@@ -20,11 +20,14 @@ import { placeStrBetween } from "./strings.js";
     }
 
     const element = dynamicElement(render, 0);
-    element.update(1);
-    element.update(2);
-    element.update(3);
+    element.d.update(1);
+    element.d.update(2);
+    element.d.update(3);
 
   In Above example partial (with ID) will be created only once and only updated later on.
+
+  [TODO 📝]:
+  Enable cacheing partials with ID similary to the Repeaters.
 */
 
 export function html(markup, ...inserts) {
@@ -75,7 +78,8 @@ function createRepeater(renderFn, collection, keySelector) {
     const element = renderFn(item);
 
     if (isPartialTemplate(element)) {
-      const partialNode = repeatersPool[repeaterIndex][keySelector(item)] = createPartialElement(element.markup, element.inserts, renderFn);
+      const partialNode = createPartialElement(element.markup, element.inserts, renderFn);
+      repeatersPool[repeaterIndex][keySelector(item)] = partialNode;
       return partialNode;
     }
 
@@ -98,7 +102,7 @@ function createRepeater(renderFn, collection, keySelector) {
         return element;
       }
 
-      return element.update ? element.update(item) : element;
+      return element?.d?.update ? element.d.update(item) : element;
     });
 
   };
@@ -131,26 +135,11 @@ function cleanupRepeaters() {
   for (let i = 0; i < repeatersPool.length; i++) {
     const cache = repeatersPool[i];
 
-    if (cache) {
-
-      // Is Array.
-      if (Array.isArray(cache)) {
-        for (let j = 0; j < cache.length; j++) {
-          if (!document.contains(array[j])) {
-            cache.splice(j, 0);
-          }
-        }
+    Object.keys(cache).forEach(key => {
+      if (!document.contains(cache[key])) {
+        delete cache[key];
       }
-
-      // Is HashMap.
-      else {
-        Object.keys(cache).forEach(key => {
-          if (!document.contains(cache[key])) {
-            delete cache[key];
-          }
-        });
-      }
-    }
+    });
   }
 }
 
@@ -442,9 +431,9 @@ function createTemplate(markup, inserts) {
 
 function createPartialElement(markup, inserts, renderFn) {
   const { element, bindings, attributes } = createTemplate(markup, inserts);
-  element.update = updateComponent(element, bindings, attributes, renderFn);
-  element.refs = getReferences(element);
-  element.update.isPartial = true;
+  element.d = {};
+  element.d.update = updateComponent(element, bindings, attributes, renderFn);
+  element.d.refs = getReferences(element);
   return element;
 }
 
@@ -665,7 +654,7 @@ function updateReference(index, bindings, attributes, newValue) {
 
       // Partial -> Partial with same ID.
       if (isSameDymaicId(binding.value, newValue)) {
-        binding.ref.update(newValue.inserts);
+        binding.ref.d.update(newValue.inserts);
       }
 
       // Partial -> Partial with different ID.
