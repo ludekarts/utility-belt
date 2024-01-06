@@ -11,9 +11,8 @@
   Creates reducer with chaining API instead of switch statements.
 
   [💡 HINT]:
-  Notice that .on() method takes action name and reducer function as arguments, however unlike in Redux
-  reducer function as second parameter (for simplicity purpose) takes "action.payload" instead full action object:
-  .on("action_name", (oldState, actionPayload) => newState);
+  When used with extendReducer() providing @initailState will override property pointed by the selector with given @initialState.
+  If you want to preserve existing state object structure DO NOT pass any initialState to the creator.
 
   [⚙️ USAGE]:
 
@@ -206,10 +205,6 @@ export function createStore(reducer) {
     [📓 DESC]:
     Allows user to add reducer after "mainReducer" is defined.
 
-    [💡 HINT]:
-    When used with extendReducer() providing @initailState will override property pointed by the selector with given @initialState.
-    If you want to preserve existing state object structure DO NOT pass any initialState to the creator.
-
     [⚙️ USAGE]:
 
     import { createStore, createReducer } from "@ludekarts/utility-belt";
@@ -251,7 +246,10 @@ export function createStore(reducer) {
     //   },
     // }
 
-
+    [💡 HINT]:
+    If you do not provide @initialState for "createReducer(undefined).on(....).done()" then
+    reduces will connect to the part of the global state object specified by the selector.
+    This way you can modify this part of global state.
 
   */
 
