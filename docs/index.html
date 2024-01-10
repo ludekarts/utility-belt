@@ -1,155 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Utility Belt Docs</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./assets/styles/reset.css" />
+    <link rel="stylesheet" href="./assets/styles/main.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Utility Belt Docs</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/styles/reset.css">
-  <link rel="stylesheet" href="./assets/styles/main.css">
-</head>
+  <body id="ub-docs">
+    <nav>
+      <div class="scroller">
+        <a href="#ub-docs" class="version">v 0.4.0</a>
 
-<body id="ub-docs">
-  <nav>
-    <div class="scroller">
-      <a href="#ub-docs" class="version">v 0.4.0</a>
+        <a href="#general-header" class="header">General Utilities</a>
 
-      <a href="#general-header" class="header">General Utilities</a>
+        <a href="#deep-override-doc">deepOverride</a>
+        <a href="#deep-clone-doc">deepClone</a>
+        <a href="#hyphenate-doc">hyphenate</a>
+        <a href="#fuzzy-doc">fuzzySearch</a>
+        <a href="#is-object-doc">isObject</a>
+        <a href="#in-polygon-doc">inPolygon</a>
+        <a href="#word-case-doc">wordCase</a>
+        <a href="#get-random-doc">getRandomNumber</a>
+        <a href="#uid-doc">uid</a>
+        <a href="#clipboard-doc">copyText</a>
+        <a href="#loopstack-doc">loopstack</a>
+        <a href="#pubsub-doc">pubsub</a>
 
-      <a href="#deep-override-doc">deepOverride</a>
-      <a href="#deep-clone-doc">deepClone</a>
-      <a href="#hyphenate-doc">hyphenate</a>
-      <a href="#fuzzy-doc">fuzzySearch</a>
-      <a href="#is-object-doc">isObject</a>
-      <a href="#in-polygon-doc">inPolygon</a>
-      <a href="#word-case-doc">wordCase</a>
-      <a href="#get-random-doc">getRandomNumber</a>
-      <a href="#uid-doc">uid</a>
-      <a href="#clipboard-doc">copyText</a>
-      <a href="#loopstack-doc">loopstack</a>
-      <a href="#pubsub-doc">pubsub</a>
+        <a href="#arrays-header" class="header">Arrays</a>
 
-      <a href="#arrays-header" class="header">Arrays</a>
+        <a href="#array-to-object-doc">arrayToObject</a>
+        <a href="#array-chunks-doc">chunksArray</a>
+        <a href="#array-compare-doc">compareArrays</a>
+        <a href="#array-random-doc">getRandomSubarray</a>
+        <a href="#array-nodelist-doc">nodeListToArray</a>
+        <a href="#array-loop-doc">loop</a>
+        <a href="#array-reduce-doc">reduce</a>
+        <a href="#array-shuffle-doc">shuffleArray</a>
+        <a href="#array-sort-by-phrase-doc">sortByPhraseIndex</a>
 
-      <a href="#array-to-object-doc">arrayToObject</a>
-      <a href="#array-chunks-doc">chunksArray</a>
-      <a href="#array-compare-doc">compareArrays</a>
-      <a href="#array-random-doc">getRandomSubarray</a>
-      <a href="#array-nodelist-doc">nodeListToArray</a>
-      <a href="#array-loop-doc">loop</a>
-      <a href="#array-reduce-doc">reduce</a>
-      <a href="#array-shuffle-doc">shuffleArray</a>
-      <a href="#array-sort-by-phrase-doc">sortByPhraseIndex</a>
+        <a href="#request-header" class="header">Request</a>
 
-      <a href="#request-header" class="header">Request</a>
+        <a href="#request-create-request-doc">createRequest</a>
+        <a href="#request-doc" class="indent">request</a>
+        <a href="#request-get-doc" class="indent">get</a>
+        <a href="#request-post-doc" class="indent">post</a>
+        <a href="#request-abort-doc" class="indent">abort</a>
+        <a href="#request-release-doc" class="indent">releaseCache</a>
+        <a href="#request-update-doc" class="indent">updateConfig</a>
+        <a href="#request-config-doc">RequestConfig</a>
+        <a href="#request-config-merge-doc" class="indent">merge</a>
+        <a href="#request-config-update-doc" class="indent">update</a>
+        <a href="#request-otfd-doc">objectToFormData</a>
 
-      <a href="#request-create-request-doc">createRequest</a>
-      <a href="#request-doc" class="indent">request</a>
-      <a href="#request-get-doc" class="indent">get</a>
-      <a href="#request-post-doc" class=" indent">post</a>
-      <a href="#request-abort-doc" class=" indent">abort</a>
-      <a href="#request-release-doc" class=" indent">releaseCache</a>
-      <a href="#request-update-doc" class=" indent">updateConfig</a>
-      <a href="#request-config-doc">RequestConfig</a>
-      <a href="#request-config-merge-doc" class=" indent">merge</a>
-      <a href="#request-config-update-doc" class=" indent">update</a>
-      <a href="#request-otfd-doc">objectToFormData</a>
+        <a href="#dom-header" class="header">DOM Utilities</a>
 
-      <a href="#dom-header" class="header">DOM Utilities</a>
+        <a href="#components" class="header">Components</a>
 
-      <a href="#dom-copy-attr-doc"><del>copyAttrs</del></a>
-      <a href="#dom-extract-nodes-doc"><del>extractNodes</del></a>
-      <a href="#dom-insert-after-doc"><del>insertNodeAfter</del></a>
-      <a href="#dom-insert-before-doc"><del>insertNodeBefore</del></a>
-      <a href="#dom-move-nodes-doc"><del>moveNodes</del></a>
-      <a href="#dom-el-from-str-doc"><del>elFromString</del></a>
-      <a href="#dom-get-nodes-path-doc"><del>getNodesPath</del></a>
-      <a href="#dom-create-element-doc"><del>createElement</del></a>
-      <a href="#dom-event-handler-doc"><del>createEventHandler</del></a>
+        <a href="#dom-copy-attr-doc"><del>copyAttrs</del></a>
+        <a href="#dom-extract-nodes-doc"><del>extractNodes</del></a>
+        <a href="#dom-insert-after-doc"><del>insertNodeAfter</del></a>
+        <a href="#dom-insert-before-doc"><del>insertNodeBefore</del></a>
+        <a href="#dom-move-nodes-doc"><del>moveNodes</del></a>
+        <a href="#dom-el-from-str-doc"><del>elFromString</del></a>
+        <a href="#dom-get-nodes-path-doc"><del>getNodesPath</del></a>
+        <a href="#dom-create-element-doc"><del>createElement</del></a>
+        <a href="#dom-event-handler-doc"><del>createEventHandler</del></a>
 
-      <a href="#dynamic-dom-header" class="header">Dynamic DOM</a>
+        <a href="#dynamic-dom-header" class="header">Dynamic DOM</a>
 
-      <a href="#dd-import-html-doc"><del>importHtml</del></a>
-      <a href="#dd-attach-style-doc"><del>attachStyle</del></a>
-      <a href="#dd-include-script-doc"><del>includeScript</del></a>
-      <a href="#dd-html-doc"><del>html</del></a>
-      <a href="#dd-events-doc"><del>events</del></a>
-      <a href="#dd-create-component-doc"><del>createComponent</del></a>
-      <a href="#dd-highlight-doc"><del>highlight</del></a>
-      <a href="#dd-dom-filter-doc"><del>domFilter</del></a>
-      <a href="#dd-memo-element-doc"><del>memoElement</del></a>
+        <a href="#dd-import-html-doc"><del>importHtml</del></a>
+        <a href="#dd-attach-style-doc"><del>attachStyle</del></a>
+        <a href="#dd-include-script-doc"><del>includeScript</del></a>
+        <a href="#dd-html-doc"><del>html</del></a>
+        <a href="#dd-events-doc"><del>events</del></a>
+        <a href="#dd-create-component-doc"><del>createComponent</del></a>
+        <a href="#dd-highlight-doc"><del>highlight</del></a>
+        <a href="#dd-dom-filter-doc"><del>domFilter</del></a>
+        <a href="#dd-memo-element-doc"><del>memoElement</del></a>
 
-      <a href="#delay-header" class="header">Delay events</a>
+        <a href="#delay-header" class="header">Delay events</a>
 
-      <a href="#delay-debounce-doc"><del>debounce</del></a>
-      <a href="#delay-throttle-doc"><del>throttle</del></a>
-      <a href="#delay-delta-time-doc"><del>inDeltaTime</del></a>
+        <a href="#delay-debounce-doc"><del>debounce</del></a>
+        <a href="#delay-throttle-doc"><del>throttle</del></a>
+        <a href="#delay-delta-time-doc"><del>inDeltaTime</del></a>
 
-      <a href="#hashing-header" class="header">Hashing</a>
+        <a href="#hashing-header" class="header">Hashing</a>
 
-      <a href="#hash-base64-doc"><del>base64</del></a>
-      <a href="#hash-code-doc"><del>hashCode</del></a>
-      <a href="#hash-hash53-doc"><del>hash52</del></a>
+        <a href="#hash-base64-doc"><del>base64</del></a>
+        <a href="#hash-code-doc"><del>hashCode</del></a>
+        <a href="#hash-hash53-doc"><del>hash52</del></a>
 
-      <a href="#query-header" class="header">Query string</a>
+        <a href="#query-header" class="header">Query string</a>
 
-      <a href="#query-update-query-doc"><del>xxupdateQueryx</del></a>
-      <a href="#query-to-object-doc"><del>queryToObject</del></a>
+        <a href="#query-update-query-doc"><del>xxupdateQueryx</del></a>
+        <a href="#query-to-object-doc"><del>queryToObject</del></a>
 
-      <a href="#schema-header" class="header">Schema</a>
+        <a href="#schema-header" class="header">Schema</a>
 
-      <a href="#schema-types-doc"><del>schemaTypes</del></a>
-      <a href="#schema-check-doc"><del>checkSchema</del></a>
+        <a href="#schema-types-doc"><del>schemaTypes</del></a>
+        <a href="#schema-check-doc"><del>checkSchema</del></a>
 
-      <a href="#strings-header" class="header">Strings manipulations</a>
+        <a href="#strings-header" class="header">Strings manipulations</a>
 
-      <a href="#strings-split-at-index-doc"><del>splitAtIndex</del></a>
-      <a href="#strings-place-between-doc"><del>placeBetween</del></a>
+        <a href="#strings-split-at-index-doc"><del>splitAtIndex</del></a>
+        <a href="#strings-place-between-doc"><del>placeBetween</del></a>
+      </div>
+    </nav>
 
-    </div>
-  </nav>
+    <main>
+      <h1 id="general-header">
+        Utility Belt Docs <a href="./tests/index.html">Run tests</a>
+      </h1>
 
-  <main>
-    <h1 id="general-header">Utility Belt Docs <a href="./tests/index.html">Run tests</a></h1>
+      <!-- General Utilities -->
+      <section
+        id="deep-override-doc"
+        data-import="./documentation/general/deep-override.html"
+      ></section>
+      <section
+        id="deep-clone-doc"
+        data-import="./documentation/general/deep-clone.html"
+      ></section>
+      <div class="stack" data-import="./documentation/general/index.html"></div>
+      <section
+        id="loopstack-doc"
+        data-import="./documentation/general/loopstack/index.html"
+        data-script="./documentation/general/loopstack/index.js"
+      ></section>
+      <section
+        id="pubsub-doc"
+        data-import="./documentation/general/pubsub/index.html"
+        data-script="./documentation/general/pubsub/index.js"
+      ></section>
 
-    <!-- General Utilities -->
-    <section id="deep-override-doc" data-import="./documentation/general/deep-override.html"></section>
-    <section id="deep-clone-doc" data-import="./documentation/general/deep-clone.html"></section>
-    <div class="stack" data-import="./documentation/general/index.html"></div>
-    <section id="loopstack-doc" data-import="./documentation/general/loopstack/index.html" data-script="./documentation/general/loopstack/index.js"></section>
-    <section id="pubsub-doc" data-import="./documentation/general/pubsub/index.html" data-script="./documentation/general/pubsub/index.js"></section>
+      <h2 id="arrays-header">Arrays</h2>
+      <div class="stack" data-import="./documentation/arrays/index.html"></div>
 
-    <h2 id="arrays-header">Arrays</h2>
-    <div class="stack" data-import="./documentation/arrays/index.html"></div>
+      <h2 id="dom-header">DOM Utilities</h2>
+      <p>. . .</p>
 
-    <h2 id="dom-header">DOM Utilities</h2>
-    <p>. . .</p>
+      <h2 id="components">Components</h2>
+      <div
+        class="stack"
+        data-import="./documentation/components/index.html"
+        data-script="./documentation/components/index.js"
+      ></div>
 
-    <h2 id="dynamic-dom-header">Dynamic DOM</h2>
-    <p>. . .</p>
+      <h2 id="dynamic-dom-header">Dynamic DOM</h2>
+      <p>. . .</p>
 
-    <h2 id="delay-header">Delay events</h2>
-    <p>. . .</p>
+      <h2 id="delay-header">Delay events</h2>
+      <p>. . .</p>
 
-    <h2 id="hashing-header">Hashing</h2>
-    <p>. . .</p>
+      <h2 id="hashing-header">Hashing</h2>
+      <p>. . .</p>
 
-    <h2 id="query-header">Query string</h2>
-    <p>. . .</p>
+      <h2 id="query-header">Query string</h2>
+      <p>. . .</p>
 
-    <h2 id="request-header">Request</h2>
-    <div id="pubsub-doc" data-import="./documentation/request/index.html" class="stack"></div>
+      <h2 id="request-header">Request</h2>
+      <div
+        id="pubsub-doc"
+        data-import="./documentation/request/index.html"
+        class="stack"
+      ></div>
 
-    <h2 id="schema-header">Schema</h2>
-    <p>. . .</p>
+      <h2 id="schema-header">Schema</h2>
+      <p>. . .</p>
 
-    <h2 id="strings-header">Strings manipulations</h2>
-    <p>. . .</p>
+      <h2 id="strings-header">Strings manipulations</h2>
+      <p>. . .</p>
+    </main>
 
-  </main>
-
-  <script type="module" src="./index.js"></script>
-</body>
-
+    <script type="module" src="./index.js"></script>
+  </body>
 </html>
