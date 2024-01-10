@@ -209,7 +209,7 @@ function componentCreator(store) {
       if (!element) {
         refs = () => element?.d?.refs;
         effect = cerateEffectsStore(effects, element);
-        element = dynamicElement(componentFn, state, { dispatch, effect, refs });
+        element = dynamicElement(componentFn, { state, dispatch, effect, refs });
         runEffects(effects);
         prevState = state;
       }
@@ -221,12 +221,12 @@ function componentCreator(store) {
 
       // Re-render with previouse State.
       else if (state === undefined) {
-        element.d.update(prevState, { dispatch, effect, refs });
+        element.d.update({ state: prevState, dispatch, effect, refs });
       }
 
       // Update only when State changes.
       else if (prevState !== state) {
-        element.d.update(state, { dispatch, effect, refs });
+        element.d.update({ state, dispatch, effect, refs });
         prevState = state;
       }
 
