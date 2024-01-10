@@ -62,7 +62,7 @@ const App = app(({ state, dispatch }) => {
     </div>
   `;
 
-}, mainReducer);
+});
 
 
 document.querySelector("#components-doc").appendChild(App);

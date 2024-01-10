@@ -145,7 +145,7 @@ export function createAppContext(initailState = {}) {
   const store = createStore(mainReducer);
   const component = componentCreator(store);
 
-  const app = (componentFn, reducerConfig) => {
+  const app = (componentFn, reducerConfig = {}) => {
     const { state, actions } = reducerConfig;
 
     // Initialize state based on App state.
