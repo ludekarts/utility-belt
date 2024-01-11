@@ -205,16 +205,16 @@ function createTemplate(markup, inserts) {
     let value = escapedInserts[index];
     let html = acc += part;
 
-    // Create binding object for each external input.
-    bindings.push({
-      value,
-      index,
-      static: false,
-    });
-
     // Last element of markup array does not generate placeholder so we do not process it,
     // only append produced HTML at the end.
     if (!isLast) {
+
+      // Create binding object for each external input.
+      bindings.push({
+        value,
+        index,
+        static: false,
+      });
 
       let placeholder;
 
@@ -301,9 +301,10 @@ function createTemplate(markup, inserts) {
 
           hook.removeAttribute(`?${attribute.name}`);
 
-          binding.value
+          Boolean(binding.value)
             ? hook.setAttribute(attribute.name, attribute.name)
             : hook.removeAttribute(attribute.name);
+
         }
 
         // Handle special case for repeaters attirbutes $key and $items.
@@ -462,9 +463,13 @@ function updateReference(index, bindings, attributes, newValue) {
   // Update Boolean Attributes.
   if (binding.type === "attribute:bool") {
     const attribute = attributes[binding.index];
-    binding.value
+
+    Boolean(newValue)
       ? binding.ref.setAttribute(attribute.name, attribute.name)
       : binding.ref.removeAttribute(attribute.name);
+
+    binding.value = newValue;
+
   }
 
   // Update Repeater $items.

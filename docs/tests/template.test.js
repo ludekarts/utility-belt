@@ -198,7 +198,7 @@ describe("Dynamic Elements", () => {
     chai.expect(t).to.throw();
   });
 
-  it("Should update multple attribute entries", () => {
+  it("Should update multiple attribute entries", () => {
     const a = "add";
     const b = "two";
     const c = "four";
@@ -228,6 +228,20 @@ describe("Dynamic Elements", () => {
     chai.expect(element.getAttribute("type")).to.be.equal("number");
   });
 
+  it("Should handle boolean attributes", () => {
+    const element = dynamicElement(isDisabled => html`<input type="text" value="${"hello"}" ?disabled="${isDisabled}">`, false);
+
+    chai.expect(element.getAttribute("disabled")).to.be.equal(null);
+
+    element.d.update(true);
+    chai.expect(element.getAttribute("disabled")).to.be.equal("disabled");
+    chai.expect(element.disabled).to.be.equal(true);
+
+    element.d.update(false);
+    chai.expect(element.getAttribute("disabled")).to.be.equal(null);
+    chai.expect(element.disabled).to.be.equal(false);
+  });
+
   it("Should update value prop when update attribute", () => {
     const element = dynamicElement(value => html`<input value="${value}">`, 10);
 
@@ -240,7 +254,6 @@ describe("Dynamic Elements", () => {
     chai.expect(element.value).to.be.equal("ok");
 
   });
-
 
   it("Should apply partial markup to main template", () => {
     const element = dynamicElement(() => html`
@@ -454,8 +467,6 @@ describe("Dynamic Elements", () => {
 
   });
 
-
-
   it("Should destroy repeater elements after given time", done => {
 
     const items = [
@@ -479,4 +490,5 @@ describe("Dynamic Elements", () => {
       done();
     }, 400);
   });
+
 });

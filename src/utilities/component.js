@@ -1,6 +1,6 @@
 import { uid } from "./general.js";
 import { dynamicElement } from "./template.js";
-import { createStore, createReducer } from "./minirdx";
+import { createStore, createReducer } from "./minirdx.js";
 
 /*
 
