@@ -1,9 +1,9 @@
 const { createHistory } = window.utilityBelt;
 
+describe("Manage history state", () => {
 
-describe("Setup", () => {
   it("Should create new history instance with proper API", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     chai.expect(history).to.have.property("pushState");
     chai.expect(history).to.have.property("current");
     chai.expect(history).to.have.property("undo");
@@ -17,24 +17,21 @@ describe("Setup", () => {
   });
 
   it("Should 'debug()' with history and pointer reference", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     chai.expect(history.debug()).to.have.property("history");
     chai.expect(history.debug()).to.have.property("pointer");
     chai.assert.isArray(history.debug().history);
     chai.assert.isNumber(history.debug().pointer);
   });
-});
 
-
-describe("Manage history state", () => {
   it("Should push state", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     chai.expect(history.current()).to.be.equal(1);
   });
 
   it("Should push multiple history entries on single element", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     history.pushState(2);
     history.pushState(3);
@@ -42,7 +39,7 @@ describe("Manage history state", () => {
   });
 
   it("Should move pointer accordingly to new history push", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     history.pushState(2);
     history.pushState(3);
@@ -50,7 +47,7 @@ describe("Manage history state", () => {
   });
 
   it("Should undo history", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     history.pushState(2);
     history.pushState(3);
@@ -58,7 +55,7 @@ describe("Manage history state", () => {
   });
 
   it("Should redo history", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     history.pushState(2);
     history.pushState(3);
@@ -73,7 +70,7 @@ describe("Manage history state", () => {
   });
 
   it("Should remove forward history if new action is created", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     history.pushState(2);
     history.pushState(3);
@@ -91,7 +88,7 @@ describe("Manage history state", () => {
   });
 
   it("Undo should not overflow below first history state", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     history.pushState(2);
     history.pushState(3);
@@ -104,7 +101,7 @@ describe("Manage history state", () => {
   });
 
   it("Redo should not overflow above last history state", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     history.pushState(2);
     history.pushState(3);
@@ -121,7 +118,7 @@ describe("Manage history state", () => {
   });
 
   it("Should handle undo and redo on range fringes", () => {
-    const history = createHistory(true);
+    const history = createHistory("--debug");
     history.pushState(1);
     history.pushState(2);
     history.pushState(3);
