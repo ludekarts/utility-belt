@@ -214,11 +214,6 @@ function componentCreator(store) {
         prevState = state;
       }
 
-      // Return element with no re-render.
-      else if (state === null) {
-        return element;
-      }
-
       // Re-render with previouse State.
       else if (state === undefined) {
         element.d.update({ state: prevState, dispatch, effect, refs });

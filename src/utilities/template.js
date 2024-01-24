@@ -328,16 +328,13 @@ function createTemplate(markup, inserts) {
 
         // Handle callback attributes.
         else if (isCallbackAttribute(attribute.name, binding.value)) {
-          binding.static = true;
           binding.type = "attribute:callback";
 
           // Clenup.
           hook.removeAttribute(attribute.name);
-          delete localAttributes[index];
 
-          // Connect callbck with reference element.
+          // Connect callback with reference element.
           hook[attribute.name] = binding.value;
-
         }
 
         // Handle non-boolean attributes.
@@ -479,6 +476,12 @@ function updateReference(index, bindings, attributes, newValue) {
     const repeaterValue = updateFn(newValue);
     updateArrayOfNodes(bindings[updateIndex], repeaterValue);
     bindings[updateIndex].value = repeaterValue;
+  }
+
+  else if (binding.type === "attribute:callback") {
+    const attribute = attributes[binding.index];
+    binding.ref[attribute.name] = newValue;
+    binding.value = newValue;
   }
 
   // Update Attributes.

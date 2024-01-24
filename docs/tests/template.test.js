@@ -3,6 +3,7 @@ const { html, dynamicElement, createRepeater, fragment } = window.utilityBelt;
 
 describe("Dynamic Elements", () => {
 
+
   it("UTB Should have an Dynamic Elements API", () => {
     chai.expect(html).to.be.a("function");
     chai.expect(dynamicElement).to.be.a("function");
@@ -176,7 +177,7 @@ describe("Dynamic Elements", () => {
     chai.expect(elementB.textContent).to.be.equal("hello");
   });
 
-  it("Should skip embeded into template 'functions' and 'objects'", () => {
+  it("Should skip embeded 'functions' and 'objects' within template", () => {
     // Objects.
     const elementA = dynamicElement(() => html`<div id="obj">${{}}</div>`);
     chai.expect(elementA.textContent).to.be.equal("");
@@ -191,6 +192,48 @@ describe("Dynamic Elements", () => {
     chai.expect(element.getAttribute("value")).to.be.equal("10");
     chai.expect(element.getAttribute("type")).to.be.equal("text");
     chai.expect(element.getAttribute("data-index")).to.be.equal("0");
+  });
+
+  it("Should handle on-event attibutes", () => {
+    let spy = chai.spy();
+    const button = dynamicElement(() => html`<button onclick="${spy}">CLICK</button>`);
+
+    button.click();
+    chai.expect(spy).to.have.been.called.once;
+
+    button.click();
+    chai.expect(spy).to.have.been.called.twice;
+  });
+
+  it("Should not cache on-event handlers", () => {
+
+    let spy = chai.spy();
+    let state = {
+      counter: 0,
+      renderCount: 1,
+    };
+
+    let render = ({ renderCount, counter }) => {
+      const updateCount = () => spy(counter);
+      return html`<button onclick="${updateCount}">RENDER ${renderCount}</button>`;
+    }
+
+    const button = dynamicElement(render, state);
+
+    button.click();
+    chai.expect(spy).on.nth(1).be.called.with(0);
+    chai.expect(button.textContent).to.be.equal("RENDER 1");
+
+    state = {
+      counter: 1,
+      renderCount: 2,
+    }
+
+    button.d.update(state);
+    button.click();
+    chai.expect(spy).on.nth(2).be.called.with(1);
+    chai.expect(button.textContent).to.be.equal("RENDER 2");
+
   });
 
   it("Should not allow for non-sting and non-number attributes", () => {
