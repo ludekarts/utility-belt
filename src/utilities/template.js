@@ -49,8 +49,8 @@ export function html(markup, ...inserts) {
 }
 
 
-export function dynamicElement(renderFn, initState) {
-  const { markup, inserts, id } = renderFn(initState);
+export function dynamicElement(renderFn, initState, ...rest) {
+  const { markup, inserts, id } = renderFn(initState, ...rest);
   const { element, bindings, attributes } = createTemplate(markup, inserts);
   element.d = {};
   element.d.refs = getReferences(element);
@@ -437,8 +437,8 @@ function createPartialElement(markup, inserts, renderFn) {
 
 // Updates values in DOM nodes.
 function updateComponent(element, bindings, attributes, renderFn) {
-  return (state) => {
-    const inserts = renderFn ? renderFn(state).inserts : state;
+  return (state, ...rest) => {
+    const inserts = renderFn ? renderFn(state, ...rest).inserts : state;
     if (!inserts)
       throw new Error("Cannot update component. Invalid input");
     const escapedInserts = escapeStringsInArray(inserts);

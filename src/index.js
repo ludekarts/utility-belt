@@ -46,6 +46,7 @@ export { default as loopstack } from "./utilities/loopstack.js";
 export { default as createHistory } from "./utilities/history.js";
 
 // DOM Helpers.
+export * from "./utilities/cmp.js";
 export * from "./utilities/template.js";
 export * from "./utilities/component.js";
 export * from "./utilities/dom-helpers.js";
