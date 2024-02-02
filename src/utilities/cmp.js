@@ -31,6 +31,8 @@ export function createAppContext(initailState = {}) {
   return Object.freeze({
     app,
     component,
+    dispatch: store.dispatch,
+    subscribe: store.subscribe,
   });
 }
 

@@ -1,4 +1,4 @@
-const { cmp, html, createAppContext2, fragment } = window.utilityBelt;
+const { cmp, html, createAppContext, fragment } = window.utilityBelt;
 
 
 describe("Component", () => {
@@ -24,48 +24,47 @@ describe("Component", () => {
 
   });
 
-  /*
-    it("Should create context component", () => {
 
-      const { app, component } = createAppContext2({ emoji: "🧮" });
+  it("Should create context component", () => {
 
-      const appReducer = {
-        state: {
-          counter: 0,
+    const { app, component, subscribe, dispatch } = createAppContext({ emoji: "🧮" });
+
+    const appReducer = {
+      state: {
+        counter: 0,
+      },
+
+      actions: {
+        INCREMENT: (state, payload) => {
+          return { ...state, counter: state.counter + payload };
         },
 
-        actions: {
-          INCREMENT: (state, payload) => {
-            return { ...state, counter: state.counter + payload };
-          },
-
-          DECREMENT: (state, payload) => {
-            return { ...state, counter: state.counter - payload };
-          },
-
-          RESET: (state, payload) => {
-            return { ...state, counter: payload };
-          },
+        DECREMENT: (state, payload) => {
+          return { ...state, counter: state.counter - payload };
         },
-      };
 
-      const resetReducer = {
-        state: 0,
-        store: "resetCount",
-        actions: {
-          RESET: (state) => state + 1,
-        }
+        RESET: (state, payload) => {
+          return { ...state, counter: payload };
+        },
+      },
+    };
+
+    const resetReducer = {
+      state: 0,
+      store: "resetCount",
+      actions: {
+        RESET: (state) => state + 1,
       }
+    }
 
-      const ResetComponent = component(({ dispatch }) => {
-        return count => html`
+    const ResetComponent = component(({ dispatch }) => {
+      return count => html`
           <button onclick="${() => dispatch("RESET", 0)}">RESET (${count})</button>
         `;
-      }, resetReducer);
+    }, resetReducer);
 
-      const MyApp = app(({ dispatch }) => {
-
-        return state => html`
+    const MyApp = app(({ dispatch }) => {
+      return state => html`
           <div>
             <h1>${state.emoji} Counter: ${state.counter}</h1>
             <div>
@@ -76,31 +75,37 @@ describe("Component", () => {
           </div>
 
       `;
-      }, appReducer);
+    }, appReducer);
 
 
-      document.body.appendChild(MyApp);
+    subscribe(console.log);
 
-    });
-    */
-  /*
-    it("Should create independent component", () => {
+    // setTimeout(() => {
+    //   dispatch("RESET", 10)
+    // }, 2000);
 
-      const App = cmp(props => {
+    document.body.appendChild(MyApp);
 
-        const readState = () => {
-          console.log(props.getState());
-        };
+  });
 
-        const shout = () => {
-          console.log(props.getState()?.label);
-        };
 
-        props.effect(({ element, refs, args }) => {
-          // console.log(element, refs);
-        });
+  it("Should create independent component", () => {
 
-        return (state, updateLabel) => html`
+    const App = cmp(props => {
+
+      const readState = () => {
+        console.log(props.getState());
+      };
+
+      const shout = () => {
+        console.log(props.getState()?.label);
+      };
+
+      props.effect(({ element, refs, args }) => {
+        // console.log(element, refs);
+      });
+
+      return (state, updateLabel) => html`
           <div style="display:flex; flex-direction:column; gap:0.5rem;">
             <label $ref="label">${state.label}</label>
             <div>
@@ -110,43 +115,42 @@ describe("Component", () => {
             <input type="text" oninput="${updateLabel}"/>
           </div>
         `;
-      });
+    });
 
-      let globalState = {
-        label: "hello",
-        button: "READ LABEL ❤️",
-      };
+    let globalState = {
+      label: "hello",
+      button: "READ LABEL ❤️",
+    };
 
-      const updateLabel = event => {
-        App({ ...globalState, label: event.target.value });
-      };
+    const updateLabel = event => {
+      App({ ...globalState, label: event.target.value });
+    };
 
-      const controlls = fragment(`
+    const controlls = fragment(`
         <div>
           <button id="unm">UNMOUNT ⏏️</button>
           <button id="trsh">TRASH 🗑️</button>
         </div>
       `);
 
-      document.body.appendChild(controlls);
+    document.body.appendChild(controlls);
 
-      unm.onclick = () => {
-        App.unmount();
-        setTimeout(() => {
-          console.log("RE-INITIALIZE 💡");
-          document.body.appendChild(App(globalState, updateLabel));
-        }, 1000);
-      };
-
-      trsh.onclick = () => {
-        App.trash();
-        console.log(App);
+    unm.onclick = () => {
+      App.unmount();
+      setTimeout(() => {
+        console.log("RE-INITIALIZE 💡");
         document.body.appendChild(App(globalState, updateLabel));
-      };
+      }, 1000);
+    };
 
-
+    trsh.onclick = () => {
+      App.trash();
+      console.log(App);
       document.body.appendChild(App(globalState, updateLabel));
+    };
 
-    });
-  */
+
+    document.body.appendChild(App(globalState, updateLabel));
+
+  });
 });
