@@ -4,7 +4,7 @@ import { createStore, createReducer } from "./minirdx.js";
 
 export const cmp = componentCreator();
 
-export function createAppContext2(initailState = {}) {
+export function createAppContext(initailState = {}) {
   const initEvent = `@initialize_${uid("--short")}`;
 
   const mainReducer = createReducer(initailState)

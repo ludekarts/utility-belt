@@ -1,19 +1,32 @@
 // Create Element from source string.
-export function fragment(source, asDomNode = false) {
+export function fragment(source, domWrapper) {
   const fragment = document.createRange().createContextualFragment(source);
 
-  if (asDomNode === true) {
-    if (fragment.childElementCount === 1) {
-      return fragment.firstElementChild;
+  if (domWrapper === "-f") {
+    return fragment;
+  }
+
+  const wrapper = typeof domWrapper === "string" && document.createElement(domWrapper);
+
+  if (fragment.childElementCount === 1) {
+    if (wrapper) {
+      wrapper.append(fragment.firstElementChild);
+      return wrapper;
     }
-    else {
-      const wrapper = document.createElement("div");
+    return fragment.firstElementChild;
+  }
+
+  else {
+    if (wrapper) {
       wrapper.append(fragment);
       return wrapper;
     }
+    else {
+      const tmp = document.createElement("div");
+      tmp.append(fragment);
+      return tmp;
+    }
   }
-
-  return fragment;
 }
 
 // Collect all parentNode elments begin from given 'node' and end on 'stopSelector'

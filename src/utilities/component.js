@@ -137,7 +137,7 @@ import { createStore, createReducer } from "./minirdx.js";
 
 */
 
-export function createAppContext(initailState = {}) {
+function createAppContext(initailState = {}) {
   const initEvent = `@initialize_${uid("--short")}`;
   const mainReducer = createReducer(initailState)
     .on(initEvent, (state, initailState) => ({ ...state, ...initailState }))
