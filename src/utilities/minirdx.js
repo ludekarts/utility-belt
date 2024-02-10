@@ -38,20 +38,20 @@ export function createReducer(initState) {
   const api = {};
   const actions = new Map();
 
-  api.on = (action, reducer) => {
-    if (actions.has(action)) {
-      throw new Error(`MiniRDXError: Action name "${action}" already exist`);
+  api.on = (actionName, actionReducer) => {
+    if (actions.has(actionName)) {
+      throw new Error(`MiniRDXError: Action name "${actionName}" already exist`);
     }
 
-    if (typeof action !== "string") {
+    if (typeof actionName !== "string") {
       throw new Error(`MiniRDXError: Action name should be a string`);
     }
 
-    if (typeof reducer !== "function") {
+    if (typeof actionReducer !== "function") {
       throw new Error(`MiniRDXError: Action reducer should be a function`);
     }
 
-    actions.set(action, reducer);
+    actions.set(actionName, actionReducer);
     return api;
   };
 
@@ -262,15 +262,13 @@ export function createStore(reducer) {
       newReducer.isNew = true;
       reducers.push(newReducer);
       dispatch("extendReducer:true");
-
     }
 
     // [⚠️ NOTE]:
     // When selector is undefined then reducer will connected to the glonal state,
-    // howewer it @initialState will not override global state.
+    // howewer it @initialState will not override the global state.
     else if (selector === undefined) {
-      const newReducer = (state, action) => reducer(state, action);
-      reducers.push(newReducer);
+      reducers.push(reducer);
       dispatch("extendReducer:true");
     }
 

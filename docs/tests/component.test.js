@@ -46,6 +46,10 @@ describe("Component", () => {
         RESET: (state, payload) => {
           return { ...state, counter: payload };
         },
+
+        AUTO: (state, payload) => {
+          return { ...state, counter: payload };
+        },
       },
     };
 
@@ -57,10 +61,21 @@ describe("Component", () => {
       }
     }
 
-    const ResetComponent = component(({ dispatch }) => {
+    const ResetComponent = component(({ dispatch, onAction }) => {
+
+      onAction("AUTO", (state, payload) => {
+        state.counter < 5 &&
+          setTimeout(() => {
+            dispatch("AUTO", state.counter + 1);
+          }, 500);
+      });
+
       return count => html`
+        <span>
           <button onclick="${() => dispatch("RESET", 0)}">RESET (${count})</button>
-        `;
+          <button onclick="${() => dispatch("AUTO", 0)}">AUTOCOUNTER</button>
+        </span>
+      `;
     }, resetReducer);
 
     const MyApp = app(({ dispatch }) => {
@@ -73,7 +88,6 @@ describe("Component", () => {
               ${ResetComponent(state.resetCount)}
             </div>
           </div>
-
       `;
     }, appReducer);
 
@@ -83,6 +97,13 @@ describe("Component", () => {
     // setTimeout(() => {
     //   dispatch("RESET", 10)
     // }, 2000);
+
+    window.__unmount = () => {
+      ResetComponent.unmount();
+      setTimeout(() => {
+        ResetComponent();
+      }, 1000);
+    }
 
     document.body.appendChild(MyApp);
 
@@ -127,11 +148,11 @@ describe("Component", () => {
     };
 
     const controlls = fragment(`
-        <div>
-          <button id="unm">UNMOUNT ⏏️</button>
-          <button id="trsh">TRASH 🗑️</button>
-        </div>
-      `);
+      <div>
+        <button id="unm">UNMOUNT ⏏️</button>
+        <button id="trsh">TRASH 🗑️</button>
+      </div>
+    `);
 
     document.body.appendChild(controlls);
 

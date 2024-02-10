@@ -39,22 +39,7 @@ export function createAppContext(initailState = {}) {
 
 function componentCreator(store) {
 
-  let dispatch = store?.dispatch;
-
   return function cmp(componentFn, reducerConfig) {
-
-    let element;
-    let prevState;
-    let restArgs = [];
-    let onEffectHandler;
-    let removeEffectHandler;
-    let renderFn = componentFn({
-      dispatch,
-      getArgs: () => restArgs,
-      getState: () => prevState,
-      getRefs: () => element?.d?.refs,
-      effect: callback => onEffectHandler = callback,
-    });
 
     if (store && reducerConfig) {
       if (reducerConfig.hasOwnProperty("actions")) {
@@ -66,6 +51,29 @@ function componentCreator(store) {
       }
     }
 
+    let element;
+    let prevState;
+    let restArgs = [];
+    let clearEffect;
+    let effectHandler;
+    let clearActionsCallbacks;
+
+    let props = {
+      getArgs: () => restArgs,
+      getState: () => prevState,
+      getRefs: () => element?.d?.refs ? { root: element, ...element.d.refs } : { root: element },
+      effect: callback => effectHandler = callback,
+    }
+
+    if (store) {
+      let { onAction, clearActions } = createActionHandler(store);
+      props.onAction = onAction;
+      props.dispatch = store.dispatch;
+      clearActionsCallbacks = clearActions;
+    }
+
+    let renderFn = componentFn(props);
+
     let render = (state, ...rest) => {
 
       if (rest.length > 0) {
@@ -76,7 +84,7 @@ function componentCreator(store) {
       if (!element) {
         prevState = state;
         element = dynamicElement(renderFn, state, ...restArgs);
-        removeEffectHandler = onEffectHandler?.({ element, refs: element.d.refs, args: restArgs });
+        clearEffect = effectHandler?.({ element, refs: element.d.refs, args: restArgs });
       }
 
       // Re-render with previouse State.
@@ -94,19 +102,21 @@ function componentCreator(store) {
     };
 
     render.unmount = () => {
-      removeEffectHandler?.();
+      clearEffect?.();
       element.remove();
       element = undefined;
       restArgs = undefined;
       prevState = undefined;
+      clearActionsCallbacks?.();
     };
 
     render.trash = () => {
       render.unmount();
+      props = undefined;
       render = undefined;
       renderFn = undefined;
-      onEffectHandler = undefined;
-      removeEffectHandler = undefined;
+      effectHandler = undefined;
+      clearEffect = undefined;
     }
 
     return render;
@@ -123,3 +133,38 @@ function createReducerFromConfig(config) {
   return reducer.done();
 }
 
+
+function createActionHandler(store) {
+
+  let handlers;
+  let unsubscribe;
+
+  function onAction(actionName, handler) {
+
+    // Setup handlers.
+    if (handlers === undefined) {
+      handlers = new Map();
+      unsubscribe = store.subscribe((state, action) => {
+        handlers.get(action.type)?.(state, action.payload);
+      });
+    }
+
+    if (handlers.has(actionName)) {
+      throw new Error(`ComponentError: onAction handler "${actionName}" already exists`);
+    }
+
+
+
+    handlers.set(actionName, handler);
+  };
+
+  function clearActions() {
+    handlers = undefined;
+    unsubscribe?.();
+  }
+
+  return {
+    onAction,
+    clearActions,
+  };
+}
