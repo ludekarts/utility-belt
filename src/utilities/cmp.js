@@ -38,41 +38,87 @@ export function createAppContext(initailState = {}) {
 
 
 function componentCreator(store) {
-
   return function cmp(componentFn, reducerConfig) {
 
     if (store && reducerConfig) {
       if (reducerConfig.hasOwnProperty("actions")) {
         store.extendReducer(createReducerFromConfig(reducerConfig), reducerConfig.store);
       }
-
       else {
         throw new Error("ComponentError: reducerConfig should have actions key");
       }
     }
 
     let element;
+    let renderFn;
     let prevState;
+    let props = {};
     let restArgs = [];
     let clearEffect;
     let effectHandler;
-    let clearActionsCallbacks;
+    let firstRender = true;
+    let render = (state, ...rest) => {
 
-    let props = {
-      getArgs: () => restArgs,
-      getState: () => prevState,
-      getRefs: () => element?.d?.refs ? { root: element, ...element.d.refs } : { root: element },
-      effect: callback => effectHandler = callback,
-    }
+      if (firstRender) {
+        props.getArgs = () => restArgs;
+        props.getState = () => prevState;
+        props.getRefs = () => element?.d?.refs ? { root: element, ...element.d.refs } : { root: element };
+        props.effect = callback => effectHandler = callback;
 
-    if (store) {
-      let { onAction, clearActions } = createActionHandler(store);
-      props.onAction = onAction;
-      props.dispatch = store.dispatch;
-      clearActionsCallbacks = clearActions;
-    }
+        if (store) {
+          props.dispatch = store.dispatch;
+          props.onAction = createActionHandler(store);
+        }
 
-    let renderFn = componentFn(props);
+        renderFn = componentFn(props);
+        firstRender = false;
+      }
+
+      if (rest.length > 0) {
+        restArgs = rest;
+      }
+
+      // Create new dynamic element.
+      if (!element) {
+        prevState = state;
+        element = dynamicElement(renderFn, state, ...restArgs);
+        clearEffect = effectHandler?.({ element, refs: element.d.refs, args: restArgs });
+      }
+
+      // Re-render with previouse State.
+      else if (state === undefined) {
+        element.d.update(prevState, ...restArgs);
+      }
+
+      // Update only when State changes.
+      else if (prevState !== state) {
+        prevState = state;
+        element.d.update(state, ...restArgs);
+      }
+
+      return element;
+    };
+
+    render.unmount = () => {
+      element.remove();
+      element = undefined;
+      renderFn = undefined;
+      prevState = undefined;
+      clearEffect = undefined;
+      effectHandler = undefined;
+      firstRender = true;
+      restArgs = [];
+      props = {};
+    };
+
+    return render;
+
+  }
+}
+
+/*
+
+
 
     let render = (state, ...rest) => {
 
@@ -121,7 +167,7 @@ function componentCreator(store) {
 
     return render;
   }
-}
+*/
 
 
 // Heler to turn reducer-config into proper reducer function.
@@ -153,8 +199,6 @@ function createActionHandler(store) {
       throw new Error(`ComponentError: onAction handler "${actionName}" already exists`);
     }
 
-
-
     handlers.set(actionName, handler);
   };
 
@@ -163,8 +207,5 @@ function createActionHandler(store) {
     unsubscribe?.();
   }
 
-  return {
-    onAction,
-    clearActions,
-  };
+  return onAction;
 }
