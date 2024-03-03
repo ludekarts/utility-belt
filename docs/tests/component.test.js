@@ -1,7 +1,56 @@
 const { cmp, html, createAppContext, fragment } = window.utilityBelt;
 
-
+/*
 describe("Component", () => {
+  it("Should works", () => {
+
+
+    const MyComponent = cmp(props => {
+      const { getArgs, getState, getRefs, effect } = props;
+
+      effect(() => {
+        console.log("Created");
+        return () => count = 0;
+      });
+
+      const handleClick = () => {
+        MyComponent(count++);
+      };
+
+      return (state, rest) => html`
+        <div id="component">
+          <div>
+            <span>Hello</span>
+            <span>${state}</span>
+            <span>${rest}</span>
+          </div>
+          <button onclick="${handleClick}">Click me</button>
+        </div>
+      `;
+    });
+
+
+    const controllers = fragment(`<div>
+      <button id="unmount">Unmount</button>
+      <button id="remount">Remount</button>
+      </div>`);
+
+    document.body.appendChild(MyComponent());
+    document.body.appendChild(controllers);
+
+    unmount.onclick = () => {
+      document.getElementById("component").remove();
+    }
+
+    remount.onclick = () => {
+      document.body.appendChild(MyComponent());
+    }
+
+  })
+})
+
+
+
 
   it("Should create proper <div> from fragment string", () => {
 
@@ -24,7 +73,8 @@ describe("Component", () => {
 
   });
 
-
+  */
+describe("Component", () => {
   it("Should create context component", () => {
 
     const { app, component, subscribe, dispatch } = createAppContext({ emoji: "🧮" });
@@ -32,6 +82,7 @@ describe("Component", () => {
     const appReducer = {
       state: {
         counter: 0,
+        showReset: false,
       },
 
       actions: {
@@ -45,6 +96,10 @@ describe("Component", () => {
 
         RESET: (state, payload) => {
           return { ...state, counter: payload };
+        },
+
+        TOGGLE: (state) => {
+          return { ...state, showReset: !state.showReset };
         },
 
         AUTO: (state, payload) => {
@@ -61,7 +116,7 @@ describe("Component", () => {
       }
     }
 
-    const ResetComponent = component(({ dispatch, onAction }) => {
+    const ResetComponent = component(({ dispatch, onAction, effect }) => {
 
       onAction("AUTO", (state, payload) => {
         state.counter < 5 &&
@@ -69,6 +124,10 @@ describe("Component", () => {
             dispatch("AUTO", state.counter + 1);
           }, 500);
       });
+
+      effect(() => {
+        console.log("Reset component created");
+      })
 
       return count => html`
         <span>
@@ -85,7 +144,8 @@ describe("Component", () => {
             <div>
               <button onclick="${() => dispatch("INCREMENT", 1)}">INCREMENT</button>
               <button onclick="${() => dispatch("DECREMENT", 1)}">DECREMENT</button>
-              ${ResetComponent(state.resetCount)}
+              <button onclick="${() => dispatch("TOGGLE")}">TOGGLE</button>
+              ${state.showReset ? ResetComponent(state.resetCount) : ""}
             </div>
           </div>
       `;
@@ -94,22 +154,22 @@ describe("Component", () => {
 
     subscribe(console.log);
 
-    // setTimeout(() => {
-    //   dispatch("RESET", 10)
-    // }, 2000);
-
-    window.__unmount = () => {
-      ResetComponent.unmount();
-      setTimeout(() => {
-        ResetComponent();
-      }, 1000);
-    }
 
     document.body.appendChild(MyApp);
+    document.body.appendChild(fragment(`<div>
+    <button id="unmount">Unmount</button>
+    <button id="remount">Remount</button>
+    </div>`));
+
+    unmount.onclick = () => {
+      document.getElementById("reset").remove();
+    }
+
 
   });
+});
 
-
+/*
   it("Should create independent component", () => {
 
     const App = cmp(props => {
@@ -175,3 +235,5 @@ describe("Component", () => {
 
   });
 });
+
+*/

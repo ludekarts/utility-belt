@@ -55,23 +55,27 @@ function componentCreator(store) {
     let props = {};
     let restArgs = [];
     let clearEffect;
+    let clearActions;
     let effectHandler;
-    let firstRender = true;
+    let initRender = true;
+
     let render = (state, ...rest) => {
 
-      if (firstRender) {
+      if (initRender) {
         props.getArgs = () => restArgs;
         props.getState = () => prevState;
         props.getRefs = () => element?.d?.refs ? { root: element, ...element.d.refs } : { root: element };
         props.effect = callback => effectHandler = callback;
 
         if (store) {
+          let cah = createActionHandler(store);
           props.dispatch = store.dispatch;
-          props.onAction = createActionHandler(store);
+          props.onAction = cah.onAction;
+          clearActions = cah.clearActions;
         }
 
         renderFn = componentFn(props);
-        firstRender = false;
+        initRender = false;
       }
 
       if (rest.length > 0) {
@@ -82,7 +86,22 @@ function componentCreator(store) {
       if (!element) {
         prevState = state;
         element = dynamicElement(renderFn, state, ...restArgs);
-        clearEffect = effectHandler?.({ element, refs: element.d.refs, args: restArgs });
+        clearEffect = effectHandler?.();
+
+        let rm = element.remove;
+        element.remove = () => {
+
+          // Cleanup.
+          clearEffect?.();
+          clearActions?.();
+          rm.call(element);
+          rm = element = renderFn = prevState = effectHandler = undefined;
+
+          // Reset.
+          props = {};
+          restArgs = [];
+          initRender = true;
+        }
       }
 
       // Re-render with previouse State.
@@ -97,77 +116,12 @@ function componentCreator(store) {
       }
 
       return element;
-    };
-
-    render.unmount = () => {
-      element.remove();
-      element = undefined;
-      renderFn = undefined;
-      prevState = undefined;
-      clearEffect = undefined;
-      effectHandler = undefined;
-      firstRender = true;
-      restArgs = [];
-      props = {};
     };
 
     return render;
 
   }
 }
-
-/*
-
-
-
-    let render = (state, ...rest) => {
-
-      if (rest.length > 0) {
-        restArgs = rest;
-      }
-
-      // Create new dynamic element.
-      if (!element) {
-        prevState = state;
-        element = dynamicElement(renderFn, state, ...restArgs);
-        clearEffect = effectHandler?.({ element, refs: element.d.refs, args: restArgs });
-      }
-
-      // Re-render with previouse State.
-      else if (state === undefined) {
-        element.d.update(prevState, ...restArgs);
-      }
-
-      // Update only when State changes.
-      else if (prevState !== state) {
-        prevState = state;
-        element.d.update(state, ...restArgs);
-      }
-
-      return element;
-    };
-
-    render.unmount = () => {
-      clearEffect?.();
-      element.remove();
-      element = undefined;
-      restArgs = undefined;
-      prevState = undefined;
-      clearActionsCallbacks?.();
-    };
-
-    render.trash = () => {
-      render.unmount();
-      props = undefined;
-      render = undefined;
-      renderFn = undefined;
-      effectHandler = undefined;
-      clearEffect = undefined;
-    }
-
-    return render;
-  }
-*/
 
 
 // Heler to turn reducer-config into proper reducer function.
@@ -207,5 +161,8 @@ function createActionHandler(store) {
     unsubscribe?.();
   }
 
-  return onAction;
+  return {
+    onAction,
+    clearActions,
+  };
 }
