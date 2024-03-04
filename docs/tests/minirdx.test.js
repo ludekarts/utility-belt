@@ -242,21 +242,6 @@ describe("MiniRDX", () => {
     chai.expect(store.getState().ext.some.deep).to.have.property("value", "🦖");
   });
 
-
-  it("Store:: Should allow to subscribe to Store updates", () => {
-    const mainReducer = createReducer({})
-      .on("update", () => ({}))
-      .done();
-
-    const store = createStore(mainReducer);
-    const spy = chai.spy();
-    store.subscribe(spy);
-    store.dispatch("update");
-    store.dispatch("update");
-    chai.expect(spy).to.have.been.called(2);
-  });
-
-
   it("ExtendReducer:: Should connect to global state without overriding it", () => {
     const initState = {
       hello: "world",
@@ -287,6 +272,21 @@ describe("MiniRDX", () => {
     chai.expect(store.getState()).to.have.property("hello", "there");
 
   });
+
+
+  it("Store:: Should allow to subscribe to Store updates", () => {
+    const mainReducer = createReducer({})
+      .on("update", () => ({}))
+      .done();
+
+    const store = createStore(mainReducer);
+    const spy = chai.spy();
+    store.subscribe(spy);
+    store.dispatch("update");
+    store.dispatch("update");
+    chai.expect(spy).to.have.been.called(2);
+  });
+
 
   it("Store:: Subscriber should recieve new state object along with dispatched action", () => {
 
@@ -342,6 +342,20 @@ describe("MiniRDX", () => {
     chai.expect(store.getState()).to.have.property("counter", 1);
     chai.expect(store.getState()).to.have.property("title", "batch");
 
+  });
+
+  it("Store:: Should dipatch action with miltiple payload arguments", () => {
+
+    const initState = {};
+    const spy = chai.spy();
+    const mainReducer = createReducer(initState)
+      .on("update", spy)
+      .done();
+
+    const store = createStore(mainReducer);
+    store.dispatch("update", "a", 2, "c");
+    chai.expect(spy).to.have.been.called(1);
+    chai.expect(spy).to.have.been.called.with(initState, "a", 2, "c");
   });
 
 

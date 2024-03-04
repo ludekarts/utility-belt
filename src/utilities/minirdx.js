@@ -63,7 +63,7 @@ export function createReducer(initState) {
       }
 
       return actions.has(action.type)
-        ? actions.get(action.type)(state, action.payload)
+        ? actions.get(action.type)(state, ...(Array.isArray(action.payload) ? action.payload : [action.payload]))
         : state;
     }
   }
@@ -126,9 +126,9 @@ export function createStore(reducer) {
   }
 
   // Base on given @action triggers all reducers to perform state update, then notifies all listeners with new state.
-  function dispatch(actionType, payload) {
+  function dispatch(actionType, ...payload) {
 
-    const action = { type: actionType, payload };
+    const action = { type: actionType, payload: payload.length ? payload : undefined };
     state = dispatchCore(action, state);
 
     // Do not send state notifications when internal actions are dispatched.
@@ -140,8 +140,8 @@ export function createStore(reducer) {
   // Dispatches multiple actions in given order, however only last action triggers Store update.
   dispatch.batch = function batchDispatch(...args) {
 
-    state = args.reduce((newState, [actionType, payload]) => {
-      const action = { type: actionType, payload };
+    state = args.reduce((newState, [actionType, ...payload]) => {
+      const action = { type: actionType, payload: payload.length ? payload : undefined };
       return dispatchCore(action, newState);
     }, state);
 

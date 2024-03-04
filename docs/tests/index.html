@@ -36,14 +36,14 @@
     <script type="module" class="mocha-exec">
       import("./importer.js").then(async (module) => {
         window.utilityBelt = await module.default;
-        await import("./component.test.js");
+        // await import("./component.test.js");
         // await import("./general.test.js");
         // await import("./query.test.js");
         // await import("./pubsub.test.js");
         // await import("./arrays.test.js");
         // await import("./history.test.js");
         // await import("./template.test.js");
-        // await import("./minirdx.test.js");
+        await import("./minirdx.test.js");
         mocha.run();
       });
     </script>
