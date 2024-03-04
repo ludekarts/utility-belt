@@ -1,304 +1,236 @@
-import { isObject } from "./general.js";
 
+// USAGE:
 /*
-  Configuration options:
-  headers: {};                   // Request headers.
-  method: "GET";                 // GET, POST, PUT, DELETE, etc.
-  redirect: "follow";            // manual, follow, error
-  mode: "no-cors";               // no-cors, cors, same-origin
-  credentials: "omit";           // include, same-origin, omit
-  cache: false;                  // default, no-cache, reload, force-cache, only-if-cached
-  referrerPolicy: "no-referrer"; // no-referrer, no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-  responseProcessor: [],         // Array of processor functions
-  requestHash: "",
-  fallback: false,
-  cacheRequests: false,
-  useErrorWrapper: false,
-  doNotParseResponse: false,
+
+import { get, post, withConfig, abortRequest, clearCache } from "@ludekarts/utility-belt;
+. . .
+
+// Add global config.
+const { get post } = withConfig({ headers: { "Authorization": 123 } });
+. . .
+
+// Use regular GET and POST methods.
+
+get("http://localhost:3030/get/json?status=200").then(console.log).catch(console.error); // LOG: {message: '🔌 Hello API'}
+get("http://localhost:3030/get/json?status=400").then(console.log).catch(console.error); // ERR: {message: '🤮 Bad request'}
+
+// With cache - each time you call the same URL, it will return the same response without making a new request.
+get("http://localhost:3030/get/json?status=200", { cacheRequest: true }).then(console.log).catch(console.error); // LOG: {message: '🔌 Hello API'}
+
+// With abortable - if you call the same URL while the previous request is still pending, it will abort the previous request and make a new one.
+get("http://localhost:3030/get/json?status=200&delay=3000", { abortable: true }).then(console.log).catch(console.error); // LOG: {message: '🔌 Hello API'}
+
+// With responseProcessor - you can process the response before it's returned, and then the result of processing is cached.
+get("http://localhost:3030/get/json?status=200", { cacheRequest: true, responseProcessor: response => response.message }).then(console.log).catch(console.error); // LOG: '🔌 Hello API'
+
+// Aborting any request.
+get("http://localhost:3030/get/json?status=200&delay=3000", {cacheRequest: true}).then(console.log).catch(console.error); // LOG: {message: '🔌 Hello API'}
+abortRequest("http://localhost:3030/get/json?status=200&delay=3000");
+
+// Clearing cache with URL.
+clearCache("http://localhost:3030/get/json?status=200");
+
+// Clearing cache with URL and HASH.
+clearCache("http://localhost:3030/post/json", "X3ersSD7");
+
+// Clearing cache with Regular Expression- all requests matching the REGEX will be removed from the cache.
+clearCache(/status=200/);
+
+// Clearing all cache.
+clearCache();
+
+// Using POST method.
+
+post("http://localhost:3030/post/echo", "hello").then(console.log).catch(console.error); // LOG: echo
+
+
+
 */
 
-const requestAllowProps = [
-  // "headers",           // Special case for procesing.
-  "mode",
-  "body",
-  "cache",
-  "method",
-  "redirect",
-  "credentials",
-  "referrerPolicy",
-];
 
-const nativeAllowProps = [
-  // "responseProcessor", // Special case for procesing.
-  "fallback",
-  "requestHash",
-  "cacheRequests",
-  "useErrorWrapper",
-  "doNotParseResponse",
-];
+// Container for all pending requests.
+const requestQueue = new Map();
 
-export class RequestConfig {
-  constructor(config) {
+// Container for all cached requests.
+const responseCache = new Map();
 
-    this.native = {};
-    this.headers = {};
-    this.requestConfig = {};
-    this.responseProcessor = [];
+export function get(url, options = {}) {
 
-    if (isObject(config)) {
-      for (const key in config) {
-        if (config.hasOwnProperty(key) && config[key] !== undefined) {
-          this.update(key, config[key]);
-        }
-      }
-      Object.freeze(this.native);
-      Object.freeze(this.headers);
-      Object.freeze(this.requestConfig);
-      Object.freeze(this.responseProcessor);
-    }
+  const { method, body, cacheRequest = false, abortable = false, responseProcessor = (x => x), ...restOptions } = options;
+  const finalURL = new URL(url);
 
-    else if (config !== undefined) {
-      throw new Error("Config argument should be Undefuned or an Object");
-    }
+  const config = {
+    method: "GET",
   };
 
-  #updateResponseProcessor(target, sourceValue) {
-    if (typeof sourceValue === "function") {
-      target.responseProcessor = [sourceValue];
-    } else if (Array.isArray(sourceValue)) {
-      target.responseProcessor = sourceValue;
-    } else {
-      throw new Error("ResponseProcessor should be Undefined. In other case it should return a Function or an Array");
-    }
-  };
-
-  #updateHeaders(target, sourceValue) {
-    if (typeof sourceValue === "function") {
-      target.headers = sourceValue({ ...target.headers });
-    } else if (isObject(sourceValue)) {
-      target.headers = { ...sourceValue };
-    } else {
-      throw new Error("Headers property should be an Object");
-    }
-  };
-
-  update(key, value) {
-
-    if (key === "responseProcessor") {
-      this.#updateResponseProcessor(this, value);
-    }
-
-    else if (key === "headers") {
-      this.#updateHeaders(this, value);
-    }
-
-    else if (requestAllowProps.includes(key)) {
-      this.requestConfig[key] = value;
-    }
-
-    else if (nativeAllowProps.includes(key)) {
-      this.native[key] = value;
-    }
-
-  };
-
-  merge(source) {
-
-    if (!source) {
-      return this;
-    } else if (!(source instanceof RequestConfig)) {
-      throw new Error("Configuration object should be instace of RequestConfig");
-    }
-
-    return new RequestConfig({
-      ...this.requestConfig,
-      ...source.requestConfig,
-      headers: {
-        ...this.headers,
-        ...(source.headers || {}),
-      },
-      ...this.native,
-      ...source.native,
-      responseProcessor: [
-        ...this.responseProcessor,
-        ...(source.responseProcessor || []),
-      ],
-    });
-  }
-};
-
-
-export function createRequest(config) {
-
-  if (config && !(config instanceof RequestConfig)) {
-    throw new Error("Configuration object should be instace of RequestConfig");
+  if (isObject(body)) {
+    finalURL.search = objectToUrlString(body);
   }
 
-  // Container for all pending requests.
-  const requestQueue = new Map();
+  const requestHash = finalURL.toString();
+  const requestProcessor = response => response.status === 200
+    ? parseResponse(response).then(responseProcessor).then(cacheResponse(requestHash, cacheRequest))
+    : parseResponse(response).then(Promise.reject).catch(clearRejectedResponse(requestHash, cacheRequest));
 
-  // Container for all cached requests.
-  const requestCache = new Map();
+  const IS_PENDING_REQUEST = cacheRequest && requestQueue.has(requestHash);
+  const HAS_CACHED_RESPONSE = cacheRequest && responseCache.has(requestHash);
 
-  // Global configuration.
-  const globalConfiguration = config || new RequestConfig();
-
-
-  // Default request.
-  function request(url, config) {
-
-    let { native, requestConfig, headers, responseProcessor } = globalConfiguration.merge(config);
-
-    // Set proper request body.
-    if (requestConfig.body) {
-
-      if (requestConfig.method.toLowerCase() === "get") {
-        const { body, ...rqConfig } = requestConfig;
-        url += typeof body === "string" ? `?${body}` : `?${objectToUrlString(body)}`;
-        requestConfig = rqConfig;
-      }
-      else {
-        requestConfig = {
-          ...requestConfig,
-          body: encodeBody(requestConfig.body, headers)
-        };
-      }
-    }
-
-    const requestHash = `${url}${native.requestHash || ""}`;
-    const cachedResponse = native.cacheRequests && requestCache.has(requestHash)
-
-    if (cachedResponse) {
-      return getResponseFromCache(requestCache, requestHash);
-    }
-
+  const createNewRequest = () => {
     const controller = new AbortController();
     const { signal } = controller;
+    config.signal = signal;
 
-    const requestCleanup = response => {
-      requestQueue.delete(fetchPromise);
-      return response;
-    };
-
-    const finalRequestCofig = { ...requestConfig, headers, signal };
-
-    const fetchPromise = fetch(url, finalRequestCofig)
-      // Remove from requests queue.
-      .then(requestCleanup)
-      // Parse response.
-      .then(response => !native.doNotParseResponse ? parseResponse(response, native.fallback, native.useErrorWrapper) : response)
-      // Cache & Process request.
-      .then(response => native.cacheRequests
-        ? cacheResponse(response, requestHash, requestCache, responseProcessor)
-        : responseProcessor
-          ? responseProcessor.reduce((acc, processor) => processor(acc), response)
-          : response
-      )
-      // Remove from requests queue on failure.
-      .catch(handleError(requestCleanup));
-
-
-    // Add request to the queue for cancelation.
-    !cachedResponse && requestQueue.set(fetchPromise, () => controller.abort());
-
-    return fetchPromise;
+    const request = fetch(finalURL, { ...config, ...restOptions }).then(requestProcessor);
+    requestQueue.set(requestHash, { request, controller });
+    return request;
   }
 
-
-  // --------------------------
-  // ---- GET -----------------
-  // --------------------------
-
-  function get(url, body) {
-    const requestConfig = body instanceof RequestConfig
-      ? body.merge(new RequestConfig({ method: "GET" }))
-      : Boolean(body)
-        ? new RequestConfig({ method: "GET", body })
-        : new RequestConfig({ method: "GET" });
-    return request(url, requestConfig);
+  if (HAS_CACHED_RESPONSE) {
+    return Promise.resolve(responseCache.get(requestHash));
   }
-
-
-  // --------------------------
-  // ---- POST ----------------
-  // --------------------------
-
-  function post(url, body) {
-    const requestConfig = body instanceof RequestConfig
-      ? body.merge(new RequestConfig({ method: "POST" }))
-      : Boolean(body)
-        ? new RequestConfig({ method: "POST", body })
-        : new RequestConfig({ method: "POST" });
-    return request(url, requestConfig);
-  }
-
-
-  // Allows to abort given request.
-  function abort(requestToCancel) {
-    if (requestQueue.has(requestToCancel)) {
-      requestQueue.get(requestToCancel)();
-      requestQueue.delete(requestToCancel);
+  else if (IS_PENDING_REQUEST) {
+    if (abortable) {
+      requestQueue.get(requestHash).controller.abort();
+      requestQueue.delete(requestHash);
+      return createNewRequest();
     }
-  }
-
-  function releaseCache(url, requestHash = "") {
-
-    if (typeof requestHash !== "string") {
-      throw new Error(`RequestHash need to be a string`);
-    }
-
-    const key = !url ? null : url instanceof RegExp ? url : `${url}${requestHash}`;
-
-    // Remove by URL + HASH;
-    if (typeof key === "string") {
-      requestCache.delete(key);
-    }
-
-    // Remove by Reular Expression.
-    else if (key instanceof RegExp) {
-      for (let cacheKey of requestCache.keys()) {
-        key.test(cacheKey) && requestCache.delete(cacheKey);
-      }
-    }
-
-    // Remove all instances.
     else {
-      requestCache.clear();
+      return requestQueue.get(requestHash).request;
+    }
+  }
+  else {
+    return createNewRequest();
+  }
+}
+
+
+export function abortRequest(url) {
+  if (requestQueue.has(url)) {
+    requestQueue.get(url).controller.abort();
+    requestQueue.delete(url);
+  }
+}
+
+export function clearCache(url, requestHash = "") {
+
+  if (typeof requestHash !== "string") {
+    throw new Error(`RequestHash need to be a string`);
+  }
+
+  const key = url === undefined ? undefined : url instanceof RegExp ? url : `${url}${requestHash}`;
+
+  // Remove by URL + HASH;
+  if (typeof key === "string") {
+    responseCache.delete(key);
+  }
+
+  // Remove by Reular Expression.
+  else if (key instanceof RegExp) {
+    for (let cacheKey of responseCache.keys()) {
+      key.test(cacheKey) && responseCache.delete(cacheKey);
     }
   }
 
-  function updateConfig(config) {
-    for (const key in config) {
-      if (config.hasOwnProperty(key)) {
-        globalConfiguration.update(key, config[key]);
-      }
-    }
+  // Remove all instances.
+  else {
+    responseCache.clear();
   }
+}
 
-  return {
-    get,
-    post,
-    abort,
-    request,
-    releaseCache,
-    updateConfig,
+
+export async function post(url, body, options = {}) {
+
+  const { method, cacheRequest = false, abortable = false, responseProcessor = (x => x), requestHash = "", ...restOptions } = options;
+  const finalURL = new URL(url);
+
+  let config = {
+    method: "POST",
   };
-};
 
+  if (body) {
+    config = { ...config, ...encodeBody(config, body) };
+  }
 
-// ---- helpers ----------------
+  if (cacheRequest && !requestHash) {
+    throw new Error("RequestHash is required for POST requests with cache enabled.");
+  }
 
-function cacheResponse(response, requestHash, cache, responseProcessor) {
-  const processedResponse = Boolean(responseProcessor) ? responseProcessor.reduce((acc, processor) => processor(acc), response) : response;
-  cache.set(requestHash, processedResponse);
-  return processedResponse;
+  const postRequestHash = finalURL.toString() + requestHash;
+  const requestProcessor = response => response.status === 200
+    ? parseResponse(response).then(responseProcessor).then(cacheResponse(postRequestHash, cacheRequest))
+    : parseResponse(response).then(Promise.reject).catch(clearRejectedResponse(postRequestHash, cacheRequest));
+
+  const IS_PENDING_REQUEST = cacheRequest && requestQueue.has(postRequestHash);
+  const HAS_CACHED_RESPONSE = cacheRequest && responseCache.has(postRequestHash);
+
+  const createNewRequest = () => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    config.signal = signal;
+
+    const request = fetch(finalURL, { ...config, ...restOptions }).then(requestProcessor);
+    requestQueue.set(postRequestHash, { request, controller });
+    return request;
+  }
+
+  if (HAS_CACHED_RESPONSE) {
+    return Promise.resolve(responseCache.get(postRequestHash));
+  }
+  else if (IS_PENDING_REQUEST) {
+    if (abortable) {
+      requestQueue.get(postRequestHash).controller.abort();
+      requestQueue.delete(postRequestHash);
+      return createNewRequest();
+    }
+    else {
+      return requestQueue.get(postRequestHash).request;
+    }
+  }
+  else {
+    return createNewRequest();
+  }
 }
 
-function getResponseFromCache(requestCache, requestHash) {
-  return Promise.resolve(requestCache.get(requestHash));
+// ---- Helpers ----------------
+
+function cacheResponse(requestHash, cacheRequest) {
+  return response => {
+    if (cacheRequest) {
+      responseCache.set(requestHash, response);
+      requestQueue.delete(requestHash);
+    }
+    return response;
+  }
 }
 
-async function parseResponse(response, fallback, useErrorWrapper = false) {
+function clearRejectedResponse(requestHash, cacheRequest) {
+  return response => {
+    if (cacheRequest) {
+      requestQueue.delete(requestHash);
+    }
+    return Promise.reject(response);
+  };
+}
+
+function isBasicType(value) {
+  return typeof value === "string"
+    || typeof value === "number"
+    || typeof value === "boolean";
+}
+
+function notAllowed(value) {
+  return value === null
+    || value === undefined
+    || typeof value === "symbol"
+    || typeof value === "function";
+}
+
+function isObject(value) {
+  return typeof value === "object" && !notAllowed(value) && !Array.isArray(value);
+}
+
+
+async function parseResponse(response, fallback) {
 
   let result;
 
@@ -337,55 +269,87 @@ async function parseResponse(response, fallback, useErrorWrapper = false) {
   }
 
   else {
-    if (useErrorWrapper) {
-      throw {
-        response: result,
-        status: response.status,
-        statusText: response.statusText,
+    throw result;
+  }
+}
+
+function encodeBody(config, body) {
+
+  const contentType = config.headers?.["content-type"] || config.headers?.["Content-Type"];
+
+  if (contentType) {
+
+    if (contentType === "application/json") {
+      return { body: JSON.stringify(body) };
+    }
+
+    else if (contentType === "text/plain") {
+      return { body: JSON.stringify(body) };
+    }
+
+    else if (contentType === "application/x-www-form-urlencoded" && isObject(body)) {
+      return { body: new URLSearchParams(body) };
+    }
+
+    else if (contentType === "application/form-data" && body instanceof HTMLFormElement) {
+      return { body: new FormData(body) };
+    }
+
+    else {
+      throw new (`Cannot handle content type: "${contentType}". Try to use different content type or use syntax: post(url, null, { body }) to encode body your way.`);
+    }
+  }
+
+  else {
+
+    // Set Request body.
+    if (isBasicType(body)) {
+      return {
+        body: body + "",
+        headers: config.headers ? { ...config.headers, "Content-Type": "text/plain" } : {
+          "Content-Type": "text/plain",
+        },
       };
-    } else {
-      throw result;
+    }
+
+    else if (body instanceof FormData) {
+      return {
+        body: body,
+        headers: config.headers ? { ...config.headers, "Content-Type": "multipart/form-data" } : {
+          "Content-Type": "multipart/form-data",
+        }
+      }
+    }
+
+    else if (!notAllowed(body)) {
+      return {
+        body: JSON.stringify(body),
+        headers: config.headers ? { ...config.headers, "Content-Type": "application/json" } : {
+          "Content-Type": "application/json",
+        },
+      };
+    }
+
+    else {
+      throw new Error("Invalid body");
     }
   }
 }
 
-function handleError(requestCleanup) {
-  return error => {
-    requestCleanup();
-    throw error;
-  };
-}
-
-function encodeBody(body, headers = {}) {
-  const contentType = headers["content-type"] || headers["Content-Type"];
-
-  if (!body) return undefined;
-
-  if (contentType === "application/json") {
-    return JSON.stringify(body);
+export function objectToUrlString(json) {
+  if (isBasicType(json) || notAllowed(json) || Array.isArray(json)) {
+    throw new Error("objectToUrlString: Given value is not a JSON object");
   }
 
-  else if (contentType === "text/plain") {
-    return JSON.stringify(body);
-  }
-
-  else if (contentType === "application/x-www-form-urlencoded" && isObject(body)) {
-    return new URLSearchParams(body);
-  }
-
-  else {
-    return isObject(body) ? objectToRequestBody(body) : JSON.stringify(body);
-  }
-}
-
-
-export function objectToRequestBody(body) {
-  const searchParams = new URLSearchParams();
-  Object.keys(body).forEach(name => {
-    const data = isBasicType(body[name]) ? body[name] : JSON.stringify(body[name]);
-    searchParams.append(name, data);
-  });
-  return searchParams;
+  return Object.keys(json).map(key => {
+    return sliceEndAnd(
+      isBasicType(json[key])
+        ? `${key}=${json[key]}`
+        : Array.isArray(json[key])
+          ? arrayToUrl(json[key], key)
+          : objectToUrl(json[key], key)
+    );
+  }).join("&");
 }
 
 function arrayToUrl(array, prefix = "") {
@@ -441,36 +405,6 @@ function objectToUrl(object, prefix = "") {
   return result;
 }
 
-
-function objectToUrlString(json) {
-  if (isBasicType(json) || notAllowed(json) || Array.isArray(json)) {
-    throw new Error("objectToUrlString: Given value is not a JSON object");
-  }
-
-  return Object.keys(json).map(key => {
-    return sliceEndAnd(
-      isBasicType(json[key])
-        ? `${key}=${json[key]}`
-        : Array.isArray(json[key])
-          ? arrayToUrl(json[key], key)
-          : objectToUrl(json[key], key)
-    );
-  }).join("&");
-}
-
 function sliceEndAnd(value) {
   return value.replace(/&$/g, "");
-}
-
-function notAllowed(value) {
-  return value === null
-    || value === undefined
-    || typeof value === "symbol"
-    || typeof value === "function";
-}
-
-function isBasicType(value) {
-  return typeof value === "string"
-    || typeof value === "number"
-    || typeof value === "boolean";
 }

@@ -15,6 +15,7 @@ export { schemaTypes, checkSchema } from "./utilities/schema-types.js";
 
 // Request.
 export * from "./utilities/request.js";
+export * from "./utilities/request.legacy.js";
 
 // URL Query.
 export * from "./utilities/query.js";

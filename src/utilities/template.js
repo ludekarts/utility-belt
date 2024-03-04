@@ -562,7 +562,8 @@ function updateReference(index, bindings, attributes, newValue) {
   // Update Single DOM Node.
   else if (binding.type === "node") {
 
-    binding.ref.d.cleanup(binding.ref.outerHTML);
+    // Run children cleanup.
+    binding.ref.d?.cleanup();
 
     // Single DOM Node to -> Empty TextNode.
     if (isAsEmpty(newValue)) {
