@@ -49,12 +49,15 @@ export function html(markup, ...inserts) {
 }
 
 
-export function dynamicElement(renderFn, initState) {
-  const { markup, inserts, id } = renderFn(initState);
+export function dynamicElement(renderFn, initState, ...rest) {
+  const { markup, inserts, id } = renderFn(initState, ...rest);
   const { element, bindings, attributes } = createTemplate(markup, inserts);
-  element.d = {};
-  element.d.refs = getReferences(element);
-  element.d.update = updateComponent(element, bindings, attributes, renderFn);
+  element.d = Object.freeze({
+    refs: getReferences(element),
+    cleanup: createCleanupFn(bindings),
+    update: updateComponent(element, bindings, attributes, renderFn),
+  });
+
   return element;
 }
 
@@ -429,16 +432,33 @@ function createTemplate(markup, inserts) {
 
 function createPartialElement(markup, inserts, renderFn) {
   const { element, bindings, attributes } = createTemplate(markup, inserts);
-  element.d = {};
-  element.d.update = updateComponent(element, bindings, attributes, renderFn);
-  element.d.refs = getReferences(element);
+  element.d = Object.freeze({
+    refs: getReferences(element),
+    cleanup: createCleanupFn(bindings),
+    update: updateComponent(element, bindings, attributes, renderFn),
+  });
   return element;
+}
+
+// Creates cleanup function that runs through all dynamic elements and run their cleanup functions.
+function createCleanupFn(bindings) {
+  let cleanupCallback;
+  return cleanupSetup => {
+    if (typeof cleanupSetup === "function") {
+      cleanupCallback = cleanupSetup;
+    }
+    else {
+      cleanupCallback?.();
+      bindings.forEach(binding => binding.ref.d?.cleanup());
+      cleanupCallback = undefined;
+    };
+  };
 }
 
 // Updates values in DOM nodes.
 function updateComponent(element, bindings, attributes, renderFn) {
-  return (state) => {
-    const inserts = renderFn ? renderFn(state).inserts : state;
+  return (state, ...rest) => {
+    const inserts = renderFn ? renderFn(state, ...rest).inserts : state;
     if (!inserts)
       throw new Error("Cannot update component. Invalid input");
     const escapedInserts = escapeStringsInArray(inserts);
@@ -453,7 +473,7 @@ function updateReference(index, bindings, attributes, newValue) {
 
   const binding = bindings[index];
 
-  // console.log(binding);
+  // console.log("Update:", binding);
 
   if (!binding) return;
 
@@ -541,6 +561,8 @@ function updateReference(index, bindings, attributes, newValue) {
 
   // Update Single DOM Node.
   else if (binding.type === "node") {
+
+    binding.ref.d.cleanup(binding.ref.outerHTML);
 
     // Single DOM Node to -> Empty TextNode.
     if (isAsEmpty(newValue)) {
@@ -767,7 +789,10 @@ function updateArrayOfNodes(binding, newValue) {
   });
 
   // Remove marked nodes.
-  loop(markForDeletion, node => node.remove());
+  loop(markForDeletion, node => {
+    node.d?.cleanup();
+    node.remove();
+  });
 }
 
 function findRepeaterPropertiesInBindings(hook, bindings) {
@@ -922,7 +947,12 @@ function insetrNodesBefore(nodes, pointer) {
 
 // Remove only direct nodes of the container element.
 function removeNodes(nodes, container) {
-  loop(nodes, node => node.parentNode === container && node.remove());
+  loop(nodes, node => {
+    if (node.parentNode === container) {
+      node.d?.cleanup();
+      node.remove();
+    }
+  });
 }
 
 // Remove element wrapper if not needed.

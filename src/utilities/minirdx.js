@@ -38,20 +38,20 @@ export function createReducer(initState) {
   const api = {};
   const actions = new Map();
 
-  api.on = (action, reducer) => {
-    if (actions.has(action)) {
-      throw new Error(`MiniRDXError: Action name "${action}" already exist`);
+  api.on = (actionName, actionReducer) => {
+    if (actions.has(actionName)) {
+      throw new Error(`MiniRDXError: Action name "${actionName}" already exist`);
     }
 
-    if (typeof action !== "string") {
+    if (typeof actionName !== "string") {
       throw new Error(`MiniRDXError: Action name should be a string`);
     }
 
-    if (typeof reducer !== "function") {
+    if (typeof actionReducer !== "function") {
       throw new Error(`MiniRDXError: Action reducer should be a function`);
     }
 
-    actions.set(action, reducer);
+    actions.set(actionName, actionReducer);
     return api;
   };
 
@@ -63,7 +63,7 @@ export function createReducer(initState) {
       }
 
       return actions.has(action.type)
-        ? actions.get(action.type)(state, action.payload)
+        ? actions.get(action.type)(state, ...(Array.isArray(action.payload) ? action.payload : [action.payload]))
         : state;
     }
   }
@@ -126,9 +126,9 @@ export function createStore(reducer) {
   }
 
   // Base on given @action triggers all reducers to perform state update, then notifies all listeners with new state.
-  function dispatch(actionType, payload) {
+  function dispatch(actionType, ...payload) {
 
-    const action = { type: actionType, payload };
+    const action = { type: actionType, payload: payload.length ? payload : undefined };
     state = dispatchCore(action, state);
 
     // Do not send state notifications when internal actions are dispatched.
@@ -140,8 +140,8 @@ export function createStore(reducer) {
   // Dispatches multiple actions in given order, however only last action triggers Store update.
   dispatch.batch = function batchDispatch(...args) {
 
-    state = args.reduce((newState, [actionType, payload]) => {
-      const action = { type: actionType, payload };
+    state = args.reduce((newState, [actionType, ...payload]) => {
+      const action = { type: actionType, payload: payload.length ? payload : undefined };
       return dispatchCore(action, newState);
     }, state);
 
@@ -262,15 +262,13 @@ export function createStore(reducer) {
       newReducer.isNew = true;
       reducers.push(newReducer);
       dispatch("extendReducer:true");
-
     }
 
     // [⚠️ NOTE]:
     // When selector is undefined then reducer will connected to the glonal state,
-    // howewer it @initialState will not override global state.
+    // howewer it @initialState will not override the global state.
     else if (selector === undefined) {
-      const newReducer = (state, action) => reducer(state, action);
-      reducers.push(newReducer);
+      reducers.push(reducer);
       dispatch("extendReducer:true");
     }
 
