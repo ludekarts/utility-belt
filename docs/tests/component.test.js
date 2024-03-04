@@ -1,30 +1,91 @@
 const { cmp, html, createAppContext, fragment } = window.utilityBelt;
 
-/*
+
 describe("Component", () => {
   it("Should works", () => {
 
+    let state = {
+      count: 0,
+      resize: true,
+    };
+
+
+    const ResizeComponent = cmp(props => {
+
+      props.effect(() => {
+
+        function handleResize() {
+          const size = window.innerWidth;
+          console.log(size);
+          ResizeComponent(size);
+        }
+
+        window.addEventListener("resize", handleResize);
+        return () => {
+          window.removeEventListener("resize", handleResize);
+        };
+      });
+
+      return (state) => html`
+        <div>
+          <span>Width</span>
+          <span>${state || window.innerWidth}</span>
+        </div>
+      `;
+    });
+
+    const WrapperComponent = cmp(({ effect }) => {
+
+      effect(() => {
+        console.log("Wrapper created");
+      });
+
+      return (resize) => html`
+        <div>
+          <span>Wrapper</span>
+          <div>
+            ${resize ? ResizeComponent() : ""}
+          </div>
+        </div>
+      `;
+    });
 
     const MyComponent = cmp(props => {
       const { getArgs, getState, getRefs, effect } = props;
 
-      effect(() => {
-        console.log("Created");
-        return () => count = 0;
-      });
-
       const handleClick = () => {
-        MyComponent(count++);
+        MyComponent(state => ({
+          ...state,
+          count: state.count + 1,
+        }));
       };
 
-      return (state, rest) => html`
+      const toggleRsize = () => {
+        MyComponent(state => ({
+          ...state,
+          resize: !state.resize,
+        }));
+      };
+
+      effect(() => {
+        console.log("Created");
+        return () => state = {
+          count: 0,
+          resize: false,
+        };
+      });
+
+      return (state) => html`
         <div id="component">
           <div>
-            <span>Hello</span>
-            <span>${state}</span>
-            <span>${rest}</span>
+            <span>Hello counter:</span>
+            <span>${state.count}</span>
           </div>
-          <button onclick="${handleClick}">Click me</button>
+          <div>
+          ${WrapperComponent(state.resize)}
+          </div>
+          <button onclick="${handleClick}">Counter ++</button>
+          <button onclick="${toggleRsize}">Toggle resize</button>
         </div>
       `;
     });
@@ -35,7 +96,7 @@ describe("Component", () => {
       <button id="remount">Remount</button>
       </div>`);
 
-    document.body.appendChild(MyComponent());
+    document.body.appendChild(MyComponent(state));
     document.body.appendChild(controllers);
 
     unmount.onclick = () => {
@@ -49,7 +110,7 @@ describe("Component", () => {
   })
 })
 
-
+/*
 
 
   it("Should create proper <div> from fragment string", () => {
@@ -73,7 +134,7 @@ describe("Component", () => {
 
   });
 
-  */
+
 describe("Component", () => {
   it("Should create context component", () => {
 
@@ -168,7 +229,7 @@ describe("Component", () => {
 
   });
 });
-
+  */
 /*
   it("Should create independent component", () => {
 

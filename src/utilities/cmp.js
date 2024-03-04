@@ -55,11 +55,13 @@ function componentCreator(store) {
     let props = {};
     let restArgs = [];
     let clearEffect;
-    let clearActions;
+    // let clearActions;
     let effectHandler;
     let initRender = true;
 
     let render = (state, ...rest) => {
+
+      let finalState = typeof state === "function" ? state(prevState, ...rest) : state;
 
       if (initRender) {
         props.getArgs = () => restArgs;
@@ -67,12 +69,12 @@ function componentCreator(store) {
         props.getRefs = () => element?.d?.refs ? { root: element, ...element.d.refs } : { root: element };
         props.effect = callback => effectHandler = callback;
 
-        if (store) {
-          let cah = createActionHandler(store);
-          props.dispatch = store.dispatch;
-          props.onAction = cah.onAction;
-          clearActions = cah.clearActions;
-        }
+        // if (store) {
+        //   let cah = createActionHandler(store);
+        //   props.dispatch = store.dispatch;
+        //   props.onAction = cah.onAction;
+        //   clearActions = cah.clearActions;
+        // }
 
         renderFn = componentFn(props);
         initRender = false;
@@ -84,35 +86,32 @@ function componentCreator(store) {
 
       // Create new dynamic element.
       if (!element) {
-        prevState = state;
-        element = dynamicElement(renderFn, state, ...restArgs);
+        prevState = finalState;
+        element = dynamicElement(renderFn, finalState, ...restArgs);
         clearEffect = effectHandler?.();
-
-        let rm = element.remove;
-        element.remove = () => {
-
+        element.d.cleanup(() => {
           // Cleanup.
           clearEffect?.();
-          clearActions?.();
-          rm.call(element);
-          rm = element = renderFn = prevState = effectHandler = undefined;
+          element = renderFn = prevState = effectHandler = undefined;
 
           // Reset.
           props = {};
           restArgs = [];
           initRender = true;
-        }
+        });
+
+
       }
 
       // Re-render with previouse State.
-      else if (state === undefined) {
+      else if (finalState === undefined) {
         element.d.update(prevState, ...restArgs);
       }
 
       // Update only when State changes.
-      else if (prevState !== state) {
-        prevState = state;
-        element.d.update(state, ...restArgs);
+      else if (prevState !== finalState) {
+        prevState = finalState;
+        element.d.update(finalState, ...restArgs);
       }
 
       return element;
@@ -132,6 +131,8 @@ function createReducerFromConfig(config) {
 
   return reducer.done();
 }
+
+
 
 
 function createActionHandler(store) {
