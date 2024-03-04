@@ -1,7 +1,7 @@
 // import { version } from "../package.json";
 
 // Version
-export const version_utb = "0.7.0-beta.1";//version;
+export const version_utb = "0.7.1-beta.1";//version;
 
 // General.
 export * from "./utilities/general.js";
@@ -46,9 +46,8 @@ export { default as loopstack } from "./utilities/loopstack.js";
 export { default as createHistory } from "./utilities/history.js";
 
 // DOM Helpers.
-export * from "./utilities/cmp.js";
 export * from "./utilities/template.js";
-// export * from "./utilities/component.js";
+export * from "./utilities/component.js";
 export * from "./utilities/dom-helpers.js";
 export * from "./utilities/dom-manipulations.js";
 export { default as highlight } from "./utilities/highlight.js";
