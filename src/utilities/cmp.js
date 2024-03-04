@@ -55,9 +55,10 @@ function componentCreator(store) {
     let props = {};
     let restArgs = [];
     let clearEffect;
-    // let clearActions;
+    let clearActions;
     let effectHandler;
     let initRender = true;
+
 
     let render = (state, ...rest) => {
 
@@ -69,12 +70,12 @@ function componentCreator(store) {
         props.getRefs = () => element?.d?.refs ? { root: element, ...element.d.refs } : { root: element };
         props.effect = callback => effectHandler = callback;
 
-        // if (store) {
-        //   let cah = createActionHandler(store);
-        //   props.dispatch = store.dispatch;
-        //   props.onAction = cah.onAction;
-        //   clearActions = cah.clearActions;
-        // }
+        if (store) {
+          let cah = createActionHandler(store);
+          props.dispatch = store.dispatch;
+          props.onAction = cah.onAction;
+          clearActions = cah.clearActions;
+        }
 
         renderFn = componentFn(props);
         initRender = false;
@@ -92,6 +93,7 @@ function componentCreator(store) {
         element.d.cleanup(() => {
           // Cleanup.
           clearEffect?.();
+          clearActions?.();
           element = renderFn = prevState = effectHandler = undefined;
 
           // Reset.
@@ -133,8 +135,6 @@ function createReducerFromConfig(config) {
 }
 
 
-
-
 function createActionHandler(store) {
 
   let handlers;
@@ -146,7 +146,7 @@ function createActionHandler(store) {
     if (handlers === undefined) {
       handlers = new Map();
       unsubscribe = store.subscribe((state, action) => {
-        handlers.get(action.type)?.(state, action.payload);
+        handlers?.get(action.type)?.(state, action.payload);
       });
     }
 

@@ -443,13 +443,14 @@ function createPartialElement(markup, inserts, renderFn) {
 // Creates cleanup function that runs through all dynamic elements and run their cleanup functions.
 function createCleanupFn(bindings) {
   let cleanupCallback;
-  return cc => {
-    if (typeof cc === "function") {
-      cleanupCallback = cc;
+  return cleanupSetup => {
+    if (typeof cleanupSetup === "function") {
+      cleanupCallback = cleanupSetup;
     }
     else {
       cleanupCallback?.();
       bindings.forEach(binding => binding.ref.d?.cleanup());
+      cleanupCallback = undefined;
     };
   };
 }
