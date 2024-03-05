@@ -85,10 +85,12 @@ function createRepeater(renderFn, collection, keySelector) {
       repeatersPool[repeaterIndex][keySelector(item)] = partialNode;
       return partialNode;
     }
-
-    else {
+    else if (element instanceof HTMLElement) {
       repeatersPool[repeaterIndex][keySelector(item)] = element;
       return element;
+    }
+    else {
+      throw new Error("RepeaterError: Invalid element type. Only HTMLElement or Partial can be used in repeater.");
     }
 
   });

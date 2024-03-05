@@ -1,36 +1,39 @@
-import { uid } from "./general.js";
 import { dynamicElement } from "./template.js";
-import { createStore, createReducer } from "./minirdx.js";
+import { createStore, createReducer, createSelector } from "./minirdx.js";
 
-export const cmp = componentCreator();
+export const component = componentCreator();
 
 export function createAppContext(initailState = {}) {
-  const initEvent = `@initialize_${uid("--short")}`;
 
-  const mainReducer = createReducer(initailState)
-    .on(initEvent, (state, initailState) => ({ ...state, ...initailState }))
-    .done();
-
+  const mainReducer = createReducer(initailState).done();
   const store = createStore(mainReducer);
-  const component = componentCreator(store);
+  const cmp = componentCreator(store);
 
-  const app = (componentFn, reducerConfig = {}) => {
-    const { state, actions } = reducerConfig;
+  const component = (componentFn, reducerConfig) => {
+    const renderFn = cmp(componentFn, reducerConfig);
+    if (reducerConfig && typeof reducerConfig.store === "string") {
+      const { getter } = createSelector(reducerConfig.store);
+      return (state, ...args) => renderFn(getter(state), ...args);
+    }
+    else {
+      return (state, ...args) => renderFn(state, ...args);
+    }
+  };
 
-    // Initialize state based on App state.
-    state && store.dispatch(initEvent, state);
-
-    const AppComponent = component(componentFn, actions ? { actions } : undefined);
-
-    // Force App re-render on every state change.
-    store.subscribe(state => AppComponent({ ...state }));
-
-    return AppComponent(store.getState());
+  const renderApp = (root, appRenderFn) => {
+    if (typeof root === "string" || root instanceof HTMLElement) {
+      const rootNode = root instanceof HTMLElement ? root : document.querySelector(root);
+      store.subscribe(state => appRenderFn({ ...state }));
+      rootNode.appendChild(appRenderFn(store.getState()));
+    }
+    else {
+      throw new Error("CreateAppContextError: root selector should ba a \"string\" or \"HTMLElement\"");
+    }
   }
 
   return Object.freeze({
-    app,
     component,
+    renderApp,
     dispatch: store.dispatch,
     subscribe: store.subscribe,
   });
@@ -38,14 +41,14 @@ export function createAppContext(initailState = {}) {
 
 
 function componentCreator(store) {
-  return function cmp(componentFn, reducerConfig) {
+  return function (componentFn, reducerConfig) {
 
     if (store && reducerConfig) {
       if (reducerConfig.hasOwnProperty("actions")) {
         store.extendReducer(createReducerFromConfig(reducerConfig), reducerConfig.store);
       }
       else {
-        throw new Error("ComponentError: reducerConfig should have actions key");
+        throw new Error("ComponentError: reducerConfig should have \"actions\" key");
       }
     }
 
@@ -58,7 +61,6 @@ function componentCreator(store) {
     let clearActions;
     let effectHandler;
     let initRender = true;
-
 
     let render = (state, ...rest) => {
 
@@ -101,8 +103,6 @@ function componentCreator(store) {
           restArgs = [];
           initRender = true;
         });
-
-
       }
 
       // Re-render with previouse State.

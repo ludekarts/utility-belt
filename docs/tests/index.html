@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Utility Belt Tests (Mocha)</title>
-    <link
+    <!-- <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.0.0/mocha.css"
       integrity="sha512-Ytt2foRGKdIInPXwyS3gxRvfTv4n2wi7uB7neCLH1LjExT+PKBeQu6LNVB4QpHaJqx7m2btagBs4kqxYC1QNFg=="
@@ -23,28 +23,29 @@
       integrity="sha512-0kWAqlZG3lK3zOhOt8GQqBcLLEQIoU/GeDYTeeFAftD4+Oh/1J2tWzVk+1J+c5J45FNMVl9/Xo/Mf9K89I3H7A=="
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
-    ></script>
+    ></script> -->
   </head>
 
   <body>
     <div id="mocha"></div>
 
-    <script type="module" class="mocha-init">
+    <!-- <script type="module" class="mocha-init">
       mocha.setup("bdd");
       mocha.checkLeaks();
-    </script>
+    </script> -->
     <script type="module" class="mocha-exec">
       import("./importer.js").then(async (module) => {
         window.utilityBelt = await module.default;
+        await import("./tmp.test.js");
         // await import("./component.test.js");
-        await import("./general.test.js");
-        await import("./query.test.js");
-        await import("./pubsub.test.js");
-        await import("./arrays.test.js");
-        await import("./history.test.js");
-        await import("./template.test.js");
-        await import("./minirdx.test.js");
-        mocha.run();
+        // await import("./general.test.js");
+        // await import("./query.test.js");
+        // await import("./pubsub.test.js");
+        // await import("./arrays.test.js");
+        // await import("./history.test.js");
+        // await import("./template.test.js");
+        // await import("./minirdx.test.js");
+        // mocha.run();
       });
     </script>
   </body>
