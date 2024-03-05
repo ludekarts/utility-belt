@@ -5,7 +5,7 @@ describe("Component", () => {
 
   it("Should handle RDX component", () => {
 
-    const { app, component, dispatch } = createAppContext({ emoji: "🧮" });
+    const { renderApp, component, dispatch } = createAppContext({ emoji: "🧮" });
 
     const appReducer = {
       state: {
@@ -65,7 +65,7 @@ describe("Component", () => {
       `;
     }, resetReducer);
 
-    const MyApp = app(({ dispatch }) => {
+    const MyApp = component(({ dispatch }) => {
       return state => html`
           <div>
             <h1>${state.emoji} Counter: ${state.counter}</h1>
@@ -79,7 +79,7 @@ describe("Component", () => {
       `;
     }, appReducer);
 
-    document.body.appendChild(MyApp);
+    renderApp(document.body, MyApp);
 
     document.body.appendChild(fragment(`<div style="margin-top:1rem;">
         <button id="toggle">Outside Toggle</button>
