@@ -4,7 +4,6 @@ import { createStore, createReducer, createSelector } from "./minirdx.js";
 export const component = componentCreator();
 
 export function createAppContext(initailState = {}) {
-
   const mainReducer = createReducer(initailState).done();
   const store = createStore(mainReducer);
   const cmp = componentCreator(store);
@@ -14,22 +13,23 @@ export function createAppContext(initailState = {}) {
     if (reducerConfig && typeof reducerConfig.store === "string") {
       const { getter } = createSelector(reducerConfig.store);
       return (state, ...args) => renderFn(getter(state), ...args);
-    }
-    else {
+    } else {
       return (state, ...args) => renderFn(state, ...args);
     }
   };
 
   const renderApp = (root, appRenderFn) => {
     if (typeof root === "string" || root instanceof HTMLElement) {
-      const rootNode = root instanceof HTMLElement ? root : document.querySelector(root);
-      store.subscribe(state => appRenderFn({ ...state }));
+      const rootNode =
+        root instanceof HTMLElement ? root : document.querySelector(root);
+      store.subscribe((state) => appRenderFn({ ...state }));
       rootNode.appendChild(appRenderFn(store.getState()));
+    } else {
+      throw new Error(
+        'CreateAppContextError: root selector should ba a "string" or "HTMLElement"'
+      );
     }
-    else {
-      throw new Error("CreateAppContextError: root selector should ba a \"string\" or \"HTMLElement\"");
-    }
-  }
+  };
 
   return Object.freeze({
     component,
@@ -39,16 +39,18 @@ export function createAppContext(initailState = {}) {
   });
 }
 
-
 function componentCreator(store) {
   return function (componentFn, reducerConfig) {
-
     if (store && reducerConfig) {
       if (reducerConfig.hasOwnProperty("actions")) {
-        store.extendReducer(createReducerFromConfig(reducerConfig), reducerConfig.store);
-      }
-      else {
-        throw new Error("ComponentError: reducerConfig should have \"actions\" key");
+        store.extendReducer(
+          createReducerFromConfig(reducerConfig),
+          reducerConfig.store
+        );
+      } else {
+        throw new Error(
+          'ComponentError: reducerConfig should have "actions" key'
+        );
       }
     }
 
@@ -63,14 +65,17 @@ function componentCreator(store) {
     let initRender = true;
 
     let render = (state, ...rest) => {
-
-      let finalState = typeof state === "function" ? state(prevState, ...rest) : state;
+      let finalState =
+        typeof state === "function" ? state(prevState, ...rest) : state;
 
       if (initRender) {
         props.getArgs = () => restArgs;
         props.getState = () => prevState;
-        props.getRefs = () => element?.d?.refs ? { root: element, ...element.d.refs } : { root: element };
-        props.effect = callback => effectHandler = callback;
+        props.getRefs = () =>
+          element?.d?.refs
+            ? { root: element, ...element.d.refs }
+            : { root: element };
+        props.effect = (callback) => (effectHandler = callback);
 
         if (store) {
           let cah = createActionHandler(store);
@@ -94,9 +99,14 @@ function componentCreator(store) {
         clearEffect = effectHandler?.();
         element.d.cleanup(() => {
           // Cleanup.
-          clearEffect?.();
-          clearActions?.();
-          element = renderFn = prevState = effectHandler = undefined;
+
+          setTimeout(() => {
+            // This is async to prevent infinite loops if cleanup calls fn
+            // that may cause re-render brefore component is fully unmounted.
+            clearActions?.();
+            clearEffect?.();
+            element = renderFn = prevState = effectHandler = undefined;
+          }, 0);
 
           // Reset.
           props = {};
@@ -120,10 +130,8 @@ function componentCreator(store) {
     };
 
     return render;
-
-  }
+  };
 }
-
 
 // Heler to turn reducer-config into proper reducer function.
 function createReducerFromConfig(config) {
@@ -134,14 +142,11 @@ function createReducerFromConfig(config) {
   return reducer.done();
 }
 
-
 function createActionHandler(store) {
-
   let handlers;
   let unsubscribe;
 
   function onAction(actionName, handler) {
-
     // Setup handlers.
     if (handlers === undefined) {
       handlers = new Map();
@@ -151,11 +156,13 @@ function createActionHandler(store) {
     }
 
     if (handlers.has(actionName)) {
-      throw new Error(`ComponentError: onAction handler "${actionName}" already exists`);
+      throw new Error(
+        `ComponentError: onAction handler "${actionName}" already exists`
+      );
     }
 
     handlers.set(actionName, handler);
-  };
+  }
 
   function clearActions() {
     handlers = undefined;
