@@ -69,7 +69,8 @@ function componentCreator(store) {
         typeof state === "function" ? state(prevState, ...rest) : state;
 
       if (initRender) {
-        props.getArgs = () => restArgs;
+        props.getArgs = (index) =>
+          typeof index === "number" ? restArgs[index] : restArgs;
         props.getState = () => prevState;
         props.getRefs = () =>
           element?.d?.refs
@@ -100,13 +101,14 @@ function componentCreator(store) {
         element.d.cleanup(() => {
           // Cleanup.
 
-          setTimeout(() => {
-            // This is async to prevent infinite loops if cleanup calls fn
-            // that may cause re-render brefore component is fully unmounted.
-            clearActions?.();
-            clearEffect?.();
-            element = renderFn = prevState = effectHandler = undefined;
-          }, 0);
+          // setTimeout(() => {
+          // This is async to prevent infinite loops if cleanup calls fn
+          // that may cause re-render brefore component is fully unmounted.
+          clearActions?.();
+          clearEffect?.();
+          // }, 0);
+
+          element = renderFn = prevState = effectHandler = undefined;
 
           // Reset.
           props = {};

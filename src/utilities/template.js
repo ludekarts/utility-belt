@@ -149,7 +149,6 @@ function createTemplate(markup, inserts) {
 
   const bindings = [];
   const wrapper = document.createElement("div");
-  const escapedInserts = escapeStringsInArray(inserts);
 
   /*
 
@@ -167,7 +166,8 @@ function createTemplate(markup, inserts) {
                             "repeater",
                             "attribute",
                             "attribute:bool",
-                            "attribute:callback",
+                            "attribute:html",           // flags value of current binding as innerHTML of the element,
+                            "attribute:callback",       // flags value of current binding as event callback function,
                             "attribute:repeaterKey",    // flags value of current binding as function that retrieves uinque key for repeater's elements (for caching & reusing elements),
                             "attribute:repeaterItems",  // flags value of current binding as reference to the array of items for the repeater to render,
                         ],
@@ -201,7 +201,7 @@ function createTemplate(markup, inserts) {
   const componentHtml = reduce(
     Array.from(markup),
     (acc, part, index, isLast) => {
-      let value = escapedInserts[index];
+      let value = inserts[index];
       let html = (acc += part);
 
       // Last element of markup array does not generate placeholder so we do not process it,
@@ -334,6 +334,13 @@ function createTemplate(markup, inserts) {
           hook[attribute.name] = binding.value;
         }
 
+        // Hendle innerHTML attributes.
+        else if (isInnerHtmlAttribute(attribute.name, binding.value)) {
+          binding.type = "attribute:html";
+          hook.removeAttribute(attribute.name);
+          binding.ref.innerHTML = binding.value || "";
+        }
+
         // Handle non-boolean attributes.
         else if (isValidAttributeValue(binding.value)) {
           binding.type = "attribute";
@@ -448,7 +455,11 @@ function createCleanupFn(bindings) {
       cleanupCallback = cleanupSetup;
     } else {
       cleanupCallback?.();
-      bindings.forEach((binding) => binding.ref.d?.cleanup());
+      bindings.forEach((binding) => {
+        if (binding.type === "node" && binding.value?.d?.cleanup) {
+          binding.value.d.cleanup();
+        }
+      });
       cleanupCallback = undefined;
     }
   };
@@ -459,8 +470,7 @@ function updateComponent(element, bindings, attributes, renderFn) {
   return (state, ...rest) => {
     const inserts = renderFn ? renderFn(state, ...rest).inserts : state;
     if (!inserts) throw new Error("Cannot update component. Invalid input");
-    const escapedInserts = escapeStringsInArray(inserts);
-    loop(escapedInserts, updateChangedValues(bindings, attributes));
+    loop(inserts, updateChangedValues(bindings, attributes));
     return element;
   };
 }
@@ -491,13 +501,22 @@ function updateReference(index, bindings, attributes, newValue) {
     const repeaterValue = updateFn(newValue);
     updateArrayOfNodes(bindings[updateIndex], repeaterValue);
     bindings[updateIndex].value = repeaterValue;
-  } else if (binding.type === "attribute:callback") {
+  }
+
+  // Update element callbacks.
+  else if (binding.type === "attribute:callback") {
     const attribute = attributes[binding.index];
     binding.ref[attribute.name] = newValue;
     binding.value = newValue;
   }
 
-  // Update Attributes.
+  // Update innerHtml.
+  else if (binding.type === "attribute:html") {
+    binding.ref.innerHTML = newValue || "";
+    binding.value = newValue;
+  }
+
+  // Update regular attributes.
   else if (binding.type === "attribute") {
     if (isValidAttributeValue(newValue)) {
       // Update value in bindings early on so it can be use in updateAttributesTempate() fn on the next line.
@@ -855,7 +874,7 @@ function updateAttributesTempate(node, attribute, bindings) {
     /%#(\d+)#%/g,
     (_, index) => {
       const { value } = bindings[Number(index)];
-      return value === undefined || value === false ? "" : value;
+      return value === undefined || value === false ? "" : escapeHtml(value);
     }
   );
 
@@ -898,6 +917,13 @@ function isRepeaterAttribute(name, value) {
 // Verify attribute is a callback.
 function isCallbackAttribute(name, value) {
   return name.startsWith("on") && typeof value === "function";
+}
+
+// Verify attribute is a innerHTML.
+function isInnerHtmlAttribute(name, value) {
+  return (
+    name === "$innerhtml" && (typeof value === "string" || value === undefined)
+  );
 }
 
 // Allow Strings and Numbers.
@@ -1027,10 +1053,6 @@ function getAllAttributes(node) {
 
     return acc;
   }, {});
-}
-
-function escapeStringsInArray(array) {
-  return array.map((i) => (typeof i === "string" ? escapeHtml(i) : i));
 }
 
 // Escaepe HTML symbols.

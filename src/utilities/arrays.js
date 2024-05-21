@@ -8,7 +8,7 @@ export function arrayToObject(array, key) {
 }
 
 // Slice array in chunks with given size.
-export function chunksArray(array, size) {
+export function chunkArray(array, size) {
   let index = 0;
   const arrayLength = array.length;
   const chunks = [];
@@ -16,15 +16,15 @@ export function chunksArray(array, size) {
     chunks.push(array.slice(index, index + size));
   }
   return chunks;
-};
+}
 
 // Compare two arrays and returns comparation object.
 export function compareArrays(arrayA, arrayB) {
   return {
-    added: arrayB.filter(el => !~arrayA.indexOf(el)),
-    removed: arrayA.filter(el => !~arrayB.indexOf(el))
+    added: arrayB.filter((el) => !~arrayA.indexOf(el)),
+    removed: arrayA.filter((el) => !~arrayB.indexOf(el)),
   };
-};
+}
 
 // Get randomly picked subarray from array of given size.
 export function getRandomSubarray(arr, size) {
@@ -40,7 +40,7 @@ export function getRandomSubarray(arr, size) {
     shuffled[i] = temp;
   }
   return shuffled.slice(min);
-};
+}
 
 // Fasterst way to convert NodeList into Array.
 export function nodeListToArray(nodelist) {
@@ -89,9 +89,9 @@ export function shuffleArray(array) {
   }
 
   return result;
-};
+}
 
-export function sortByPhraseIndex(array, phrase, selector = x => x) {
+export function sortByPhraseIndex(array, phrase, selector = (x) => x) {
   const lowerPhrase = phrase.toLowerCase();
   const result = [...array];
   return result.sort((a, b) => {
@@ -145,4 +145,26 @@ export function swapItems(array, indexA, indexB) {
 
 export function zipArray(arrayA, arrayB) {
   return arrayA.map((element, index) => [element, arrayB[index]]);
+}
+
+export function uniqueArray(...arrays) {
+  return [...new Set(arrays.flat())];
+}
+
+// Cretaes array touple with one array that passes the predicate and one that does not.
+// USAGE:
+// const [even, odd] = sortOutArray([1, 2, 3, 4, 5], (x) => x % 2 === 0);
+
+export function sortOutArray(array, predicate) {
+  return array.reduce(
+    (acc, item, index) =>
+      predicate(item, index)
+        ? [[...acc[0], item], acc[1]]
+        : [acc[0], [...acc[1], item]],
+    [[], []]
+  );
+}
+
+export function splitArrayAt(array, index) {
+  return [array.slice(0, index), array.slice(index)];
 }
