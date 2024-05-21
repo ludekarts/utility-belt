@@ -29,7 +29,7 @@
   "license": "ISC",
   "devDependencies": {
     "copy-files-from-to": "^3.2.1",
-    "gh-pages": "^3.2.3",
+    "gh-pages": "^5.0.0",
     "microbundle": "^0.14.2"
   },
   "copyFiles": [
