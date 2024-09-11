@@ -1,6 +1,5 @@
-// Inspired by Redux a library for state management.
+// Library for state management inspired by Redux & pubsub design pattern.
 // by @ludekarts 02.2022
-
 
 /*
 
@@ -40,7 +39,9 @@ export function createReducer(initState) {
 
   api.on = (actionName, actionReducer) => {
     if (actions.has(actionName)) {
-      throw new Error(`MiniRDXError: Action name "${actionName}" already exist`);
+      throw new Error(
+        `MiniRDXError: Action name "${actionName}" already exist`
+      );
     }
 
     if (typeof actionName !== "string") {
@@ -57,20 +58,23 @@ export function createReducer(initState) {
 
   api.done = function () {
     return function reducer(state = initState, action) {
-
       if (!action) {
         throw new Error("MiniRDXError: Action is required to run a reducer");
       }
 
       return actions.has(action.type)
-        ? actions.get(action.type)(state, ...(Array.isArray(action.payload) ? action.payload : [action.payload]))
+        ? actions.get(action.type)(
+            state,
+            ...(Array.isArray(action.payload)
+              ? action.payload
+              : [action.payload])
+          )
         : state;
-    }
-  }
+    };
+  };
 
   return api;
 }
-
 
 /*
 
@@ -109,7 +113,9 @@ export function createStore(reducer) {
   let reducers = [reducer];
 
   if (!reducer) {
-    throw new Error("MiniRDXError: The Main Reducer is required to create a store");
+    throw new Error(
+      "MiniRDXError: The Main Reducer is required to create a store"
+    );
   }
 
   // Provides a way to get current state value out of sibscribe callback.
@@ -121,43 +127,42 @@ export function createStore(reducer) {
   function subscribe(callback) {
     !listeners.includes(callback) && listeners.push(callback);
     return function unsubscribe() {
-      listeners = listeners.filter(l => l !== callback);
-    }
+      listeners = listeners.filter((l) => l !== callback);
+    };
   }
 
   // Base on given @action triggers all reducers to perform state update, then notifies all listeners with new state.
   function dispatch(actionType, ...payload) {
-
-    const action = { type: actionType, payload: payload.length ? payload : undefined };
+    const action = {
+      type: actionType,
+      payload: payload.length ? payload : undefined,
+    };
     state = dispatchCore(action, state);
 
     // Do not send state notifications when internal actions are dispatched.
     isExternalAction(action) &&
-      listeners.forEach(listener => listener(state, action));
+      listeners.forEach((listener) => listener(state, action));
   }
-
 
   // Dispatches multiple actions in given order, however only last action triggers Store update.
   dispatch.batch = function batchDispatch(...args) {
-
     state = args.reduce((newState, [actionType, ...payload]) => {
-      const action = { type: actionType, payload: payload.length ? payload : undefined };
+      const action = {
+        type: actionType,
+        payload: payload.length ? payload : undefined,
+      };
       return dispatchCore(action, newState);
     }, state);
 
-    listeners.forEach(listener => listener(state, batchArgsToAction(args)));
-  }
-
+    listeners.forEach((listener) => listener(state, batchArgsToAction(args)));
+  };
 
   // Core dispatch functionality.
   function dispatchCore(action, oldState) {
-
     // Update state.
     const finalState = reducers.reduce((newState, reducer) => {
-
       // Handles extendReducer logic.
       if (typeof reducer.setter === "function") {
-
         let intermediateState;
 
         // If new reducer was added try to set it's default state.
@@ -168,9 +173,7 @@ export function createStore(reducer) {
           if (intermediateState === undefined) {
             intermediateState = reducer(newState, action);
           }
-        }
-
-        else {
+        } else {
           intermediateState = reducer(newState, action);
         }
 
@@ -179,23 +182,17 @@ export function createStore(reducer) {
         // In that case you also need to return a full global state.
         if (typeof intermediateState === "function") {
           return intermediateState(newState);
-        }
-
-        else {
+        } else {
           reducer.setter(newState, intermediateState);
           return newState;
         }
-      }
-
-      else {
+      } else {
         return reducer(newState, action);
       }
-
     }, oldState);
 
     return finalState;
   }
-
 
   /*
 
@@ -254,10 +251,10 @@ export function createStore(reducer) {
   */
 
   function extendReducer(reducer, selector) {
-
     if (typeof selector === "string") {
       const { setter, getter } = createSelector(selector);
-      const newReducer = (state, action) => reducer(state === undefined ? undefined : getter(state), action);
+      const newReducer = (state, action) =>
+        reducer(state === undefined ? undefined : getter(state), action);
       newReducer.setter = setter;
       newReducer.isNew = true;
       reducers.push(newReducer);
@@ -270,12 +267,11 @@ export function createStore(reducer) {
     else if (selector === undefined) {
       reducers.push(reducer);
       dispatch("extendReducer:true");
+    } else {
+      throw new Error(
+        "MiniRDXError: Reducer's statePath should be a string with dot notation e.g.: 'user.cars[1].name' "
+      );
     }
-
-    else {
-      throw new Error("MiniRDXError: Reducer's statePath should bw a string with dot notation e.g.: 'user.cars[1].name' ");
-    }
-
   }
 
   // setupAction -> initialize reducers.
@@ -283,7 +279,6 @@ export function createStore(reducer) {
 
   return { getState, subscribe, dispatch, extendReducer };
 }
-
 
 // ---- Helpers ----------------
 
@@ -295,11 +290,15 @@ export function createSelector(selector) {
     };
   }
 
-  throw new Error("MiniRDXError: Selector should be a string with dot notation e.g.: 'user.cars[1].name' ");
+  throw new Error(
+    "MiniRDXError: Selector should be a string with dot notation e.g.: 'user.cars[1].name' "
+  );
 }
 
 function isExternalAction(action) {
-  return action.type !== "initialize:true" && action.type !== "extendReducer:true";
+  return (
+    action.type !== "initialize:true" && action.type !== "extendReducer:true"
+  );
 }
 
 function batchArgsToAction(args) {

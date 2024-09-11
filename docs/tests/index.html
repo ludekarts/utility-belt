@@ -36,7 +36,8 @@
     <script type="module" class="mocha-exec">
       import("./importer.js").then(async (module) => {
         window.utilityBelt = await module.default;
-        await import("./tmp.test.js");
+        await import("./tmp_cmp.test.js");
+        // await import("./tmp.test.js");
         // await import("./component.test.js");
         // await import("./general.test.js");
         // await import("./query.test.js");

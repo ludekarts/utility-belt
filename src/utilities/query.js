@@ -42,12 +42,14 @@ export function updateQueryParams(query, name, value) {
   const tail = !head
     ? query
     : query.slice(query.indexOf("?") + 1, query.length);
-  const updaSingleParam = typeof name === "string";
+  const UPDATE_SINLGE_PARAM = typeof name === "string";
+  const UPDATE_MULTIPLE_PARAM =
+    typeof name === "object" && typeof value === "undefined";
   const searchParams = new URLSearchParams(tail);
 
-  if (updaSingleParam) {
+  if (UPDATE_SINLGE_PARAM) {
     updateParam(searchParams, name, value);
-  } else {
+  } else if (UPDATE_MULTIPLE_PARAM) {
     Object.keys(name).forEach((key) => {
       const propValue = name[key];
 
@@ -58,6 +60,8 @@ export function updateQueryParams(query, name, value) {
         updateParam(searchParams, key, propValue);
       }
     });
+  } else {
+    throw new Error("UpdateQueryParamsError: Invalid arguments");
   }
 
   return head + searchParams.toString();
