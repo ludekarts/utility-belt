@@ -1,44 +1,33 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.7.1-beta.3",
+  "version": "0.8.0",
   "description": "JavaScript Utilities Collection",
-  "source": "src/index.js",
-  "main": "dist/utility-belt.js",
-  "unpkg": "dist/utility-belt.umd.js",
-  "module": "dist/utility-belt.module.js",
-  "homepage": "https://ludekarts.github.io/utility-belt",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/utility-belt.umd.cjs",
+  "module": "./dist/utility-belt.js",
+  "types": "./dist/utility-belt.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/utility-belt.js",
+      "require": "./dist/utility-belt.umd.cjs"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/ludekarts/utility-belt.git"
   },
-  "directories": {
-    "doc": "docs"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "microbundle watch -o docs/assets/ubm --no-sourcemap --no-pkg-main -f es",
-    "build": "microbundle --no-sourcemap && copy-files-from-to",
-    "debug-build": "microbundle && copy-files-from-to",
-    "deploy": "npm run build && gh-pages -d docs"
-  },
-  "keywords": [
-    "JavaScript",
-    "utilities"
-  ],
   "author": "Wojciech Ludwin << @ludekarts >>",
   "license": "ISC",
-  "devDependencies": {
-    "copy-files-from-to": "^3.2.1",
-    "gh-pages": "^5.0.0",
-    "microbundle": "^0.14.2"
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
-  "copyFiles": [
-    {
-      "from": "./dist/utility-belt.module.js",
-      "to": "./docs/assets/ubm/utility-belt.js"
-    }
-  ],
-  "copyFilesSettings": {
-    "whenFileExists": "overwrite"
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "vite": "^5.4.1",
+    "vite-plugin-dts": "^4.2.1"
   }
 }
