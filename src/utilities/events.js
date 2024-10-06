@@ -1,4 +1,3 @@
-
 // DESC:
 //
 // Creates an action handler that reacts to (by default on) buttons with "data-action" attibute.
@@ -22,7 +21,6 @@
 //
 
 export function catchAction(selector = "button[data-action]") {
-
   let actions = new Map();
   let defaultAction;
 
@@ -42,7 +40,7 @@ export function catchAction(selector = "button[data-action]") {
     },
 
     done(doneCallback) {
-      return event => {
+      return (event) => {
         if (event.target.matches(selector)) {
           const { action } = event.target.dataset;
           const fn = actions.get(action);
@@ -50,8 +48,8 @@ export function catchAction(selector = "button[data-action]") {
           typeof fn === "function"
             ? fn(actionObject)
             : defaultAction
-              ? defaultAction(actionObject)
-              : undefined;
+            ? defaultAction(actionObject)
+            : undefined;
           typeof doneCallback === "function" && doneCallback(actionObject);
         }
       };
@@ -60,7 +58,6 @@ export function catchAction(selector = "button[data-action]") {
 
   return api;
 }
-
 
 // DESC:
 //
@@ -73,8 +70,8 @@ export function catchAction(selector = "button[data-action]") {
 // . . .
 //
 // document.querySelector("input").onkeydown = keyboard(onlyMyInput)
-//    .key("KeyZ+Ctrl", customUndo)                              // String notation.
-//    .key({ key: "KeyC", shift: true, ctrl: true }, clearInput) // Object notation.
+//    .key("Ctrl+Z", customUndo, true)                        // String notation.
+//    .key({ key: "Z", shift: true, ctrl: true }, clearInput) // Object notation.
 //    .done();
 //
 // function onlyMyInput(event) {
@@ -94,23 +91,31 @@ export function catchAction(selector = "button[data-action]") {
 // NOTE:
 //
 // Key signature: Key+Shift+Ctrl+Alt e.g.:
-// Enter key --> Enter
-// Enter + Shift key --> Enter+Shift
+//    Enter key          --> "Enter"
+//    Enter + Shift key  --> "Enter+Shift"
+//    Special key + key  --> "Shift+Ctrl+W" === "Shift+Ctrl+KeyW" === "W+Shift+Ctrl"
 //
-
 export function keyboard(filterFn) {
-  let keys = new Map();
+  let keyCombos = new Map();
+
+  function executeEventCallback(keyHash, event) {
+    if (keyCombos.has(keyHash)) {
+      const [callback, preventDefault] = keyCombos.get(keyHash);
+      preventDefault && event.preventDefault();
+      callback(event);
+    }
+  }
 
   const api = Object.freeze({
-    key(config, callback) {
-      const keyHash = serilaizeConfig(config);
-      keys.set(keyHash, callback);
+    key(config, callback, preventDefault = false) {
+      const keyHash = parseConfig(config);
+      keyCombos.set(keyHash, [callback, preventDefault]);
       return api;
     },
 
-    done() {
-      return event => {
-        const keyHash = serilaizeConfig({
+    done(defaultCallback) {
+      return (event) => {
+        const keyHash = parseConfig({
           key: event.code,
           alt: event.altKey,
           ctrl: event.ctrlKey,
@@ -118,32 +123,56 @@ export function keyboard(filterFn) {
           shift: event.shiftKey,
         });
 
-        (filterFn ? filterFn(event) : true) && keys.has(keyHash) && keys.get(keyHash)(event);
-      }
-    }
+        if (filterFn) {
+          if (filterFn(event)) {
+            executeEventCallback(keyHash, event);
+            defaultCallback?.(event);
+          }
+        } else {
+          executeEventCallback(keyHash, event);
+          defaultCallback?.(event);
+        }
+      };
+    },
   });
 
   return api;
 }
 
-
-function serilaizeConfig(config) {
-  // Key signature: Key+Shift+Ctrl+Alt e.g.:
-  // Enter key --> Enter
-  // Enter + Shift key --> Enter+Shift
-
+export function parseConfig(config) {
   let keyHash;
 
   if (typeof config === "string") {
-    keyHash = config;
+    const keys = config.split("+");
+    const key = keys
+      .filter(notActionKey)
+      .map((key) => (/^\w$/.test(key) ? `Key${key}` : key));
+    if (key.length > 1) {
+      throw new Error("KeyboardHelperError: Too many keys in config");
+    }
+    keyHash =
+      key[0] +
+      (keys.includes("Shift") ? "+Shift" : "") +
+      (keys.includes("Ctrl") ? "+Ctrl" : "") +
+      (keys.includes("Alt") ? "+Alt" : "") +
+      (keys.includes("Meta") ? "+Meta" : "");
   } else if (typeof config === "object") {
     const { shift, ctrl, alt, meta, key } = config;
-    keyHash = `${key}${Boolean(shift) ? "+Shift" : ""}${Boolean(ctrl) ? "+Ctrl" : ""}${Boolean(alt) ? "+Alt" : ""}${Boolean(meta) ? "+Meta" : ""}`;
+    keyHash =
+      key +
+      (Boolean(shift) ? "+Shift" : "") +
+      (Boolean(ctrl) ? "+Ctrl" : "") +
+      (Boolean(alt) ? "+Alt" : "") +
+      (Boolean(meta) ? "+Meta" : "");
   } else {
-    throw new Error("Keyboard Helper Error: Invalid event config");
+    throw new Error("KeyboardHelperError: Invalid event config");
   }
 
   return keyHash;
+}
+
+function notActionKey(key) {
+  return key !== "Shift" && key !== "Ctrl" && key !== "Alt" && key !== "Meta";
 }
 
 // USAGE:
@@ -166,17 +195,16 @@ function serilaizeConfig(config) {
 // <button data-click="actionAname">OK</button>
 
 export function catchEvents(root, ...events) {
-
   const registerHandlers = {};
 
-  const globalCallback = eventName => event => {
+  const globalCallback = (eventName) => (event) => {
     if (event.target.dataset[eventName]) {
       const callback = registerHandlers[event.target.dataset[eventName]];
       callback && callback(event);
     }
   };
 
-  events.forEach(eventName => {
+  events.forEach((eventName) => {
     root.addEventListener(eventName, globalCallback(eventName));
     // console.log(`Added ${eventName} event handler`);
   });
@@ -198,7 +226,12 @@ export function catchEvents(root, ...events) {
 }
 
 // Create EventListener with destroy function at return statement.
-export function createEventHandler(element, eventName, callback, useCapture = false) {
+export function createEventHandler(
+  element,
+  eventName,
+  callback,
+  useCapture = false
+) {
   element.addEventListener(eventName, callback, useCapture);
   return () => element.removeEventListener(eventName, callback, useCapture);
-};
+}
