@@ -1,2 +1,2 @@
 export * from "./utils/arrays";
-export * from "./utils/latte";
+export * from "./utils/strings";
