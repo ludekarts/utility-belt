@@ -3,11 +3,13 @@ import { insertStrAtIndex } from "./strings.js";
 
 // ----  TYPES -------------------------
 
+type RefsList = Readonly<{ [key: string]: HTMLElement }>;
+
 interface DynamicInterface {
   d: {
-    cleanup: () => void;
-    update: (state: any) => MarkupObject;
-    refs: Readonly<{ [key: string]: HTMLElement }>;
+    refs: RefsList;
+    cleanup: (callback?: () => void) => void;
+    update: (state: any, ...rest: any[]) => DynamicElement;
   };
 }
 
@@ -62,6 +64,15 @@ type Binding = {
   } | null;
 };
 
+type ComponentProps = {
+  getState: () => void;
+  getRefs: () => RefsList | null;
+  getArgs: (index: number) => any;
+  effect: (callback: () => () => void) => void;
+};
+
+type ComponentFunction = (props: ComponentProps) => RenderFunction;
+
 // ----  API ---------------------------
 
 export function html(markup: TemplateStringsArray, ...values: any[]) {
@@ -91,17 +102,82 @@ export function html(markup: TemplateStringsArray, ...values: any[]) {
   );
 }
 
-// export function component(templateFn: TemplateFunction) {
-//   return (state: any) => {
-//     const xmp = templateFn(state);
-//     createDynamicElement(, {});
+export function component<T>(componentFn: ComponentFunction) {
+  let element: DynamicElement | undefined;
+  let initRender = true;
+  let restArgs: any[] = [];
+  let prevState: T | undefined;
+  let props: ComponentProps | null = null;
+  let clearEffect: (() => void) | undefined;
+  let renderFn: RenderFunction | undefined;
+  let effectHandler: (() => () => void) | undefined;
 
-//   };
-// }
+  let render = (state: T, ...rest: any[]) => {
+    let finalState =
+      typeof state === "function" ? state(prevState, ...rest) : state;
+
+    if (initRender) {
+      props = {
+        getArgs(index) {
+          return typeof index === "number" ? restArgs[index] : restArgs;
+        },
+        getState() {
+          return prevState;
+        },
+        getRefs() {
+          return element
+            ? element.d?.refs
+              ? { root: element, ...element.d.refs }
+              : { root: element }
+            : null;
+        },
+        effect(callback) {
+          effectHandler = callback;
+        },
+      };
+
+      renderFn = componentFn(props);
+      initRender = false;
+    }
+
+    if (rest.length > 0) {
+      restArgs = rest;
+    }
+
+    // Create new dynamic element.
+    if (!element && renderFn) {
+      prevState = finalState;
+      element = createDynamicElement(renderFn, finalState, ...restArgs);
+      clearEffect = effectHandler?.();
+      element.d.cleanup(() => {
+        clearEffect?.();
+        props = null;
+        restArgs = [];
+        initRender = true;
+        element = prevState = renderFn = effectHandler = undefined;
+      });
+    }
+
+    // Re-render with previouse State.
+    else if (element && finalState === undefined) {
+      element.d.update(prevState, ...restArgs);
+    }
+
+    // Update only when State changes.
+    else if (element && prevState !== finalState) {
+      prevState = finalState;
+      element.d.update(finalState, ...restArgs);
+    }
+
+    return element;
+  };
+
+  return render;
+}
 
 // ---- CORE ---------------------------
 
-export function createDynamicElement(
+function createDynamicElement(
   renderFn: RenderFunction,
   initState: any,
   ...rest: any[]
@@ -705,9 +781,9 @@ function updateReference(
 
 // Creates cleanup function that runs through all dynamic elements and run their cleanup functions.
 function createCleanupFn(bindings: Binding[]) {
-  type CleanupFn = (() => void) | undefined;
-  let cleanupCallback: CleanupFn;
-  return (cleanupSetup: CleanupFn) => {
+  type CleanupFnunction = (() => void) | undefined;
+  let cleanupCallback: CleanupFnunction;
+  return (cleanupSetup?: CleanupFnunction) => {
     if (typeof cleanupSetup === "function") {
       cleanupCallback = cleanupSetup;
     } else {
@@ -791,7 +867,7 @@ function createRepeater(
   };
 }
 
-dynamicElement.__setTerminateInterval = function (time?: number) {
+export function utbc_setTerminateInterval(time?: number) {
   if (time === undefined) {
     return terminateElementsIntervel;
   } else if (time === 0) {
@@ -801,7 +877,7 @@ dynamicElement.__setTerminateInterval = function (time?: number) {
     terminateElementsIntervel = time;
     terminateTimre = setInterval(cleanupRepeaters, terminateElementsIntervel);
   }
-};
+}
 
 function cleanupRepeaters() {
   for (let i = 0; i < repeatersPool.length; i++) {
