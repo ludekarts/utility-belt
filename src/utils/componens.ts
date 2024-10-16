@@ -1,42 +1,55 @@
-import { loop, reduce } from "./arrays.ts";
+import { loop, reduce, removeByInstance } from "./arrays.ts";
 import { insertStrAtIndex } from "./strings.js";
 
-// ---- Core API ----------------
+// ----  TYPES -------------------------
 
-export function html(markup: TemplateStringsArray, ...values: any[]) {
-  if (markup && Boolean(markup.raw)) {
-    const { element } = createTemplate(Array.from(markup), values);
-
-    // Implement -> "element.d"
-    return element;
-  } else {
-    throw new Error(
-      "UTBTError: Invalid usage of html helper. Try html`` instead."
-    );
-  }
+interface DynamicInterface {
+  d: {
+    cleanup: () => void;
+    update: (state: any) => MarkupObject;
+    refs: Readonly<{ [key: string]: HTMLElement }>;
+  };
 }
 
-// ---- Create Element ----------------
+// type TemplateFunction = <T>(state: T) => DynamicElement;
+type DynamicElement = HTMLElement & DynamicInterface;
+
+type MarkupObject = { markup: string[]; values: any[]; id?: string };
+type RenderFunction = (state: any, ...rest: any[]) => MarkupObject;
+
+type AttibuteName = keyof HTMLElement | "value" | "$key" | "$items" | "$ref";
+
+type Attribute = {
+  name: AttibuteName; // Attribute name.
+  template: string; // Attribute template to update.
+  isBoolean: boolean; // Flag for attribute either regular or boolean.
+};
+
+type AttributeList = { [key: string]: Attribute };
 
 type BindingType =
   | "text"
   | "node"
   | "list"
-  | "dynamic"
-  | "repeater"
-  | "attribute"
-  | "attribute:bool"
-  | "attribute:html" // Flags value of current binding as innerHTML of the element,
-  | "attribute:callback" // Flags value of current binding as event callback function,
-  | "attribute:repeaterKey" // Flags value of current binding as function that retrieves uinque key for repeater's elements (for caching & reusing elements),
-  | "attribute:repeaterItems"; // Flags value of current binding as reference to the array of items for the repeater to render,
+  | "partial"
+  | "repeater" // Ref. of this binding is a repeater container,
+  | "attribute" // Value of this binding is an attribute of the element,
+  | "attribute:bool" // Value of this binding is a boolean attribute (disbled, checked, etc.),
+  | "attribute:html" // Value of this binding is an innerHTML of the element,
+  | "attribute:callback" // Value of this binding is an event callback function,
+  | "attribute:repeaterKey" // Value of this binding is a function that retrieves uinque key for repeater's elements (for caching & reusing elements),
+  | "attribute:repeaterItems"; // Value of this binding is a reference to the array of items for the repeater to render,
 
-interface Binding {
+type Binding = {
   value: any; // Current value of given binding.
   index: number; // Index of binding within template.
   isStatic: boolean; // Flag that marks binding for update (TRUE mean no updates).
   type: BindingType | null;
-  ref: HTMLElement | Text | null /* Reference to DOM node holding given value:
+  ref:
+    | HTMLElement[]
+    | HTMLElement
+    | Text
+    | null /* Reference to DOM node holding given value:
                                     - for attributes node with given attribute,
                                     - for lists parent node.*/;
   container: {
@@ -47,18 +60,74 @@ interface Binding {
     update: Function; // Update function used to generate a new array of nodes to display in repeater.
     sourceIndex: number; // Index of binding containing items for the repeater.
   } | null;
+};
+
+// ----  API ---------------------------
+
+export function html(markup: TemplateStringsArray, ...values: any[]) {
+  // Run as generic template.
+  if (markup && Boolean(markup.raw)) {
+    return Object.freeze({ markup: markup.raw, values });
+  }
+
+  // Run as temtale with ID.
+  else if (typeof markup === "string" && values.length === 0) {
+    const id = markup;
+    return function (keyedMarkup: TemplateStringsArray, ...keyedValuse: any[]) {
+      if (keyedMarkup && Boolean(keyedMarkup.raw)) {
+        return Object.freeze({
+          markup: keyedMarkup.raw,
+          inserts: keyedValuse,
+          id,
+        });
+      }
+      throw new Error(
+        `UTBComponentError: Invalid usage of html helper. Try html("id")\`\` instead.`
+      );
+    };
+  }
+  throw new Error(
+    `UTBComponentError: Invalid usage of html helper. Try html\`\` or html("id")\`\` instead.`
+  );
 }
 
-type AttibuteName = keyof HTMLElement | "value" | "$key" | "$items";
+// export function component(templateFn: TemplateFunction) {
+//   return (state: any) => {
+//     const xmp = templateFn(state);
+//     createDynamicElement(, {});
 
-interface Attribute {
-  name: AttibuteName; // Attribute name.
-  template: string; // Attribute template to update.
-  isBoolean: boolean; // Flag for attribute either regular or boolean.
+//   };
+// }
+
+// ---- CORE ---------------------------
+
+export function createDynamicElement(
+  renderFn: RenderFunction,
+  initState: any,
+  ...rest: any[]
+) {
+  const { markup, values } = renderFn(initState, ...rest);
+  return dynamicElement(markup, values, renderFn);
 }
 
-function createTemplate(markup: string[], inserts: any[]) {
-  let attributes = {};
+// Creates a new DynamicElement that can be updated with render function.
+function dynamicElement(
+  markup: string[],
+  values: any[],
+  renderFn?: RenderFunction
+) {
+  const { element, bindings, attributes } = elementFromTemplate(markup, values);
+  (element as any).d = Object.freeze({
+    refs: getReferences(element),
+    cleanup: createCleanupFn(bindings),
+    update: updateDynamicElement(element, bindings, attributes, renderFn),
+  });
+  return element as DynamicElement;
+}
+
+// Create new HTML element from given MarkupObject (markup & values).
+function elementFromTemplate(markup: string[], values: any[]) {
+  let attributes: AttributeList = {};
 
   const bindings: Binding[] = [];
   const wrapper = document.createElement("div");
@@ -67,7 +136,7 @@ function createTemplate(markup: string[], inserts: any[]) {
   const componentHtml = reduce(
     Array.from(markup),
     (acc, part, index, isLast) => {
-      let value = inserts[index];
+      let value = values[index];
       let html = (acc += part);
 
       // Last element of markup array does not generate placeholder so we do not process it,
@@ -118,9 +187,9 @@ function createTemplate(markup: string[], inserts: any[]) {
           placeholder = `<i data-hook-index="${index}" data-hook-type="list"></i>`;
         }
 
-        // Detect Dynamic Elements HTML
-        else if (isDynamicElement(value)) {
-          placeholder = `<i data-hook-index="${index}" data-hook-type="dynamic"></i>`;
+        // Detect Partial Templates
+        else if (isMarkupObject(value)) {
+          placeholder = `<i data-hook-index="${index}" data-hook-type="partial"></i>`;
         }
 
         // Detect repeater render function.
@@ -217,10 +286,10 @@ function createTemplate(markup: string[], inserts: any[]) {
         // Handle non-boolean attributes.
         else if (isValidAttributeValue(binding.value)) {
           binding.type = "attribute";
-          updateAttributesTempate(hook, attribute, bindings);
+          updateAttributesTemplate(hook, attribute, bindings);
         } else {
           throw new Error(
-            `Only String, Numbers, Undefined or False can be passed as attributes. Got: "${typeof binding.value}" at "${index}" value.`
+            `UTBComponentError: Only String, Numbers, Undefined or False can be passed as attributes. Got: "${typeof binding.value}" at "${index}" value.`
           );
         }
       });
@@ -261,53 +330,489 @@ function createTemplate(markup: string[], inserts: any[]) {
       }
 
       // Partials.
-      // else if (type === "partial") {
-      //   binding.type = "partial";
-      //   binding.ref = createPartialElement(
-      //     binding.value.markup,
-      //     binding.value.inserts
-      //   );
-      //   binding.container = createContainer(hook);
-      //   binding.container.ref.replaceChild(binding.ref, hook);
-      // }
+      else if (type === "partial") {
+        binding.type = "partial";
+        binding.ref = dynamicElement(
+          binding.value.markup,
+          binding.value.inserts
+        );
+        binding.container = createContainer(hook);
+        binding.container.ref.replaceChild(binding.ref, hook);
+      }
 
       // Repeaters.
-      // else if (type === "repeater") {
-      //   binding.type = "repeater";
-      //   binding.isStatic = true;
-      //   binding.ref = hook.parentNode as HTMLElement;
-      //   binding.container = createContainer(hook);
+      else if (type === "repeater") {
+        binding.type = "repeater";
+        binding.isStatic = true;
+        binding.ref = hook.parentNode as HTMLElement;
+        binding.container = createContainer(hook);
 
-      //   const renderFn = binding.value;
-      //   const { items, itemsIndex, keySelector } =
-      //     findRepeaterPropertiesInBindings(hook, bindings);
-      //   const { elements, updateRepeater } = createRepeater(
-      //     renderFn,
-      //     items,
-      //     keySelector
-      //   );
-      //   binding.value = elements;
+        const renderFn = binding.value;
+        const { items, itemsIndex, keySelector } =
+          findRepeaterPropertiesInBindings(hook, bindings);
+        const { elements, updateRepeater } = createRepeater(
+          renderFn,
+          items,
+          keySelector
+        );
+        binding.value = elements;
 
-      //   bindings[itemsIndex].repeater = {
-      //     updateFn: updateRepeater,
-      //     updateIndex: binding.index,
-      //   };
+        bindings[itemsIndex].repeater = {
+          update: updateRepeater,
+          sourceIndex: binding.index,
+        };
 
-      //   insetrNodesBefore(binding.value, hook);
-      // }
+        insetrNodesBefore(binding.value, hook);
+      }
     }
 
     hook.removeAttribute("data-hook-index");
   });
 
   // Strip wrapper node if not needed.
-  const element = stripWrapper(wrapper);
+  const element = stripWrapper(wrapper) as HTMLElement;
 
   return {
     element,
     bindings,
     attributes,
   };
+}
+
+// Updates values in DynamicElement.
+function updateDynamicElement(
+  element: HTMLElement,
+  bindings: Binding[],
+  attributes: AttributeList,
+  renderFn?: RenderFunction
+) {
+  return (state: any, ...rest: any[]) => {
+    const values = renderFn ? renderFn(state, ...rest).values : state;
+    if (!values)
+      throw new Error(
+        "UTBComponentError: Cannot update element. Invalid input"
+      );
+    loop(values, updateElementValues(bindings, attributes));
+    return element;
+  };
+}
+
+// Runs only through the values that need to be updated.
+function updateElementValues(bindings: Binding[], attibutes: AttributeList) {
+  return (value: any, index: number) => {
+    return (
+      Boolean(bindings[index].isStatic) === false &&
+      value !== bindings[index].value &&
+      updateReference(index, bindings, attibutes, value)
+    );
+  };
+}
+
+// Updates values of an element and it's references.
+function updateReference(
+  index: number,
+  bindings: Binding[],
+  attributes: AttributeList,
+  newValue: any
+) {
+  const binding = bindings[index];
+
+  // console.log("Update:", binding);
+
+  if (!binding) {
+    throw new Error(`UTBComponentError: Missing binding at index: "${index}".`);
+  }
+
+  if (!binding.ref || !binding.container) {
+    throw new Error(
+      `UTBComponentError: Missing references on binding: "${index}".`
+    );
+  }
+
+  // Update Boolean Attributes.
+  if (binding.type === "attribute:bool") {
+    const attribute = attributes[binding.index];
+    const refElement = binding.ref as HTMLElement;
+
+    Boolean(newValue)
+      ? refElement.setAttribute(attribute.name, attribute.name)
+      : refElement.removeAttribute(attribute.name);
+
+    binding.value = newValue;
+  }
+
+  // Update Repeater $items.
+  if (binding.type === "attribute:repeaterItems") {
+    binding.value = newValue;
+    if (binding.repeater) {
+      const { sourceIndex, update } = binding.repeater;
+      const repeaterValue = update(newValue);
+      updateArrayOfNodes(bindings[sourceIndex], repeaterValue);
+      bindings[sourceIndex].value = repeaterValue;
+    } else {
+      throw new Error(`UTBComponentError: Repeater items binding is missing.`);
+    }
+  }
+
+  // Update element callbacks.
+  else if (binding.type === "attribute:callback") {
+    const attribute = attributes[binding.index];
+    (binding as any).ref[attribute.name] = newValue;
+    binding.value = newValue;
+  }
+
+  // Update innerHtml.
+  else if (binding.type === "attribute:html") {
+    (binding.ref as HTMLElement).innerHTML = newValue || "";
+    binding.value = newValue;
+  }
+
+  // Update regular attributes.
+  else if (binding.type === "attribute") {
+    if (isValidAttributeValue(newValue)) {
+      // Update value in bindings early on so it can be used in updateAttributes Template() fn on the next line.
+      // This simplifies logic of updateAttributesTemplate().
+      binding.value = newValue;
+      updateAttributesTemplate(
+        binding.ref as HTMLElement,
+        attributes[binding.index],
+        bindings
+      );
+    } else {
+      throw new Error(
+        `UTBComponentError: Only String, Numbers, Undefined or False can be passed as attributes. Got: "${typeof newValue}" at value of index: "${
+          binding.index
+        }".`
+      );
+    }
+  }
+
+  // Update TextNode.
+  else if (binding.type === "text") {
+    // TextNode to -> Empty String (undefined).
+    if (isEmpty(newValue)) {
+      (binding.ref as Text).textContent = "";
+    }
+
+    // TextNode to -> TextNode (Strings || Numbers).
+    else if (isNumberOrString(newValue)) {
+      (binding.ref as Text).textContent = newValue;
+    }
+
+    // TextNode to -> Single DOM Node.
+    else if (isDomNode(newValue)) {
+      binding.type = "node";
+      binding.container.ref.replaceChild(newValue, binding.ref as Text);
+      binding.ref = newValue;
+    }
+
+    // TextNode to -> Partial.
+    else if (isMarkupObject(newValue)) {
+      const partialNode = dynamicElement(newValue.markup, newValue.inserts);
+      binding.type = "partial";
+      binding.container.ref.replaceChild(partialNode, binding.ref as Text);
+      binding.ref = partialNode;
+    }
+
+    // TextNode to -> Array of DOM Nodes.
+    else if (Array.isArray(newValue)) {
+      insetrNodesBefore(newValue, binding.ref as Text);
+      binding.type = "list";
+      binding.ref = newValue as HTMLElement[];
+    }
+
+    // Update current binding value.
+    binding.value = newValue;
+  }
+
+  // Update Single DOM Node.
+  else if (binding.type === "node") {
+    // Run children cleanup.
+    if (isDynamicElement(binding.ref)) {
+      (binding.ref as DynamicElement).d.cleanup();
+    }
+
+    // Single DOM Node to -> Empty TextNode.
+    if (isEmpty(newValue)) {
+      const textNode = document.createTextNode("");
+      binding.container.ref.replaceChild(textNode, binding.ref as Text);
+      binding.type = "text";
+      binding.ref = textNode;
+    }
+
+    // Single DOM Node to -> TextNode (Strings || Numbers).
+    else if (isNumberOrString(newValue)) {
+      const textNode = document.createTextNode(newValue);
+      binding.container.ref.replaceChild(textNode, binding.ref as Text);
+      binding.type = "text";
+      binding.ref = textNode;
+    }
+
+    // Single DOM Node to -> DOM Node.
+    else if (isDomNode(newValue)) {
+      binding.container.ref.replaceChild(newValue, binding.ref as HTMLElement);
+      binding.ref = newValue;
+    }
+
+    // Single DOM Node to -> Partial.
+    else if (isMarkupObject(newValue)) {
+      const partialNode = dynamicElement(newValue.markup, newValue.inserts);
+      binding.container.ref.replaceChild(
+        partialNode,
+        binding.ref as HTMLElement
+      );
+      binding.type = "partial";
+      binding.ref = partialNode;
+    }
+
+    // Single DOM Node to -> Array of DOM Nodes.
+    else if (Array.isArray(newValue)) {
+      insetrNodesBefore(newValue, binding.ref as HTMLElement);
+      binding.type = "list";
+      binding.ref = newValue;
+    }
+
+    // Update current binding value.
+    binding.value = newValue;
+  }
+
+  // Update Nodes List.
+  else if (binding.type === "list") {
+    // Array of DOM Nodes to -> Empty TextNode.
+    if (isEmpty(newValue)) {
+      const textNode = document.createTextNode("");
+      insertNodeAtIndex(
+        binding.container.childIndex,
+        textNode,
+        binding.container.ref
+      );
+      removeNodes(binding.value, binding.container.ref);
+      binding.type = "text";
+      binding.ref = textNode;
+    }
+
+    // Array of DOM Nodes to -> TextNode (Strings || Numbers).
+    else if (isNumberOrString(newValue)) {
+      const textNode = document.createTextNode(newValue);
+      insertNodeAtIndex(
+        binding.container.childIndex,
+        textNode,
+        binding.container.ref
+      );
+      removeNodes(binding.value, binding.container.ref);
+      binding.type = "text";
+      binding.ref = textNode;
+    }
+
+    // Array of Nodes to -> Single DOM Node.
+    else if (isDomNode(newValue)) {
+      insertNodeAtIndex(
+        binding.container.childIndex,
+        newValue,
+        binding.container.ref
+      );
+      removeNodes(binding.value, binding.container.ref);
+      binding.type = "node";
+      binding.ref = newValue;
+    }
+
+    // Array of Nodes to -> Partial.
+    else if (isMarkupObject(newValue)) {
+      const partialNode = dynamicElement(newValue.markup, newValue.inserts);
+      insertNodeAtIndex(
+        binding.container.childIndex,
+        partialNode,
+        binding.container.ref
+      );
+      removeNodes(binding.value, binding.container.ref);
+      binding.type = "partial";
+      binding.ref = partialNode;
+    }
+
+    // Array of DOM Nodes to -> Array of DOM Nodes.
+    else if (Array.isArray(newValue)) {
+      updateArrayOfNodes(binding, newValue);
+    }
+
+    // Update current binding value.
+    binding.value = newValue;
+  }
+
+  // Update Partials.
+  else if (binding.type === "partial") {
+    // Partial -> Empty TextNode.
+    if (isEmpty(newValue)) {
+      const textNode = document.createTextNode("");
+      binding.container.ref.replaceChild(
+        textNode,
+        binding.ref as DynamicElement
+      );
+      binding.type = "text";
+      binding.ref = textNode;
+    }
+
+    // Partial -> TextNode (Strings || Numbers).
+    else if (isNumberOrString(newValue)) {
+      const textNode = document.createTextNode(newValue);
+      binding.container.ref.replaceChild(
+        textNode,
+        binding.ref as DynamicElement
+      );
+      binding.type = "text";
+      binding.ref = textNode;
+    }
+
+    // Partial -> DOM Node.
+    else if (isDomNode(newValue)) {
+      binding.container.ref.replaceChild(
+        newValue,
+        binding.ref as DynamicElement
+      );
+      binding.type = "node";
+      binding.ref = newValue;
+    }
+
+    // Partial -> Partial.
+    else if (isMarkupObject(newValue)) {
+      // Partial -> Partial with same ID.
+      if (isSameDymaicId(binding.value, newValue)) {
+        (binding.ref as DynamicElement).d.update(newValue.inserts);
+      }
+
+      // Partial -> Partial with different ID.
+      else {
+        const partialNode = dynamicElement(newValue.markup, newValue.inserts);
+        binding.container.ref.replaceChild(
+          partialNode,
+          binding.ref as DynamicElement
+        );
+        binding.type = "partial";
+        binding.ref = partialNode;
+      }
+    }
+
+    // Partial -> Array of DOM Nodes.
+    else if (Array.isArray(newValue)) {
+      insetrNodesBefore(newValue, binding.ref as DynamicElement);
+      binding.type = "list";
+      binding.ref = newValue;
+    }
+
+    // Update current binding value.
+    binding.value = newValue;
+  }
+}
+
+// Creates cleanup function that runs through all dynamic elements and run their cleanup functions.
+function createCleanupFn(bindings: Binding[]) {
+  type CleanupFn = (() => void) | undefined;
+  let cleanupCallback: CleanupFn;
+  return (cleanupSetup: CleanupFn) => {
+    if (typeof cleanupSetup === "function") {
+      cleanupCallback = cleanupSetup;
+    } else {
+      cleanupCallback?.();
+      bindings.forEach((binding) => {
+        if (binding.type === "node" && binding.value?.d?.cleanup) {
+          binding.value.d.cleanup();
+        }
+      });
+      cleanupCallback = undefined;
+    }
+  };
+}
+
+// ---- REPEATERS -----------------
+
+type RepeaterKeySelector = (item: any) => string;
+type RepaetrPool = { [key: string]: HTMLElement | DynamicElement };
+
+const repeatersPool: RepaetrPool[] = [];
+
+// Clean up repeaters elements (by default) every 5 minutes.
+let terminateElementsIntervel = 300_000;
+let terminateTimre = setInterval(cleanupRepeaters, terminateElementsIntervel);
+
+function createRepeater(
+  renderFn: RenderFunction,
+  collection: any[],
+  keySelector: RepeaterKeySelector
+) {
+  repeatersPool.push({});
+
+  const repeaterIndex = repeatersPool.length - 1;
+
+  const elements = collection.map((item) => {
+    const element = renderFn(item);
+
+    if (isMarkupObject(element)) {
+      const partialNode = dynamicElement(
+        element.markup,
+        element.values,
+        renderFn
+      );
+      repeatersPool[repeaterIndex][keySelector(item)] = partialNode;
+      return partialNode;
+    } else if (element instanceof HTMLElement) {
+      repeatersPool[repeaterIndex][keySelector(item)] = element;
+      return element;
+    } else {
+      throw new Error(
+        "UTBComponentError: Invalid element type in repeater. Only HTMLElement or Partial can be used in repeater."
+      );
+    }
+  });
+
+  const updateRepeater = (collection: any[]) => {
+    return collection.map((item) => {
+      let element = repeatersPool[repeaterIndex][keySelector(item)];
+
+      if (!element) {
+        const node = renderFn(item);
+
+        if (node instanceof HTMLElement) {
+          element = repeatersPool[repeaterIndex][keySelector(item)] = node;
+        } else if (isMarkupObject(node)) {
+          element = repeatersPool[repeaterIndex][keySelector(item)] =
+            dynamicElement(node.markup, node.values, renderFn);
+        }
+        return element;
+      }
+
+      return isDynamicElement(element)
+        ? (element as DynamicElement).d.update(item)
+        : element;
+    });
+  };
+
+  return {
+    elements,
+    updateRepeater,
+  };
+}
+
+dynamicElement.__setTerminateInterval = function (time?: number) {
+  if (time === undefined) {
+    return terminateElementsIntervel;
+  } else if (time === 0) {
+    clearInterval(terminateTimre);
+  } else {
+    clearInterval(terminateTimre);
+    terminateElementsIntervel = time;
+    terminateTimre = setInterval(cleanupRepeaters, terminateElementsIntervel);
+  }
+};
+
+function cleanupRepeaters() {
+  for (let i = 0; i < repeatersPool.length; i++) {
+    const cache = repeatersPool[i];
+
+    Object.keys(cache).forEach((key) => {
+      if (!document.contains(cache[key])) {
+        delete cache[key];
+      }
+    });
+  }
 }
 
 // ---- Helpers -------------------
@@ -325,6 +830,7 @@ function stripWrapper(wrapper: HTMLDivElement) {
   return wrapper.children.length === 1 ? wrapper.children[0] : wrapper;
 }
 
+// Mark dynamic attibute in element.
 function addHookIndexAttribute(head: string, element: string, index: number) {
   return (
     head +
@@ -336,6 +842,7 @@ function addHookIndexAttribute(head: string, element: string, index: number) {
   );
 }
 
+// Add more dynamic attibutes for element.
 function updateHookIndexAttribute(
   head: string,
   element: string,
@@ -386,7 +893,8 @@ function getAllAttributes(node: HTMLElement) {
   );
 }
 
-function updateAttributesTempate(
+// Update template for dynamic attributes.
+function updateAttributesTemplate(
   node: HTMLElement,
   attribute: Attribute,
   bindings: Binding[]
@@ -407,6 +915,76 @@ function updateAttributesTempate(
   }
 }
 
+/*
+    Implements 4 basic actions to update DOM tree.
+    - ADD:      when node is the new one.
+    - SKIP:     when node matches old position.
+    - MOVE:     when node position changed.
+    - REVMOE:   when node does not exist in new structure.
+  */
+function updateArrayOfNodes(binding: Binding, newValue: any[]) {
+  type ArrayNode = HTMLElement | Text;
+  let markForDeletion: Array<ArrayNode> = [];
+
+  // Remove all nodes that does not exist in newValue array.
+  loop(binding.value, (node, index) => {
+    if (binding.container) {
+      const childIndex = binding.container.childIndex + index;
+      if (
+        (isDomNode(node as ArrayNode) && !newValue.includes(node)) ||
+        isMarkupObject(node)
+      ) {
+        binding.value = removeByInstance(binding.value, node);
+        markForDeletion.push(
+          binding.container.ref.childNodes[childIndex] as ArrayNode
+        );
+      }
+    }
+  });
+
+  // Update remaining nodes.
+  loop(newValue, (newNode, index) => {
+    if (binding.container) {
+      // Offset index value with container.childIndex in case list is not only item in the element.
+      const insertIndex = binding.container.childIndex + index;
+
+      // Check for new node.
+      const isNewNode = binding.value.indexOf(newNode) === -1;
+
+      // Add (node does not exist -> append new node).
+      if (isNewNode) {
+        isMarkupObject(newNode)
+          ? insertNodeAtIndex(
+              insertIndex,
+              dynamicElement(newNode.markup, newNode.inserts),
+              binding.container.ref
+            )
+          : insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
+      }
+
+      // Move (node does not match old position).
+      else if (binding.value[index] !== newNode) {
+        insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
+      }
+
+      // Skip (new node matches its old position).
+      else if (binding.value[index] === newNode) {
+        /* Do nothing */
+      }
+    } else {
+      throw new Error(
+        `UTBComponentError: Cannot update nodes. Missing container reference.`
+      );
+    }
+  });
+
+  // Remove marked nodes.
+  loop(markForDeletion, (node) => {
+    isDynamicElement(node) && (node as DynamicElement).d.cleanup();
+    node.remove();
+  });
+}
+
 // Finds repeater properties in bindings - allow mappinig repeater to proper values.
 function findRepeaterPropertiesInBindings(
   hook: HTMLElement,
@@ -414,8 +992,8 @@ function findRepeaterPropertiesInBindings(
 ) {
   // Current Binding Index - 1;
   let index = Number(hook.dataset.hookIndex) - 1;
+  let itemsIndex = 0;
   let keySelector;
-  let itemsIndex;
   let items;
 
   while (index > -1) {
@@ -460,11 +1038,54 @@ function insetrNodesBefore(
   loop(nodes, (node) => {
     isDomNode(node)
       ? pointer.before(node)
-      : // : isPartialTemplate(node)
-        // ? pointer.before(createPartialElement(node.markup, node.inserts))
+      : // : isMarkupObject(node)
+        // ? pointer.before(dynamicElement(node.markup, node.inserts))
         null;
   });
   pointer.remove();
+}
+
+// Simplify adding nodes at given index.
+function insertNodeAtIndex(
+  index: number,
+  node: HTMLElement | Text,
+  parent: HTMLElement
+) {
+  node !== parent.childNodes[index]
+    ? index === 0
+      ? parent.childNodes.length === 0
+        ? parent.append(node)
+        : parent.childNodes[0].before(node)
+      : parent.childNodes[index - 1].after(node)
+    : null;
+}
+
+// Remove only direct nodes of the container element.
+function removeNodes(nodes: DynamicElement[], container: HTMLElement) {
+  loop(nodes, (node) => {
+    if (node.parentNode === container) {
+      node.d?.cleanup();
+      node.remove();
+    }
+  });
+}
+
+// Pull out and cleanup "ref" hooks.
+function getReferences(element: HTMLElement) {
+  const refs: { [key: string]: HTMLElement } = {};
+  const refsElements: HTMLElement[] = Array.from(
+    element.querySelectorAll("[\\$ref]")
+  );
+
+  loop(refsElements, (refNode) => {
+    const refName = refNode.getAttribute("$ref");
+    if (refName) {
+      refs[refName] = refNode;
+      refNode.removeAttribute("$ref");
+    }
+  });
+
+  return Object.freeze(refs);
 }
 
 // Escaepe HTML symbols.
@@ -526,9 +1147,24 @@ function isDomNode(node: HTMLElement | Text) {
   return node instanceof HTMLElement || node instanceof Text;
 }
 
-// Verify if given @node is an instance of DynamicElement.
-function isDynamicElement(node: HTMLElement) {
-  return node.hasOwnProperty("d");
+// Verify if given @node is a template partial.
+function isMarkupObject(node: any) {
+  return Boolean(
+    node.hasOwnProperty("markup") &&
+      node.hasOwnProperty("values") &&
+      Array.isArray(node.values) &&
+      Array.isArray(node.markup)
+  );
+}
+
+// Verify if given @partials have same ID.
+function isSameDymaicId(partialA: MarkupObject, partialB: MarkupObject) {
+  return partialA.id && partialB.id && partialA.id === partialB.id;
+}
+
+// Verify if given @node is a DynamicElement.
+function isDynamicElement(node: any) {
+  return node.d !== undefined;
 }
 
 // Verify if value is valid for repeater attribute.
