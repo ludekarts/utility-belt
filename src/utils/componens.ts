@@ -88,7 +88,7 @@ export function html(markup: TemplateStringsArray, ...values: any[]) {
       if (keyedMarkup && Boolean(keyedMarkup.raw)) {
         return Object.freeze({
           markup: keyedMarkup.raw,
-          inserts: keyedValuse,
+          values: keyedValuse,
           id,
         });
       }
@@ -202,7 +202,7 @@ function dynamicElement(
 }
 
 // Create new HTML element from given MarkupObject (markup & values).
-function elementFromTemplate(markup: string[], values: any[]) {
+function elementFromTemplate(markup: string[], values: any[] = []) {
   let attributes: AttributeList = {};
 
   const bindings: Binding[] = [];
@@ -409,8 +409,8 @@ function elementFromTemplate(markup: string[], values: any[]) {
       else if (type === "partial") {
         binding.type = "partial";
         binding.ref = dynamicElement(
-          binding.value.markup,
-          binding.value.inserts
+          (binding.value as MarkupObject).markup,
+          (binding.value as MarkupObject).values
         );
         binding.container = createContainer(hook);
         binding.container.ref.replaceChild(binding.ref, hook);
@@ -493,7 +493,7 @@ function updateReference(
 ) {
   const binding = bindings[index];
 
-  // console.log("Update:", binding);
+  // console.log("Update:", JSON.stringify(binding, null, 2));
 
   if (!binding) {
     throw new Error(`UTBComponentError: Missing binding at index: "${index}".`);
@@ -584,7 +584,10 @@ function updateReference(
 
     // TextNode to -> Partial.
     else if (isMarkupObject(newValue)) {
-      const partialNode = dynamicElement(newValue.markup, newValue.inserts);
+      const partialNode = dynamicElement(
+        (newValue as MarkupObject).markup,
+        (newValue as MarkupObject).values
+      );
       binding.type = "partial";
       binding.container.ref.replaceChild(partialNode, binding.ref as Text);
       binding.ref = partialNode;
@@ -632,7 +635,10 @@ function updateReference(
 
     // Single DOM Node to -> Partial.
     else if (isMarkupObject(newValue)) {
-      const partialNode = dynamicElement(newValue.markup, newValue.inserts);
+      const partialNode = dynamicElement(
+        (newValue as MarkupObject).markup,
+        (newValue as MarkupObject).values
+      );
       binding.container.ref.replaceChild(
         partialNode,
         binding.ref as HTMLElement
@@ -694,7 +700,10 @@ function updateReference(
 
     // Array of Nodes to -> Partial.
     else if (isMarkupObject(newValue)) {
-      const partialNode = dynamicElement(newValue.markup, newValue.inserts);
+      const partialNode = dynamicElement(
+        (newValue as MarkupObject).markup,
+        (newValue as MarkupObject).values
+      );
       insertNodeAtIndex(
         binding.container.childIndex,
         partialNode,
@@ -752,12 +761,17 @@ function updateReference(
     else if (isMarkupObject(newValue)) {
       // Partial -> Partial with same ID.
       if (isSameDymaicId(binding.value, newValue)) {
-        (binding.ref as DynamicElement).d.update(newValue.inserts);
+        (binding.ref as DynamicElement).d.update(
+          (newValue as MarkupObject).values
+        );
       }
 
       // Partial -> Partial with different ID.
       else {
-        const partialNode = dynamicElement(newValue.markup, newValue.inserts);
+        const partialNode = dynamicElement(
+          (newValue as MarkupObject).markup,
+          (newValue as MarkupObject).values
+        );
         binding.container.ref.replaceChild(
           partialNode,
           binding.ref as DynamicElement
@@ -1032,7 +1046,10 @@ function updateArrayOfNodes(binding: Binding, newValue: any[]) {
         isMarkupObject(newNode)
           ? insertNodeAtIndex(
               insertIndex,
-              dynamicElement(newNode.markup, newNode.inserts),
+              dynamicElement(
+                (newNode as MarkupObject).markup,
+                (newNode as MarkupObject).values
+              ),
               binding.container.ref
             )
           : insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
@@ -1108,15 +1125,20 @@ function getNodeIndex(node: Node | null) {
 
 // Insert only DOM nodes, Text nodes, and Partials.
 function insetrNodesBefore(
-  nodes: Array<HTMLElement | Text>,
+  nodes: Array<HTMLElement | Text | MarkupObject>,
   pointer: HTMLElement | Text
 ) {
   loop(nodes, (node) => {
     isDomNode(node)
       ? pointer.before(node)
-      : // : isMarkupObject(node)
-        // ? pointer.before(dynamicElement(node.markup, node.inserts))
-        null;
+      : isMarkupObject(node)
+      ? pointer.before(
+          dynamicElement(
+            (node as MarkupObject).markup,
+            (node as MarkupObject).values
+          )
+        )
+      : null;
   });
   pointer.remove();
 }
@@ -1219,7 +1241,7 @@ function isRepeaterFunction(value: Function, html: string) {
 }
 
 // Verify if given @node is instance of a Text or HTMLElement.
-function isDomNode(node: HTMLElement | Text) {
+function isDomNode(node: any) {
   return node instanceof HTMLElement || node instanceof Text;
 }
 
