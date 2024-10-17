@@ -1,6 +1,30 @@
 import { loop, reduce, removeByInstance } from "./arrays.ts";
 import { insertStrAtIndex } from "./strings.js";
 
+/*
+  📝 TODO :
+  Enable caching partials with ID similary to what Repeaters do for elements.
+  This will allow for usecase as follow:
+
+  <div>
+    <span>
+      ${ isOn ? html("on")`<span>🟢</span>` : html("off")`<span>🔴</span>` }
+    </span>
+    <button onclick="${toggle}">TOGGLE</button>
+  </div>
+
+  In above example partials with ID will be CREATED ONCE and reused on render.
+  Currently we can leverage reusability only with one partial e.g.:
+
+  <div>
+    <span>
+      ${html("abacus")`<span>🧮 ${count}</span>`}
+    </span>
+    <button onclick="${updateCount}">UPDATE</button>
+  </div>
+
+*/
+
 // ----  TYPES -------------------------
 
 type RefsList = Readonly<{ [key: string]: HTMLElement }>;
@@ -175,6 +199,36 @@ export function component<T>(componentFn: ComponentFunction) {
   return render;
 }
 
+// ---- STATE SLICE CACHE --------------
+
+/**
+ * StateSliceCache allows for using slice of a global state as initial state for another component preventing
+ * from overriding of this slice of a state when parent component updated global state.
+ *
+ * @example
+ * See docs example code for State Slice Cache.
+ */
+
+interface StateCache<T> {
+  (state: T): T | undefined;
+  remove(state: any): void;
+}
+
+const stateSliceCache: any[] = [];
+
+export const st: StateCache<any> = function <T>(state: T): T | undefined {
+  if (!stateSliceCache.includes(state)) {
+    stateSliceCache.push(state);
+    return state;
+  }
+  return undefined;
+} as StateCache<any>;
+
+st.remove = function (state: any) {
+  const index = initStates.indexOf(state);
+  index > -1 && initStates.splice(index, 1);
+};
+
 // ---- CORE ---------------------------
 
 function createDynamicElement(
@@ -183,6 +237,11 @@ function createDynamicElement(
   ...rest: any[]
 ) {
   const { markup, values } = renderFn(initState, ...rest);
+  if (!markup || !values) {
+    throw new Error(
+      "UTBComponentError: Invalid render function. Expected: (state) => html`...`."
+    );
+  }
   return dynamicElement(markup, values, renderFn);
 }
 
@@ -614,7 +673,7 @@ function updateReference(
     // Single DOM Node to -> Empty TextNode.
     if (isEmpty(newValue)) {
       const textNode = document.createTextNode("");
-      binding.container.ref.replaceChild(textNode, binding.ref as Text);
+      binding.container.ref.replaceChild(textNode, binding.ref as HTMLElement);
       binding.type = "text";
       binding.ref = textNode;
     }
@@ -622,7 +681,7 @@ function updateReference(
     // Single DOM Node to -> TextNode (Strings || Numbers).
     else if (isNumberOrString(newValue)) {
       const textNode = document.createTextNode(newValue);
-      binding.container.ref.replaceChild(textNode, binding.ref as Text);
+      binding.container.ref.replaceChild(textNode, binding.ref as HTMLElement);
       binding.type = "text";
       binding.ref = textNode;
     }
