@@ -225,8 +225,8 @@ export const st: StateCache<any> = function <T>(state: T): T | undefined {
 } as StateCache<any>;
 
 st.remove = function (state: any) {
-  const index = initStates.indexOf(state);
-  index > -1 && initStates.splice(index, 1);
+  const index = stateSliceCache.indexOf(state);
+  index > -1 && stateSliceCache.splice(index, 1);
 };
 
 // ---- CORE ---------------------------
