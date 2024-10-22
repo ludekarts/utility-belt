@@ -26,6 +26,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@ludekarts/latte": "^1.0.2",
     "typescript": "^5.5.3",
     "vite": "^5.4.1",
     "vite-plugin-dts": "^4.2.1"
