@@ -4,6 +4,7 @@
   await import("./forms.test.js");
   await import("./array.test.js");
   await import("./general.test.js");
+  await import("./hashing.test.js");
   await import("./strings.test.js");
   // await import("./component.test.js");
 })();
