@@ -3,15 +3,12 @@
 
 // Types.
 type baseType = string | number | boolean;
-
 type ResponseFallback = (response: Response) => any;
-
-interface BodyObject {
+type BodyObject = {
   [key: string]: baseType | baseType[] | BodyObject | BodyObject[];
-}
+};
 
 type RequestBody = baseType | baseType[] | BodyObject | BodyObject[] | FormData;
-
 type RequestOptions = Omit<RequestInit, "body"> & {
   body?: RequestBody;
   method?: string;
@@ -99,7 +96,7 @@ export function abortRequest(url: string) {
 
 export function clearCache(url: string | RegExp, requestHash: string = "") {
   if (typeof requestHash !== "string") {
-    throw new Error(`RequestHash need to be a string`);
+    throw new Error(`RequestHelperError: RequestHash need to be a string`);
   }
 
   const key =
@@ -147,12 +144,12 @@ export async function post(
 
   if (cacheRequest && typeof requestHash !== "string") {
     throw new Error(
-      "RequestHash is required for POST requests with cache enabled."
+      "RequestHelperError: RequestHash is required for POST requests with cache enabled."
     );
   }
 
   if (typeof requestHash !== "string") {
-    throw new Error("RequestHash need to be a string");
+    throw new Error("RequestHelperError: RequestHash need to be a string");
   }
 
   const postRequestHash = finalURL.toString() + requestHash;
@@ -281,7 +278,7 @@ function encodeBody(body: RequestBody, initHeaders: HeadersInit = {}) {
       return { headers, body: `${body}` };
     } else {
       throw new Error(
-        `Cannot handle content type: "${contentType}". Try to use different content type or use syntax: post(url, null, { body }) to encode body your way.`
+        `RequestHelperError: Cannot handle content type "${contentType}". Try to use different content type or use syntax: post(url, null, { body }) to encode body your way.`
       );
     }
   }
@@ -311,12 +308,12 @@ function encodeBody(body: RequestBody, initHeaders: HeadersInit = {}) {
         return { headers, body: objectToDataForm(body as BodyObject) };
       } else {
         throw new Error(
-          `Cannot convert body of type: "${typeof body}". Try to use different Content-Type or use syntax: post(url, null, { body }) to encode body your way.`
+          `RequestHelperError: Cannot convert body of type "${typeof body}". Try to use different Content-Type or use syntax: post(url, null, { body }) to encode body your way.`
         );
       }
     } else {
       throw new Error(
-        `Cannot handle content type: "${contentType}". Try to use different Content-Type or use syntax: post(url, null, { body }) to encode body your way.`
+        `RequestHelperError: Cannot handle content type "${contentType}". Try to use different Content-Type or use syntax: post(url, null, { body }) to encode body your way.`
       );
     }
   }
@@ -324,7 +321,7 @@ function encodeBody(body: RequestBody, initHeaders: HeadersInit = {}) {
 
 export function objectToUrlString(json: BodyObject) {
   if (isBasicType(json) || notAllowed(json) || Array.isArray(json)) {
-    throw new Error("objectToUrlString: Given value is not a JSON object");
+    throw new Error("ObjectToUrlStringError: Given value is not a JSON object");
   }
 
   return Object.keys(json)
@@ -346,7 +343,7 @@ function arrayToUrl(array: BodyObject[], prefix = "") {
   array.forEach((item, index) => {
     if (notAllowed(item)) {
       throw new Error(
-        `objectToUrlString: Encounter not allowed value at: ${prefix} index: ${index}`
+        `ObjectToUrlStringError: Encounter not allowed value at: ${prefix} index: ${index}`
       );
     } else if (isBasicType(item)) {
       result += `${prefix}=${item}&`;
@@ -366,7 +363,7 @@ function objectToUrl(object: BodyObject, prefix = "") {
   Object.keys(object).forEach((key) => {
     if (notAllowed(object[key])) {
       throw new Error(
-        `objectToUrlString: Encounter not allowed value at: ${prefix}`
+        `ObjectToUrlStringError: Encounter not allowed value at: ${prefix}`
       );
     } else if (isBasicType(object[key])) {
       result += prefix + `[${key}]=${object[key]}&`;
