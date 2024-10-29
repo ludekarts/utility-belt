@@ -1,3 +1,4 @@
+export * from "./utils/dom";
 export * from "./utils/forms";
 export * from "./utils/fuzzy";
 export * from "./utils/query";

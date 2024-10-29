@@ -5,14 +5,13 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/utility-belt.umd.cjs",
-  "module": "./dist/utility-belt.js",
   "types": "./dist/utility-belt.d.ts",
+  "type": "module",
+  "main": "dist/utility-belt.umd.js",
+  "module": "dist/utility-belt.es.js",
   "exports": {
-    ".": {
-      "import": "./dist/utility-belt.js",
-      "require": "./dist/utility-belt.umd.cjs"
-    }
+    "import": "./dist/utility-belt.es.js",
+    "require": "./dist/utility-belt.umd.js"
   },
   "repository": {
     "type": "git",
@@ -26,9 +25,11 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@ludekarts/latte": "^1.0.2",
     "typescript": "^5.5.3",
     "vite": "^5.4.1",
     "vite-plugin-dts": "^4.2.1"
+  },
+  "dependencies": {
+    "dashboard": "link:C:/xampp/htdocs/dashboard"
   }
 }

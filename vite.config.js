@@ -11,8 +11,9 @@ export default defineConfig({
   build: {
     lib: {
       name: "UtilityBelt",
-      fileName: "utility-belt",
+      formats: ["es", "cjs", "umd"],
       entry: resolve(__dirname, "src/index.ts"),
+      fileName: (format) => `utility-belt.${format}.js`,
     },
   },
 });

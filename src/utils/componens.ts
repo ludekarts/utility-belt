@@ -43,7 +43,13 @@ type DynamicElement = HTMLElement & DynamicInterface;
 type MarkupObject = { markup: string[]; values: any[]; id?: string };
 type RenderFunction = (state: any, ...rest: any[]) => MarkupObject;
 
-type AttibuteName = keyof HTMLElement | "value" | "$key" | "$items" | "$ref";
+type AttibuteName =
+  | keyof HTMLElement
+  | "value"
+  | "$ref"
+  | "$key"
+  | "$items"
+  | "$props";
 
 type Attribute = {
   name: AttibuteName; // Attribute name.
@@ -64,7 +70,8 @@ type BindingType =
   | "attribute:html" // Value of this binding is an innerHTML of the element,
   | "attribute:callback" // Value of this binding is an event callback function,
   | "attribute:repeaterKey" // Value of this binding is a function that retrieves uinque key for repeater's elements (for caching & reusing elements),
-  | "attribute:repeaterItems"; // Value of this binding is a reference to the array of items for the repeater to render,
+  | "attribute:repeaterItems" // Value of this binding is a reference to the array of items for the repeater to render,
+  | "attribute:repeaterProps"; // Value of this binding is a reference to the props for the repeater to render.
 
 type Binding = {
   value: any; // Current value of given binding.
@@ -85,9 +92,9 @@ type Binding = {
   repeater: {
     update: Function; // Update function used to generate a new array of nodes to display in repeater.
     sourceIndex: number; // Index of binding containing items for the repeater.
+    propsIndex?: number; // Index of binding containing props for the repeater.
   } | null;
 };
-
 type ComponentProps = {
   getState: () => void;
   getRefs: () => RefsList | null;
@@ -358,6 +365,11 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
   loop(dataHooks, (hook) => {
     const type = hook.dataset.hookType;
 
+    const reperaterMarkers = {
+      hasItems: false,
+      hasProps: false,
+    };
+
     // Attributes.
     if (type === undefined) {
       const hookAttributes = getAllAttributes(hook);
@@ -375,14 +387,14 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
         if (attribute.isBoolean) {
           binding.type = "attribute:bool";
 
-          hook.removeAttribute(`?${attribute.name}`);
+          hook.removeAttribute(`${attribute.name}?`);
 
           Boolean(binding.value)
             ? hook.setAttribute(attribute.name, attribute.name)
             : hook.removeAttribute(attribute.name);
         }
 
-        // Handle special case for repeaters attirbutes $key and $items.
+        // Handle special case for repeater attirbutes $key, $items or $props.
         else if (isRepeaterAttribute(attribute.name, binding.value)) {
           // Mark as repeater Key, block for updates and cleanup.
           if (attribute.name === "$key") {
@@ -393,7 +405,21 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
 
           // Mark as repeater Items and cleanup.
           if (attribute.name === "$items") {
+            reperaterMarkers.hasItems = true;
             binding.type = "attribute:repeaterItems";
+            hook.removeAttribute(attribute.name);
+          }
+
+          // Mark as repeater Items and cleanup.
+          if (attribute.name === "$props") {
+            reperaterMarkers.hasProps = true;
+            // Make sure that $props value is fresh when $items are updated.
+            if (reperaterMarkers.hasItems) {
+              throw new Error(
+                `UTBComponentError: Repeater $props must be defined before $items.`
+              );
+            }
+            binding.type = "attribute:repeaterProps";
             hook.removeAttribute(attribute.name);
           }
 
@@ -483,18 +509,21 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
         binding.container = createContainer(hook);
 
         const renderFn = binding.value;
-        const { items, itemsIndex, keySelector } =
+        const { items, itemsIndex, keySelector, props, propsIndex } =
           findRepeaterPropertiesInBindings(hook, bindings);
         const { elements, updateRepeater } = createRepeater(
           renderFn,
           items,
-          keySelector
+          keySelector,
+          props
         );
+
         binding.value = elements;
 
         bindings[itemsIndex].repeater = {
           update: updateRepeater,
           sourceIndex: binding.index,
+          propsIndex,
         };
 
         insetrNodesBefore(binding.value, hook);
@@ -576,12 +605,22 @@ function updateReference(
     binding.value = newValue;
   }
 
+  // Update Repeater $props.
+  if (binding.type === "attribute:repeaterProps") {
+    // NOTE: We keep this value fresh however it change does not trigger element updates.
+    binding.value = newValue;
+  }
+
   // Update Repeater $items.
   if (binding.type === "attribute:repeaterItems") {
     binding.value = newValue;
+
     if (binding.repeater) {
-      const { sourceIndex, update } = binding.repeater;
-      const repeaterValue = update(newValue);
+      const { sourceIndex, propsIndex, update } = binding.repeater;
+      const repeaterValue = update(
+        newValue,
+        typeof propsIndex === "number" ? bindings[propsIndex].value : undefined
+      );
       updateArrayOfNodes(bindings[sourceIndex], repeaterValue);
       bindings[sourceIndex].value = repeaterValue;
     } else {
@@ -885,14 +924,15 @@ let terminateTimre = setInterval(cleanupRepeaters, terminateElementsIntervel);
 function createRepeater(
   renderFn: RenderFunction,
   collection: any[],
-  keySelector: RepeaterKeySelector
+  keySelector: RepeaterKeySelector,
+  props: any
 ) {
   repeatersPool.push({});
 
   const repeaterIndex = repeatersPool.length - 1;
 
   const elements = collection.map((item) => {
-    const element = renderFn(item);
+    const element = renderFn(item, props);
 
     if (isMarkupObject(element)) {
       const partialNode = dynamicElement(
@@ -912,12 +952,12 @@ function createRepeater(
     }
   });
 
-  const updateRepeater = (collection: any[]) => {
+  const updateRepeater = (collection: any[], props: any) => {
     return collection.map((item) => {
       let element = repeatersPool[repeaterIndex][keySelector(item)];
 
       if (!element) {
-        const node = renderFn(item);
+        const node = renderFn(item, props);
 
         if (node instanceof HTMLElement) {
           element = repeatersPool[repeaterIndex][keySelector(item)] = node;
@@ -929,7 +969,7 @@ function createRepeater(
       }
 
       return isDynamicElement(element)
-        ? (element as DynamicElement).d.update(item)
+        ? (element as DynamicElement).d.update(item, props)
         : element;
     });
   };
@@ -1024,9 +1064,11 @@ function getAllAttributes(node: HTMLElement) {
         };
 
         // Mark boolean attributes.
-        if (attributeBinding.name.indexOf("?") === 0) {
+
+        if (attributeBinding.name.endsWith("?")) {
           attributeBinding.name = attributeBinding.name.slice(
-            1
+            0,
+            -1
           ) as AttibuteName;
           attributeBinding.isBoolean = true;
         }
@@ -1145,7 +1187,9 @@ function findRepeaterPropertiesInBindings(
   // Current Binding Index - 1;
   let index = Number(hook.dataset.hookIndex) - 1;
   let itemsIndex = 0;
+  let propsIndex;
   let keySelector;
+  let props;
   let items;
 
   while (index > -1) {
@@ -1156,7 +1200,11 @@ function findRepeaterPropertiesInBindings(
 
     if (bindings[index].type === "attribute:repeaterKey") {
       keySelector = bindings[index].value;
-      break;
+    }
+
+    if (bindings[index].type === "attribute:repeaterProps") {
+      props = bindings[index].value;
+      propsIndex = index;
     }
 
     index--;
@@ -1164,6 +1212,8 @@ function findRepeaterPropertiesInBindings(
 
   return {
     items,
+    props,
+    propsIndex,
     itemsIndex,
     keySelector,
   };
@@ -1328,7 +1378,8 @@ function isDynamicElement(node: any) {
 function isRepeaterAttribute(name: string, value: Function) {
   return (
     (name === "$key" && typeof value === "function") ||
-    (name === "$items" && Array.isArray(value))
+    (name === "$items" && Array.isArray(value)) ||
+    (name === "$props" && typeof value !== "function")
   );
 }
 

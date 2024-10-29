@@ -7,10 +7,11 @@ settings:
 importers:
 
   .:
+    dependencies:
+      dashboard:
+        specifier: link:C:/xampp/htdocs/dashboard
+        version: link:../dashboard
     devDependencies:
-      '@ludekarts/latte':
-        specifier: ^1.0.2
-        version: 1.0.2
       typescript:
         specifier: ^5.5.3
         version: 5.6.2
@@ -180,9 +181,6 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.0':
     resolution: {integrity: sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==}
-
-  '@ludekarts/latte@1.0.2':
-    resolution: {integrity: sha512-4+cHUUfsNO4jMFtoCgmqga5OKJE4YcPtK3BONhK9C7+nZwaBByAJljfKsWfKPiUVwthMLNCzzeHcM1o5OidIMA==}
 
   '@microsoft/api-extractor-model@7.29.6':
     resolution: {integrity: sha512-gC0KGtrZvxzf/Rt9oMYD2dHvtN/1KPEYsrQPyMKhLHnlVuO/f4AFN3E4toqZzD2pt4LhkKoYmL2H9tX3yCOyRw==}
@@ -732,8 +730,6 @@ snapshots:
     optional: true
 
   '@jridgewell/sourcemap-codec@1.5.0': {}
-
-  '@ludekarts/latte@1.0.2': {}
 
   '@microsoft/api-extractor-model@7.29.6':
     dependencies:
