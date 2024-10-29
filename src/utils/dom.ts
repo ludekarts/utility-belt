@@ -3,10 +3,14 @@
  *
  * @example
  *
- * const element = createElement('<div>Hello World</div>');
+ * const div = fragment('<div>Hello World</div>');
+ * const docFragment = fragment(`<p>Hello</p><p>World</p>`);
+ * const section = fragment(`<p>Hello</p><p>World</p>`, `section`);
  *
  */
 export function fragment(source: string, domWrapper: string | undefined) {
+  if (!source) throw new Error("FragmentError: source is required");
+
   const fragment = document.createRange().createContextualFragment(source);
 
   if (typeof domWrapper === "undefined") {
