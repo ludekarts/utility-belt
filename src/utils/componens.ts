@@ -346,10 +346,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
 
         bindings.push(binding);
 
-        // ⚠️ This alow for setting default value for input elements without causing error when parsing HTML template
-        // into DOM elements. Since some inputs allows only specific values (e.g. Number, Date string, etc.) our
-        // attribute temaplate-string (%#0#%) is invalid. Thus we set it as static value and re-bind it during first update.
-        return setDefaultValueAttr(html, value) + placeholder;
+        return html + placeholder;
       }
 
       return html;
@@ -358,7 +355,13 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
   );
 
   // Parese HTML template into DOM elements.
-  wrapper.insertAdjacentHTML("beforeend", componentHtml);
+  // rewireValueAttributes() alow for setting default value for input elements without causing error when parsing HTML template
+  // into DOM elements. Since some inputs allows only specific values (e.g. Number, Date string, etc.) our
+  // attribute temaplate-string (%#0#%) is invalid. Thus we set it as static value and re-bind it during first update.
+  wrapper.insertAdjacentHTML(
+    "beforeend",
+    rewireValueAttributes(componentHtml, bindings)
+  );
 
   // Map data-hook-index elements and attributes into their external values.
   const dataHooks: HTMLElement[] = Array.from(
@@ -455,6 +458,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
           hook.removeAttribute(attribute.name);
           hookAttributes[index].name = "value";
           binding.type = "attribute";
+          console.log(attribute, binding);
         }
 
         // Handle non-boolean attributes.
@@ -594,11 +598,11 @@ function updateReference(
 ) {
   const binding = bindings[index];
 
-  // console.log(
-  //   `Update:\n${JSON.stringify(binding, null, 2)}\n`,
-  //   "New value:",
-  //   newValue
-  // );
+  console.log(
+    `Update:\n${JSON.stringify(binding, null, 2)}\n`,
+    "New value:",
+    newValue
+  );
 
   if (!binding) {
     throw new Error(`UTBComponentError: Missing binding at index: "${index}".`);
@@ -1126,10 +1130,11 @@ function updateAttributesTemplate(
 }
 
 // Set default value for input elements & proveide additional data-hook.
-function setDefaultValueAttr(html: string, value: any) {
-  return isValidAttributeValue(value)
-    ? html.replace(/value="/, `value="${String(value)}" data-hook-dv="`)
-    : html;
+function rewireValueAttributes(html: string, bindings: Binding[]) {
+  return html.replace(/ value="%#(\d+)#%"/g, (_, index) => {
+    const value = bindings[Number(index)].value;
+    return ` value="${value}" data-hook-dv="%#${index}#%"`;
+  });
 }
 
 /*
