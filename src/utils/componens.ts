@@ -345,7 +345,11 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
         }
 
         bindings.push(binding);
-        return html + placeholder;
+
+        // ⚠️ This alow for setting default value for input elements without causing error when parsing HTML template
+        // into DOM elements. Since some inputs allows only specific values (e.g. Number, Date string, etc.) our
+        // attribute temaplate-string (%#0#%) is invalid. Thus we set it as static value and re-bind it during first update.
+        return bindDefaultValue(html, value) + placeholder;
       }
 
       return html;
@@ -382,6 +386,8 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
         binding.container = createContainer(hook);
 
         const attribute = hookAttributes[index];
+
+        // console.log(binding, attribute);
 
         // Handle boolean attributes.
         if (attribute.isBoolean) {
@@ -442,6 +448,13 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
           binding.type = "attribute:html";
           hook.removeAttribute(attribute.name);
           binding.ref.innerHTML = binding.value || "";
+        }
+
+        // Hendle defaultValue attributes.
+        else if (isDefaultValueAttribute(attribute.name, binding.value)) {
+          hook.removeAttribute(attribute.name);
+          hookAttributes[index].name = "value";
+          binding.type = "attribute";
         }
 
         // Handle non-boolean attributes.
@@ -581,7 +594,11 @@ function updateReference(
 ) {
   const binding = bindings[index];
 
-  // console.log("Update:", JSON.stringify(binding, null, 2));
+  // console.log(
+  //   `Update:\n${JSON.stringify(binding, null, 2)}\n`,
+  //   "New value:",
+  //   newValue
+  // );
 
   if (!binding) {
     throw new Error(`UTBComponentError: Missing binding at index: "${index}".`);
@@ -1094,7 +1111,9 @@ function updateAttributesTemplate(
     /%#(\d+)#%/g,
     (_, index) => {
       const { value } = bindings[Number(index)];
-      return value === undefined || value === false ? "" : escapeHtml(value);
+      return value === undefined || value === false
+        ? ""
+        : escapeHtml(String(value));
     }
   );
 
@@ -1104,6 +1123,12 @@ function updateAttributesTemplate(
   if (attribute.name === "value") {
     (node as HTMLInputElement).value = attributeValue;
   }
+}
+
+function bindDefaultValue(html: string, value: any) {
+  return isValidAttributeValue(value)
+    ? html.replace(/value="/, `value="${String(value)}" data-hook-dv="`)
+    : html;
 }
 
 /*
@@ -1403,4 +1428,9 @@ function isValidAttributeValue(value?: boolean | string | number) {
     typeof value === "number" ||
     typeof value === "string"
   );
+}
+
+// Verify if value is an input's defaultValue.
+function isDefaultValueAttribute(name: string, value) {
+  return name === "data-hook-dv" && isValidAttributeValue(value);
 }
