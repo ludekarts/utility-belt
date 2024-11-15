@@ -329,7 +329,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
           placeholder = `<i data-hook-index="${index}" data-hook-type="list"></i>`;
         }
 
-        // Detect Partial Templates
+        // Detect Partial Templates.
         else if (isMarkupObject(value)) {
           placeholder = `<i data-hook-index="${index}" data-hook-type="partial"></i>`;
         }
@@ -349,7 +349,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
         // ⚠️ This alow for setting default value for input elements without causing error when parsing HTML template
         // into DOM elements. Since some inputs allows only specific values (e.g. Number, Date string, etc.) our
         // attribute temaplate-string (%#0#%) is invalid. Thus we set it as static value and re-bind it during first update.
-        return bindDefaultValue(html, value) + placeholder;
+        return setDefaultValueAttr(html, value) + placeholder;
       }
 
       return html;
@@ -1125,7 +1125,8 @@ function updateAttributesTemplate(
   }
 }
 
-function bindDefaultValue(html: string, value: any) {
+// Set default value for input elements & proveide additional data-hook.
+function setDefaultValueAttr(html: string, value: any) {
   return isValidAttributeValue(value)
     ? html.replace(/value="/, `value="${String(value)}" data-hook-dv="`)
     : html;
@@ -1431,6 +1432,6 @@ function isValidAttributeValue(value?: boolean | string | number) {
 }
 
 // Verify if value is an input's defaultValue.
-function isDefaultValueAttribute(name: string, value) {
+function isDefaultValueAttribute(name: string, value: any) {
   return name === "data-hook-dv" && isValidAttributeValue(value);
 }
