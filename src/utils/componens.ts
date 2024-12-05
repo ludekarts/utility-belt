@@ -311,32 +311,32 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
 
         // Allow for undefined & null values - treat them as empty strings.
         else if (isEmpty(value)) {
-          placeholder = `<i data-hook-index="${index}" data-hook-type="text"></i>`;
+          placeholder = `<hr data-hook-index="${index}" data-hook-type="text"/>`;
         }
 
         // Detect Numbers & Strings.
         else if (isNumberOrString(value)) {
-          placeholder = `<i data-hook-index="${index}" data-hook-type="text"></i>`;
+          placeholder = `<hr data-hook-index="${index}" data-hook-type="text"/>`;
         }
 
         // Detect HTML Elements.
         else if (isDomNode(value)) {
-          placeholder = `<i data-hook-index="${index}" data-hook-type="node"></i>`;
+          placeholder = `<hr data-hook-index="${index}" data-hook-type="node"/>`;
         }
 
         // Detect Array of Nodes.
         else if (Array.isArray(value)) {
-          placeholder = `<i data-hook-index="${index}" data-hook-type="list"></i>`;
+          placeholder = `<hr data-hook-index="${index}" data-hook-type="list"/>`;
         }
 
         // Detect Partial Templates.
         else if (isMarkupObject(value)) {
-          placeholder = `<i data-hook-index="${index}" data-hook-type="partial"></i>`;
+          placeholder = `<hr data-hook-index="${index}" data-hook-type="partial"/>`;
         }
 
         // Detect repeater render function.
         else if (isRepeaterFunction(value, html)) {
-          placeholder = `<i data-hook-index="${index}" data-hook-type="repeater"></i>`;
+          placeholder = `<hr data-hook-index="${index}" data-hook-type="repeater"/>`;
         }
 
         // Clamp other types into empty string - skip them.
@@ -458,7 +458,6 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
           hook.removeAttribute(attribute.name);
           hookAttributes[index].name = "value";
           binding.type = "attribute";
-          console.log(attribute, binding);
         }
 
         // Handle non-boolean attributes.
@@ -598,11 +597,11 @@ function updateReference(
 ) {
   const binding = bindings[index];
 
-  console.log(
-    `Update:\n${JSON.stringify(binding, null, 2)}\n`,
-    "New value:",
-    newValue
-  );
+  // console.log(
+  //   `Update:\n${JSON.stringify(binding, null, 2)}\n`,
+  //   "New value:",
+  //   newValue
+  // );
 
   if (!binding) {
     throw new Error(`UTBComponentError: Missing binding at index: "${index}".`);
