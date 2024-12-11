@@ -46,6 +46,7 @@ type RenderFunction = (state: any, ...rest: any[]) => MarkupObject;
 type AttibuteName =
   | keyof HTMLElement
   | "value"
+  | "href"
   | "$ref"
   | "$key"
   | "$items"
@@ -355,12 +356,11 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
   );
 
   // Parese HTML template into DOM elements.
-  // rewireValueAttributes() alow for setting default value for input elements without causing error when parsing HTML template
-  // into DOM elements. Since some inputs allows only specific values (e.g. Number, Date string, etc.) our
-  // attribute temaplate-string (%#0#%) is invalid. Thus we set it as static value and re-bind it during first update.
+  // preInsertProcessing() runs additional cleanup & setup tasks before creating initial DOM nodes (HOOKED version)
+  // that will be used to map external values into the template.
   wrapper.insertAdjacentHTML(
     "beforeend",
-    rewireValueAttributes(componentHtml, bindings)
+    preInsertProcessing(componentHtml, bindings)
   );
 
   // Map data-hook-index elements and attributes into their external values.
@@ -458,6 +458,14 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
           hook.removeAttribute(attribute.name);
           hookAttributes[index].name = "value";
           binding.type = "attribute";
+        }
+
+        // Hendle interpolated href attributes.
+        else if (isIntHrefAttribute(attribute.name, binding.value)) {
+          hook.removeAttribute(attribute.name);
+          hookAttributes[index].name = "href";
+          binding.type = "attribute";
+          updateAttributesTemplate(hook, attribute, bindings);
         }
 
         // Handle non-boolean attributes.
@@ -911,6 +919,26 @@ function updateReference(
   }
 }
 
+function preInsertProcessing(componentHtml: string, bindings: Binding[]) {
+  type Processor = (html: string, bindings: Binding[]) => string;
+  const processors: Processor[] = [
+    // rewireValueAttributes() alow for setting default value for input elements without causing error when parsing
+    // HTML template into DOM elements. Since some inputs allows only for specific values (e.g. Number, Date string, etc.)
+    // attribute temaplate-string used for dynamic interpolation (%#0#%) is invalid.
+    // Therefore we set it as static value and re-bind it during first update.
+    rewireValueAttributes,
+    // rewireHrefAttributes() allows to set href attribute with interpolated values without causing fetch error when parsing
+    // HTML template into DOM elements. This step is required due to fact that interpolated href is always invalid
+    // during BUILD_PHASE since it contains interpolation string (%#0#%).
+    rewireHrefAttributes,
+  ];
+
+  return processors.reduce(
+    (acc, processor) => processor(acc, bindings),
+    componentHtml
+  );
+}
+
 // Creates cleanup function that runs through all dynamic elements and run their cleanup functions.
 function createCleanupFn(bindings: Binding[]) {
   type CleanupFnunction = (() => void) | undefined;
@@ -1128,11 +1156,18 @@ function updateAttributesTemplate(
   }
 }
 
-// Set default value for input elements & proveide additional data-hook.
+// Set default value for input elements & provide additional data-hook.
 function rewireValueAttributes(html: string, bindings: Binding[]) {
   return html.replace(/ value="%#(\d+)#%"/g, (_, index) => {
     const value = bindings[Number(index)].value;
     return ` value="${value}" data-hook-dv="%#${index}#%"`;
+  });
+}
+
+// Replace href attribute with additional data-hook to allow dynamic URL interpolation.
+function rewireHrefAttributes(html: string, _bindings: Binding[]) {
+  return html.replace(/ href="(.+%#\d+#%.+?)"/g, (_, template) => {
+    return ` data-hook-hf="${template}"`;
   });
 }
 
@@ -1438,4 +1473,9 @@ function isValidAttributeValue(value?: boolean | string | number) {
 // Verify if value is an input's defaultValue.
 function isDefaultValueAttribute(name: string, value: any) {
   return name === "data-hook-dv" && isValidAttributeValue(value);
+}
+
+// Verify if attribute is a interpolated href.
+function isIntHrefAttribute(name: string, value: any) {
+  return name === "data-hook-hf" && isValidAttributeValue(value);
 }
