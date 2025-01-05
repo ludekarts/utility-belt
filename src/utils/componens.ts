@@ -979,8 +979,12 @@ function createRepeater(
 
   const repeaterIndex = repeatersPool.length - 1;
 
-  const elements = collection.map((item) => {
-    const element = renderFn(item, props);
+  const elements = collection.map((item, index) => {
+    const element = renderFn(
+      item,
+      props !== undefined ? props : index,
+      props !== undefined ? index : undefined
+    );
 
     if (isMarkupObject(element)) {
       const partialNode = dynamicElement(
@@ -1001,11 +1005,15 @@ function createRepeater(
   });
 
   const updateRepeater = (collection: any[], props: any) => {
-    return collection.map((item) => {
+    return collection.map((item, index) => {
       let element = repeatersPool[repeaterIndex][keySelector(item)];
 
       if (!element) {
-        const node = renderFn(item, props);
+        const node = renderFn(
+          item,
+          props !== undefined ? props : index,
+          props !== undefined ? index : undefined
+        );
 
         if (node instanceof HTMLElement) {
           element = repeatersPool[repeaterIndex][keySelector(item)] = node;
@@ -1017,7 +1025,11 @@ function createRepeater(
       }
 
       return isDynamicElement(element)
-        ? (element as DynamicElement).d.update(item, props)
+        ? (element as DynamicElement).d.update(
+            item,
+            props !== undefined ? props : index,
+            props !== undefined ? index : undefined
+          )
         : element;
     });
   };
