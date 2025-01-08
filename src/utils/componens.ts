@@ -100,7 +100,8 @@ type ComponentProps = {
   getState: () => void;
   getRefs: () => RefsList | null;
   getArgs: (index: number) => any;
-  effect: (callback: () => () => void) => void;
+  onMount: (callback: () => () => void) => void;
+  onUpdate: (callback: () => () => void) => void;
 };
 
 type ComponentFunction = (props: ComponentProps) => RenderFunction;
@@ -140,9 +141,12 @@ export function component<T>(componentFn: ComponentFunction) {
   let restArgs: any[] = [];
   let prevState: T | undefined;
   let props: ComponentProps | null = null;
-  let clearEffect: (() => void) | undefined;
   let renderFn: RenderFunction | undefined;
-  let effectHandler: (() => () => void) | undefined;
+  let clearOnMount: (() => void) | undefined;
+  let onMountHandler: (() => () => void) | undefined;
+  let onUpdateHandler:
+    | ((newState: any, oldState: any, ...restArgs: any[]) => void)
+    | undefined;
 
   let render = (state: T, ...rest: any[]) => {
     let finalState =
@@ -163,8 +167,11 @@ export function component<T>(componentFn: ComponentFunction) {
               : { root: element }
             : null;
         },
-        effect(callback) {
-          effectHandler = callback;
+        onMount(callback) {
+          onMountHandler = callback;
+        },
+        onUpdate(callback) {
+          onUpdateHandler = callback;
         },
       };
 
@@ -180,25 +187,38 @@ export function component<T>(componentFn: ComponentFunction) {
     if (!element && renderFn) {
       prevState = finalState;
       element = createDynamicElement(renderFn, finalState, ...restArgs);
-      clearEffect = effectHandler?.();
+      clearOnMount = onMountHandler?.();
       element.d.cleanup(() => {
-        clearEffect?.();
+        clearOnMount?.();
         props = null;
         restArgs = [];
         initRender = true;
-        element = prevState = renderFn = effectHandler = undefined;
+        element =
+          prevState =
+          renderFn =
+          onMountHandler =
+          onUpdateHandler =
+            undefined;
       });
     }
 
     // Re-render with previouse State.
     else if (element && finalState === undefined) {
-      element.d.update(prevState, ...restArgs);
+      const upState = onUpdateHandler?.(prevState, prevState, ...restArgs);
+      element.d.update(
+        upState !== undefined ? upState : prevState,
+        ...restArgs
+      );
     }
 
     // Update only when State changes.
     else if (element && prevState !== finalState) {
       prevState = finalState;
-      element.d.update(finalState, ...restArgs);
+      const upState = onUpdateHandler?.(finalState, prevState, ...restArgs);
+      element.d.update(
+        upState !== undefined ? upState : finalState,
+        ...restArgs
+      );
     }
 
     return element;
