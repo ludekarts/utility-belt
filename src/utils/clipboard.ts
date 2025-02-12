@@ -2,9 +2,9 @@
  * Allows for copying text to clipboard.
  *
  * @example
- * copyText("Hello, World!", document.querySelector("#someElement"));
+ * copyToClipboard("Hello, World!", document.querySelector("#someElement"));
  */
-export default function copyText(value: string, rootElement?: HTMLElement) {
+export function copyToClipboard(value: string, rootElement?: HTMLElement) {
   const container = (document.getElementById("_clipContainer_") ||
     document.createElement("textarea")) as HTMLTextAreaElement;
   const root = rootElement || document.body;
