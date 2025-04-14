@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.8.0",
+  "version": "0.8.0-alpha.1",
   "description": "JavaScript Utilities Collection",
   "files": [
     "dist"
@@ -10,6 +10,7 @@
   "main": "dist/utility-belt.umd.js",
   "module": "dist/utility-belt.es.js",
   "exports": {
+    "types": "./dist/utility-belt.d.ts",
     "import": "./dist/utility-belt.es.js",
     "require": "./dist/utility-belt.umd.js"
   },

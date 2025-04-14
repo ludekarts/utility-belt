@@ -2,16 +2,21 @@
 // import { get, post, abortRequest, clearCache } from "@ludekarts/utility-belt;
 
 // Types.
-type baseType = string | number | boolean;
-type ResponseFallback = (response: Response) => any;
-type BodyObject = {
+export type baseType = string | number | boolean;
+export type ResponseFallback = (response: Response) => any;
+export type BodyObject = {
   [key: string]: baseType | baseType[] | BodyObject | BodyObject[];
 };
 
-type RequestBody = baseType | baseType[] | BodyObject | BodyObject[] | FormData;
-type RequestOptions = Omit<RequestInit, "body"> & {
+export type RequestBody =
+  | baseType
+  | baseType[]
+  | BodyObject
+  | BodyObject[]
+  | FormData;
+
+export type RequestOptions = RequestInit & {
   body?: RequestBody;
-  method?: string;
   abortable?: boolean;
   requestHash?: string;
   cacheRequest?: boolean;
@@ -124,12 +129,9 @@ export function clearCache(url: string | RegExp, requestHash: string = "") {
   }
 }
 
-export async function post(
-  url: string,
-  body?: RequestBody,
-  options?: RequestOptions
-) {
+export async function post(url: string, options?: RequestOptions) {
   const {
+    body,
     method,
     headers,
     fallback,
@@ -264,9 +266,9 @@ function encodeBody(body: RequestBody, initHeaders: HeadersInit = {}) {
 
   // Content-Type auto detection.
   if (!contentType) {
-    if (body instanceof HTMLFormElement) {
+    if (isFormElement(body)) {
       // Not setting Content-Type so the browser can set it automaicaly.
-      return { headers, body: new FormData(body) };
+      return { headers, body: new FormData(body as HTMLFormElement) };
     } else if (body instanceof FormData) {
       // Not setting Content-Type so the browser can set it automaicaly.
       return { headers, body };
@@ -300,8 +302,8 @@ function encodeBody(body: RequestBody, initHeaders: HeadersInit = {}) {
       };
     } else if (contentType === "multipart/form-data") {
       headers.delete("Content-Type");
-      if (body instanceof HTMLFormElement) {
-        return { headers, body: new FormData(body) };
+      if (isFormElement(body)) {
+        return { headers, body: new FormData(body as HTMLFormElement) };
       } else if (body instanceof FormData) {
         return { headers, body };
       } else if (isBodyObject(body)) {
@@ -404,6 +406,10 @@ function objectToDataForm(body: BodyObject) {
 }
 
 // ---- Verifiers ----------------
+
+function isFormElement(body: any) {
+  return typeof window !== "undefined" && body instanceof HTMLFormElement;
+}
 
 function isBasicType(value: any) {
   return (

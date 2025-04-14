@@ -96,15 +96,21 @@ type Binding = {
     propsIndex?: number; // Index of binding containing props for the repeater.
   } | null;
 };
-type ComponentProps = {
-  getState: () => void;
+type ComponentProps<T> = {
+  getState: () => T | undefined;
   getRefs: () => RefsList | null;
   getArgs: (index: number) => any;
-  onMount: (callback: () => () => void) => void;
-  onUpdate: (callback: () => () => void) => void;
+  onMount: (callback: (state: T | undefined) => () => void) => void;
+  onUpdate: (
+    callback: (
+      prevState: T | undefined,
+      newState: T | undefined,
+      ...args: any[]
+    ) => () => void
+  ) => void;
 };
 
-type ComponentFunction = (props: ComponentProps) => RenderFunction;
+type ComponentFunction<T> = (props: ComponentProps<T>) => RenderFunction;
 
 // ----  API ---------------------------
 
@@ -135,17 +141,21 @@ export function html(markup: TemplateStringsArray, ...values: any[]) {
   );
 }
 
-export function component<T>(componentFn: ComponentFunction) {
+export function component<T>(componentFn: ComponentFunction<T>) {
   let element: DynamicElement | undefined;
   let initRender = true;
   let restArgs: any[] = [];
   let prevState: T | undefined;
-  let props: ComponentProps | null = null;
+  let props: ComponentProps<T> | null = null;
   let renderFn: RenderFunction | undefined;
   let clearOnMount: (() => void) | undefined;
-  let onMountHandler: (() => () => void) | undefined;
+  let onMountHandler: ((state: T) => () => void) | undefined;
   let onUpdateHandler:
-    | ((newState: any, oldState: any, ...restArgs: any[]) => void)
+    | ((
+        newState: T | undefined,
+        oldState: T | undefined,
+        ...restArgs: any[]
+      ) => void)
     | undefined;
 
   let render = (state: T, ...rest: any[]) => {
@@ -185,9 +195,9 @@ export function component<T>(componentFn: ComponentFunction) {
 
     // Create new dynamic element.
     if (!element && renderFn) {
-      prevState = finalState;
       element = createDynamicElement(renderFn, finalState, ...restArgs);
-      clearOnMount = onMountHandler?.();
+      clearOnMount = onMountHandler?.(finalState);
+      prevState = finalState;
       element.d.cleanup(() => {
         clearOnMount?.();
         props = null;
@@ -213,8 +223,8 @@ export function component<T>(componentFn: ComponentFunction) {
 
     // Update only when State changes.
     else if (element && prevState !== finalState) {
-      prevState = finalState;
       const upState = onUpdateHandler?.(finalState, prevState, ...restArgs);
+      prevState = finalState;
       element.d.update(
         upState !== undefined ? upState : finalState,
         ...restArgs
