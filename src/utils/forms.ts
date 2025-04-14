@@ -1,17 +1,6 @@
-type FormValue = null | string | boolean | { value: string; checked: boolean };
-type FormFields = Record<string, FormValue>;
-
-type FormFieldsOptions = {
-  includeCheckboxValues: boolean;
-};
-
 /**
  *
  * Get an object with all form fields and their values.
- *
- * ⚠️ NOTICE:
- * In case of checkboxes the value is replaced with "checked" state since in most cases this is what you want
- * from toggle switch rather than the value that is not changing.
  *
  * @example
  *
@@ -20,47 +9,101 @@ type FormFieldsOptions = {
  *   <input type="number" name="age" value="25">
  *   <input type="radio" name="mood" value="bad">
  *   <input type="radio" name="mood" value="good" checked>
- *   <input type="checkbox" name="active" value="🔥" checked>
+ *   <input type="checkbox" name="element" value="🔥" checked>
+ *   <input type="checkbox" name="element" value="💧">
  * </form>
  *
- * const { name, age, mood, active } = getFormFields("#myForm");
- * // active => true
+ * const { name, age, mood, element } = getFormFields("#myForm");
+ * // element => ["🔥", "💧"]
  *
- * OR W/ options
+ * OR w/ options:
  *
- * const { name, age, mood, active } = getFormFields("#myForm",  { includeCheckboxValues: true });
- * // active => { value: "🔥", checked: true }
+ * -> includeCheckboxState: true - include the checkbox state in the result (checked/unchecked)
+ *
+ * const { name, age, mood, element } = getFormFields("#myForm",  { includeCheckboxState: true });
+ * // element => [{ value: "🔥", checked: true }, { value: "💧", checked: false }]
+ *
+ * -> onlyCheckboxState: true - only include the checkbox state in the result (true/false)
+ *
+ * const { name, age, mood, element } = getFormFields("#myForm",  { onlyCheckboxState: true });
+ * // element => [true, false]
+ *
+ * -> onlyRecentValues: true - only include the most recent (last in the DOM tree) value for each "name" field
+ *
+ * const { name, age, mood, element } = getFormFields("#myForm",  { onlyRecentValues: true });
+ * // element => ["💧"]
+ *
+ * -> onlySelectedChekboxes: true - include in the result only value of selected checkboxes
+ *
+ * const { name, age, mood, element } = getFormFields("#myForm",  { onlyRecentValues: true });
+ * // element => ["💧"]
  *
  */
 
+export type CheckboxValue = { value?: string; checked: boolean };
+export type FormValue = string | boolean | CheckboxValue;
+type FormFieldsOptions = {
+  onlySelectedChekboxes?: boolean;
+  includeCheckboxState?: boolean;
+  onlyCheckboxState?: boolean;
+  onlyRecentValues?: boolean;
+};
+
 export function getFormFields(
   form: HTMLFormElement,
-  options: FormFieldsOptions = { includeCheckboxValues: false }
+  options: FormFieldsOptions = {}
 ) {
-  return (Array.from(form.elements) as HTMLFormElement[]).reduce(
-    (acc, element) => {
-      if (element.name) {
-        if (element.type === "radio") {
-          if (element.checked) {
-            acc[element.name] = element.value;
-          }
-        } else if (element.type === "checkbox") {
-          if (options.includeCheckboxValues) {
-            acc[element.name] = {
-              value: element.value,
-              checked: element.checked,
-            };
-          } else {
-            acc[element.name] = element.checked;
-          }
-        } else {
-          acc[element.name] = element.value;
+  const {
+    onlySelectedChekboxes = false,
+    includeCheckboxState = false,
+    onlyCheckboxState = false,
+    onlyRecentValues = false,
+  } = options;
+  const fields: Map<string, FormValue | FormValue[]> = new Map();
+
+  for (const element of form.elements) {
+    const { name, type, value, checked } = element as HTMLInputElement;
+    if (name) {
+      !fields.has(name) && fields.set(name, []);
+
+      if (type === "checkbox") {
+        if (onlySelectedChekboxes && !checked) {
+          continue;
         }
+
+        let pushValue: FormValue = onlyCheckboxState ? checked : value;
+
+        if (includeCheckboxState) {
+          pushValue = onlyCheckboxState ? { checked } : { value, checked };
+        }
+
+        (fields.get(name) as FormValue[]).push(pushValue);
+      } else if (type === "radio") {
+        checked && fields.set(name, [value]);
+      } else {
+        (fields.get(name) as FormValue[]).push(value);
       }
-      return acc;
-    },
-    {} as FormFields
-  );
+    }
+  }
+
+  // Cleanup.
+
+  for (const [name, v] of fields.entries()) {
+    const values = v as FormValue[];
+    const recentValue = (values as FormValue[])[values.length - 1];
+
+    if (onlyRecentValues && Array.isArray(values)) {
+      fields.set(name, recentValue);
+    }
+
+    if (values.length === 1) {
+      fields.set(name, recentValue);
+    } else if (!onlyRecentValues) {
+      fields.set(name, values);
+    }
+  }
+
+  return Object.fromEntries(fields.entries());
 }
 
 /**
@@ -104,7 +147,7 @@ export function getFormFields(
  **/
 export function updateForm(
   selector: HTMLFormElement | string,
-  source: FormFields
+  source: Record<string, FormValue>
 ) {
   const form =
     selector instanceof HTMLFormElement
