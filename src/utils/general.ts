@@ -101,7 +101,11 @@ export function inPolygon(
  *
  * @example
  *
- * const getCase = wordCase({ one: "produkt", some: "produkty", multiple: "produktów" });
+ * const getCase = plPlurals({
+ *  one: "produkt",
+ *  few: "produkty",
+ *  many: "produktów"
+ * });
  *
  * getCase(1) // => "produkt"
  * getCase(2) // => "produkty"
@@ -110,21 +114,23 @@ export function inPolygon(
  *
  */
 
-type WordCaseOptions = {
-  one: string;
-  some: string;
-  multiple: string;
+type plPluralsSettings = {
+  one?: string;
+  few?: string;
+  many?: string;
 };
-export function wordCase(options: WordCaseOptions) {
-  const mods = [2, 3, 4];
-  const mtpval = [11, 12, 13, 14];
+
+export function plPlurals(settings: plPluralsSettings = {}) {
+  const manyCases = [11, 12, 13, 14];
+  const moduloCases = [2, 3, 4];
+  const { one = "", few = "", many = "" } = settings;
   return (value: number) => {
     const mod10 = value % 10;
     return value === 1
-      ? options.one
-      : !mods.includes(mod10) || mtpval.includes(value)
-      ? options.multiple
-      : options.some;
+      ? one
+      : !moduloCases.includes(mod10) || manyCases.includes(value)
+      ? many
+      : few;
   };
 }
 

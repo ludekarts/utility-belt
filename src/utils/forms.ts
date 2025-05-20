@@ -33,17 +33,17 @@
  * const { name, age, mood, element } = getFormFields("#myForm",  { onlyRecentValues: true });
  * // element => ["💧"]
  *
- * -> onlySelectedChekboxes: true - include in the result only value of selected checkboxes
+ * -> onlySelectedCheckboxes: true - include in the result only value of selected checkboxes
  *
- * const { name, age, mood, element } = getFormFields("#myForm",  { onlyRecentValues: true });
- * // element => ["💧"]
+ * const { name, age, mood, element } = getFormFields("#myForm",  { onlySelectedCheckboxes: true });
+ * // element => ["🔥"]
  *
  */
 
 export type CheckboxValue = { value?: string; checked: boolean };
 export type FormValue = string | boolean | CheckboxValue;
 type FormFieldsOptions = {
-  onlySelectedChekboxes?: boolean;
+  onlySelectedCheckboxes?: boolean;
   includeCheckboxState?: boolean;
   onlyCheckboxState?: boolean;
   onlyRecentValues?: boolean;
@@ -54,7 +54,7 @@ export function getFormFields(
   options: FormFieldsOptions = {}
 ) {
   const {
-    onlySelectedChekboxes = false,
+    onlySelectedCheckboxes = false,
     includeCheckboxState = false,
     onlyCheckboxState = false,
     onlyRecentValues = false,
@@ -67,7 +67,7 @@ export function getFormFields(
       !fields.has(name) && fields.set(name, []);
 
       if (type === "checkbox") {
-        if (onlySelectedChekboxes && !checked) {
+        if (onlySelectedCheckboxes && !checked) {
           continue;
         }
 

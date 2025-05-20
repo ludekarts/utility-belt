@@ -11,7 +11,7 @@ export function splitAtIndex(str: string, index: number) {
 }
 
 /**
- * Place 'insert' inside 'str' string at given 'position'.
+ * Place @insertStr string into @baseStr string at given @position number
  *
  * @example
  *
@@ -20,11 +20,11 @@ export function splitAtIndex(str: string, index: number) {
  */
 
 //
-export function insertStrAtIndex(
-  str: string,
-  insert: string,
+export function insertStringAtIndex(
+  baseStr: string,
+  insertStr: string,
   position: number
 ) {
-  const [head, tail] = splitAtIndex(str, position);
-  return `${head}${insert}${tail}`;
+  const [head, tail] = splitAtIndex(baseStr, position);
+  return `${head}${insertStr}${tail}`;
 }

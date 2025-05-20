@@ -1,5 +1,5 @@
 /**
- * Create a DOM element from string. Or Fragment if there are multiple elements.
+ * Create a DOM element from string or Fragment if there are multiple elements.
  *
  * @example
  *
@@ -67,4 +67,82 @@ export function attachStyle(style: string, name: string) {
 
   document.head.appendChild(element).textContent += style;
   return element;
+}
+
+/**
+ * Inject <script> tag into page.
+ *
+ * @example
+ *
+ * includeScriptTag("https://example.com/script.js", {
+ *  isModule: true,
+ *  onComplete: () => console.log("script loaded"),
+ * });
+ *
+ */
+
+interface IncludeScriptTagConfig {
+  isModule?: boolean;
+  onComplete?: () => void;
+}
+export function includeScriptTag(
+  path: string,
+  config = {} as IncludeScriptTagConfig
+) {
+  const { isModule, onComplete } = config;
+  const script = document.createElement("script");
+  script.setAttribute("type", isModule ? "module" : "text/javascript");
+
+  onComplete && script.addEventListener("load", onLoadHandler);
+
+  function onLoadHandler() {
+    script.removeEventListener("load", onLoadHandler);
+    onComplete?.();
+  }
+
+  script.setAttribute("src", path);
+  document.head.appendChild(script);
+}
+
+/**
+ * Imports HTML file and renders it content into DOM element, then triggers custom "htmlLoaded" event on containder node.
+ *
+ * @example
+ *
+ * JS:
+ * importHtml(() => console.log("all scripts loaded"));
+ *
+ * HTML:
+ * <div data-import="./path/to/file.html"></div>
+ */
+
+export default function importHtml(doneCallback: () => void) {
+  const entry = document.querySelector("*[data-import]") as HTMLElement;
+  if (!entry) return doneCallback && doneCallback();
+
+  const importFile = entry.dataset.import as string;
+  entry.removeAttribute("data-import");
+
+  fetch(importFile)
+    .then((response) => {
+      if (response.ok) return response.text();
+      throw Error(`Cannot import file: ${importFile}`);
+    })
+    .then((html) => {
+      entry.innerHTML = html;
+      entry.dispatchEvent(
+        new CustomEvent("htmlLoaded", {
+          bubbles: true,
+          detail: {
+            file: importFile,
+          },
+        })
+      );
+      importHtml(doneCallback);
+    })
+    .catch((error) => {
+      entry.innerHTML = `<strong style="color:red;">Cannot import module!</strong>`;
+      console.error(error);
+      importHtml(doneCallback);
+    });
 }

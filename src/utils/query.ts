@@ -39,7 +39,14 @@ export function getQueryParams(...params: string[]) {
  * @example
  *
  * const query = updateQueryParams("https://example.com?id=123&user=admin&filter=age&filter=address", "id", "456");
- * console.log(query); // "https://example.com?id=456user=admin&filter=age&filter=address"
+ * console.log(query); // "https://example.com?id=456&user=admin&filter=age&filter=address"
+ *
+ * const multiQuery = updateQueryParams("https://example.com?id=123&user=admin", {
+ *   id: "456",
+ *   filter: ["age", "address"],
+ *   user: "guest"
+ * });
+ * console.log(multiQuery); // "https://example.com?id=456&user=guest&filter=age&filter=address"
  *
  */
 
