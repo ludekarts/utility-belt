@@ -1,7 +1,7 @@
 import "../dist/utility-belt.umd.js";
 
 describe("Strings tests", () => {
-  const { splitAtIndex, insertStrAtIndex } = window.UtilityBelt;
+  const { splitAtIndex, insertStringAtIndex } = window.UtilityBelt;
 
   it("Should split word at given index", () => {
     const result = splitAtIndex("Hello World", 5);
@@ -9,7 +9,7 @@ describe("Strings tests", () => {
   });
 
   it("Should insert word at given index", () => {
-    const result = insertStrAtIndex("Hello World", " Beautifull", 5);
+    const result = insertStringAtIndex("Hello World", " Beautifull", 5);
     expect(result).to.equal("Hello Beautifull World");
   });
 });

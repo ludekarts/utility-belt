@@ -1,50 +1,62 @@
-// DESC:
-//
-// Creates an action handler that reacts to (by default on) buttons with "data-action" attibute.
-// It calls proper callback fn according to the action name.
-//
-// USAGE:
-//
-// >> HTML:
-// <button class="menu-item" data-action="action-name">My Action</button>
-//
-// >> JS:
-//
-// import { catchAction } from "@ludekarts/utility-belt";
-// . . .
-//
-// document.querySelector("#menu-bar").onclick = catchAction("button.menu-item")
-//  .addAction("action-name", ({action, event, dataset}) => {})
-//  .addAction("action-name-2", ({action, event, dataset}) => {})
-//  .addDefaultAction(({action, event, dataset}) => {/* Callback runs only if no other action matches */})
-//  .done(({action, event, dataset}) => {/* Callback runs on each interaction with matching selector */});
-//
+/**
+ *
+ * Creates action handler that reacts to "data-utb-action" attibute.
+ * It calls proper callback fn according to the action name.
+ *
+ * @example
+ *
+ * HTML:
+ * <button class="menu-item" data-utb-action="action-name">My Action</button>
+ *
+ * JS:
+ * document.querySelector("#menu-bar").onclick = catchAction("button.menu-item")
+ *  .addAction("action-name", ({action, event, dataset}) => {})
+ *  .addAction("action-name-2", ({action, event, dataset}) => {})
+ *  .addDefaultAction(({action, event, dataset}) => {})           // Callback runs only if no other action matches.
+ *  .done(({action, event, dataset}) => {});                      // Callback runs on each interaction with matching selector.
+ *
+ */
 
-export function catchAction(selector = "button[data-action]") {
+type Action = {
+  event: Event;
+  action: string;
+  dataset: DOMStringMap;
+};
+
+type ActionCallback = (action: Action) => void;
+
+export function catchAction() {
+  const selector = "*[data-utb-action]";
   let actions = new Map();
-  let defaultAction;
+  let defaultAction: ActionCallback;
 
   const api = Object.freeze({
-    addAction(name, callback) {
+    addAction(name: string, callback: ActionCallback) {
       if (!actions.has(name)) {
         actions.set(name, callback);
       } else {
-        throw new Erron(`Action "${name}" already exist.`);
+        throw new Error(`Action "${name}" already exist.`);
       }
       return api;
     },
 
-    addDefaultAction(callback) {
+    addDefaultAction(callback: ActionCallback) {
       defaultAction = callback;
       return api;
     },
 
-    done(doneCallback) {
-      return (event) => {
-        if (event.target.matches(selector)) {
-          const { action } = event.target.dataset;
+    done(doneCallback: ActionCallback) {
+      return (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+
+        if (target.matches(selector)) {
+          const action = target.dataset.utbAction!;
           const fn = actions.get(action);
-          const actionObject = { action, event, dataset: event.target.dataset };
+          const actionObject: Action = {
+            event,
+            action,
+            dataset: target.dataset,
+          };
           typeof fn === "function"
             ? fn(actionObject)
             : defaultAction
@@ -59,46 +71,53 @@ export function catchAction(selector = "button[data-action]") {
   return api;
 }
 
-// DESC:
-//
-// Creates handlers for keyboard events.
-// It recognizes keyboard key by "event.code" value, so pressing "Z" key should be setup by set "KeyZ" as key.
-//
-// USAGE:
-//
-// import { keyboard } from "@ludekarts/utility-belt";
-// . . .
-//
-// document.querySelector("input").onkeydown = keyboard(onlyMyInput)
-//    .key("Ctrl+Z", customUndo, true)                        // String notation.
-//    .key({ key: "Z", shift: true, ctrl: true }, clearInput) // Object notation.
-//    .done();
-//
-// function onlyMyInput(event) {
-//    return evnet.target.id = "my-input";
-// }
-//
-// function customUndo(event) {
-//    event.preventDefault();
-//    . . .
-// }
-//
-// function clearInput(event) {
-//    event.preventDefault();
-//    event.target.value = "";
-// }
-//
-// NOTE:
-//
-// Key signature: Key+Shift+Ctrl+Alt e.g.:
-//    Enter key          --> "Enter"
-//    Enter + Shift key  --> "Enter+Shift"
-//    Special key + key  --> "Shift+Ctrl+W" === "Shift+Ctrl+KeyW" === "W+Shift+Ctrl"
-//
-export function keyboard(filterFn) {
+/**
+ * Creates handlers for keyboard events. It recognizes keyboard key by "event.code" value,
+ * so pressing "Z" key should be setup by set "KeyZ" as key.
+ *
+ *
+ * document.querySelector("input").onkeydown = keyboard(onlyMyInput)
+ *   .key("Ctrl+Z", customUndo, true)                        // String notation.
+ *   .key({ key: "Z", shift: true, ctrl: true }, clearInput) // Object notation.
+ *   .done();
+ *
+ * function onlyMyInput(event) {
+ *  return evnet.target.id = "my-input";
+ * }
+ *
+ * function customUndo(event) {
+ *  event.preventDefault();
+ *  ...
+ * }
+ *
+ * function clearInput(event) {
+ *  event.preventDefault();
+ *  event.target.value = "";
+ * }
+ *
+ * NOTE:
+ *
+ * Key signature: Key+Shift+Ctrl+Alt e.g.:
+ *    Enter key          --> "Enter"
+ *    Enter + Shift key  --> "Enter+Shift"
+ *    Special key + key  --> "Shift+Ctrl+W" === "Shift+Ctrl+KeyW" === "W+Shift+Ctrl"
+ *
+ */
+
+type KeyConfig =
+  | string
+  | {
+      key: string;
+      shift?: boolean;
+      ctrl?: boolean;
+      alt?: boolean;
+      meta?: boolean;
+    };
+
+export function keyboard(filterFn?: (event: KeyboardEvent) => boolean) {
   let keyCombos = new Map();
 
-  function executeEventCallback(keyHash, event) {
+  function executeEventCallback(keyHash: string, event: KeyboardEvent) {
     if (keyCombos.has(keyHash)) {
       const [callback, preventDefault] = keyCombos.get(keyHash);
       preventDefault && event.preventDefault();
@@ -107,14 +126,18 @@ export function keyboard(filterFn) {
   }
 
   const api = Object.freeze({
-    key(config, callback, preventDefault = false) {
+    key(
+      config: KeyConfig,
+      callback: (event: KeyboardEvent) => void,
+      preventDefault = false
+    ) {
       const keyHash = parseConfig(config);
       keyCombos.set(keyHash, [callback, preventDefault]);
       return api;
     },
 
-    done(defaultCallback) {
-      return (event) => {
+    done(defaultCallback: (event: KeyboardEvent) => void) {
+      return (event: KeyboardEvent) => {
         const keyHash = parseConfig({
           key: event.code,
           alt: event.altKey,
@@ -139,7 +162,7 @@ export function keyboard(filterFn) {
   return api;
 }
 
-export function parseConfig(config) {
+export function parseConfig(config: KeyConfig): string {
   let keyHash;
 
   if (typeof config === "string") {
@@ -171,52 +194,59 @@ export function parseConfig(config) {
   return keyHash;
 }
 
-function notActionKey(key) {
+function notActionKey(key: string) {
   return key !== "Shift" && key !== "Ctrl" && key !== "Alt" && key !== "Meta";
 }
 
-// USAGE:
-//
-// in JS:
-//
-// import { catchEvents } from "@ludekarts/utility-belt";
-// ...
-// const handlers = catchEvents(document.body, "click", "dblclick", ...);
-// ...
-// handlers.add("actionAname", event => {
-//   ...
-// });
-//
-// ...
-// handlers.callHandler("name", {});
-//
-// in HTML:
-//
-// <button data-click="actionAname">OK</button>
+/**
+ *
+ *
+ * @example
+ *
+ * JS:
+ * const handlers = catchEvents(document.body, "click", "dblclick", ...);
+ *
+ * ...
+ *
+ * handlers.add("actionAname", event => {...});
+ * handlers.add("dbClickAction", event => {...});
+ *
+ * ...
+ *
+ * handlers.callHandler("actionAname");
+ *
+ *
+ * HTML:
+ * <button data-click="clickAction">OK</button>
+ * <button data-dblclick="dbClickAction">OK</button>
+ *
+ */
 
-export function catchEvents(root, ...events) {
-  const registerHandlers = {};
+export function catchEvents(root: HTMLElement, ...events: string[]) {
+  const registerHandlers = new Map();
 
-  const globalCallback = (eventName) => (event) => {
-    if (event.target.dataset[eventName]) {
-      const callback = registerHandlers[event.target.dataset[eventName]];
-      callback && callback(event);
+  const globalCallback = (eventName: string) => (event: Event) => {
+    const target = event.target as HTMLElement;
+    if (target.dataset[eventName]) {
+      const callback = registerHandlers.get(target.dataset[eventName]);
+      callback?.(event);
     }
   };
 
   events.forEach((eventName) => {
     root.addEventListener(eventName, globalCallback(eventName));
-    // console.log(`Added ${eventName} event handler`);
   });
 
-  const addHandler = (handlerName, callback) => {
-    if (!registerHandlers[handlerName]) {
-      registerHandlers[handlerName] = callback;
-    }
+  const addHandler = (
+    handlerName: string,
+    callback: (event: Event) => void
+  ) => {
+    !registerHandlers.has(handlerName) &&
+      registerHandlers.set(handlerName, callback);
   };
 
-  const runRegisterHandler = (name, event) => {
-    registerHandlers[name](event);
+  const runRegisterHandler = (name: String, event?: Event) => {
+    registerHandlers.get(name)?.(event);
   };
 
   return Object.freeze({
@@ -225,11 +255,26 @@ export function catchEvents(root, ...events) {
   });
 }
 
-// Create EventListener with destroy function at return statement.
+/**
+ * Create EventListener with destroy function at return.
+ *
+ * @example
+ *
+ * const removeHandler = createEventHandler(
+ *  document.querySelector("#send"),
+ *  "click",
+ *  () => console.log("button clicked"),
+ *  false
+ * );
+ *
+ * removeHandler();
+ *
+ */
+
 export function createEventHandler(
-  element,
-  eventName,
-  callback,
+  element: HTMLElement,
+  eventName: string,
+  callback: (event: Event) => void,
   useCapture = false
 ) {
   element.addEventListener(eventName, callback, useCapture);

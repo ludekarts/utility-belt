@@ -21,49 +21,46 @@
  * );
  */
 
-type Transformer = (key: string, value: any) => any;
+type Transformer = (key: string | null, value: any) => any;
 
-export function transformObject<T>(input: T, transformer: Transformer) {
-  return traverseUnique(input, transformer, new Set());
+export function transformObject<T>(input: T, transformer: Transformer): T {
+  return traverseUnique(input, transformer, new WeakSet());
 }
 
-function transformValue(
-  key: string | null,
-  value: any,
-  transformer: Transformer
-) {
-  return typeof transformer === "function" ? transformer(key, value) : value;
-}
-
-function traverseUnique(input, transformer, visited) {
+function traverseUnique(
+  input: any,
+  transformer: Transformer,
+  visited: WeakSet<any>,
+  key: string | null = null
+): any {
   if (typeof input !== "object" || input === null) {
-    return transformValue(null, input, transformer);
+    return transformer(key, input) ?? input;
   }
 
-  // Skip cicrular references (do not stuck in loop).
   if (visited.has(input)) {
     return input;
   }
-
   visited.add(input);
 
+  let result: any;
   if (Array.isArray(input)) {
-    // We using map() to guard against case when transformer modifies the oryginal array length,
-    // so we process initial number of items and apply exact results to transformed array.
-    const transformedArray = input.map((item) =>
-      traverseUnique(item, transformer, visited)
+    result = input.map((item) =>
+      traverseUnique(item, transformer, visited, null)
     );
-    input.length = 0;
-    transformedArray.forEach((item) => input.push(item));
   } else {
-    for (const key in input) {
-      if (input.hasOwnProperty(key)) {
-        input[key] = transformValue(key, input[key], transformer);
-        input[key] = traverseUnique(input[key], transformer, visited); // Transform recursively.
+    result = {};
+    for (const k in input) {
+      if (input.hasOwnProperty(k)) {
+        const transformed = traverseUnique(input[k], transformer, visited, k);
+        if (transformed !== undefined) {
+          result[k] = transformed;
+        }
       }
     }
   }
 
   visited.delete(input);
-  return input;
+
+  const final = transformer(key, result);
+  return final === undefined ? result : final;
 }

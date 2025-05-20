@@ -1,5 +1,5 @@
 import { loop, reduce, removeByInstance } from "./arrays.ts";
-import { insertStrAtIndex } from "./strings.js";
+import { insertStringAtIndex } from "./strings.js";
 
 /*
   📝 TODO :
@@ -1113,7 +1113,7 @@ function stripWrapper(wrapper: HTMLDivElement) {
 function addHookIndexAttribute(head: string, element: string, index: number) {
   return (
     head +
-    insertStrAtIndex(
+    insertStringAtIndex(
       element,
       ` data-hook-index="${index}"`,
       element.indexOf(" ")
