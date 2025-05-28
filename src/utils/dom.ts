@@ -3,7 +3,7 @@
  *
  * @example
  *
- * const div = fragment('<div>Hello World</div>');
+ * const div = fragment("<div>Hello World</div>");
  * const docFragment = fragment(`<p>Hello</p><p>World</p>`);
  * const section = fragment(`<p>Hello</p><p>World</p>`, `section`);
  *
@@ -28,11 +28,11 @@ export function fragment(source: string, domWrapper: string | undefined) {
 }
 
 /**
- * Collect all parentNode elments begin from given 'node' and end on 'stopSelector'
+ * Collect all parentNode elments begin from given "node" and end on "stopSelector"
  *
  * @example
  *
- * const path = getNodesPath('.stop-selector');
+ * const path = getNodesPath(".stop-selector");
  *
  */
 export function getNodesPath(stopSelector: string) {
@@ -145,4 +145,54 @@ export default function importHtml(doneCallback: () => void) {
       console.error(error);
       importHtml(doneCallback);
     });
+}
+
+/**
+ * Copy attributes @from one element @to another without @excluded names.
+ *
+ * @example
+ * copyAttrs(sourceElement, targetElement, ["style", "class"]);
+ */
+export function copyAttrs(from: Element, to: Element, excluded: string[] = []) {
+  Array.from(from.attributes || []).forEach(
+    (attr) =>
+      !excluded.includes(attr.name) && to.setAttribute(attr.name, attr.value)
+  );
+}
+
+/**
+ * Move nodes from @source node to @target node base on given options.
+ *
+ * @example
+ *
+ * moveNodes(source, target, "--into");
+ * moveNodes(source, target, "--after --rm-source");
+ * moveNodes(source, target, "--before --rm-source");
+ */
+
+type MoveNodesOptions = "--into" | "--after" | "--before" | "--rm-source";
+
+export function moveNodes(
+  source: Element,
+  target: Element,
+  options: MoveNodesOptions = "--into"
+) {
+  if (!(source instanceof Element) || !(target instanceof Element)) {
+    throw new Error("moveNodes error: source and target must be DOM elements");
+  }
+
+  if (options.includes("--before")) {
+    while (source.childNodes.length > 0) target.before(source.firstChild!);
+  } else if (options.includes("--after")) {
+    while (source.childNodes.length > 0) target.after(source.firstChild!);
+  } else {
+    // --into
+    while (source.childNodes.length > 0) target.appendChild(source.firstChild!);
+  }
+
+  if (options.includes("--rm-source")) {
+    source.remove();
+  }
+
+  return target;
 }
