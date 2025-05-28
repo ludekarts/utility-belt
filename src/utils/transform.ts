@@ -1,6 +1,6 @@
 /**
  * This utility treverse @input object and allows to apply @transformer function on each value.
- * If @transformer returns undefined, the value is not changed.
+ * If @transformer returns "undefined", the value is not changed.
  *
  * @example
  *
@@ -40,6 +40,7 @@ function traverseUnique(
   if (visited.has(input)) {
     return input;
   }
+
   visited.add(input);
 
   let result: any;

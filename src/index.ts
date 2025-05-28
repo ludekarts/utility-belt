@@ -9,6 +9,7 @@ export * from "./utils/request";
 export * from "./utils/hashing";
 export * from "./utils/strings";
 export * from "./utils/history";
+export * from "./utils/highlight";
 export * from "./utils/componens";
 export * from "./utils/clipboard";
 export * from "./utils/transform";
