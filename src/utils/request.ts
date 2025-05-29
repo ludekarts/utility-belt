@@ -330,7 +330,7 @@ export function objectToUrlString(json: BodyObject) {
     .map((key) => {
       return sliceEndAnd(
         isBasicType(json[key])
-          ? `${key}=${json[key]}`
+          ? `${key}=${encodeURIComponent(json[key])}`
           : Array.isArray(json[key])
           ? arrayToUrl(json[key] as BodyObject[], key)
           : objectToUrl(json[key] as BodyObject, key)
@@ -348,7 +348,7 @@ function arrayToUrl(array: BodyObject[], prefix = "") {
         `ObjectToUrlStringError: Encounter not allowed value at: ${prefix} index: ${index}`
       );
     } else if (isBasicType(item)) {
-      result += `${prefix}=${item}&`;
+      result += `${prefix}=${encodeURIComponent(item)}&`;
     } else if (Array.isArray(item)) {
       result += arrayToUrl(item, prefix + `[${index}]`);
     } else {
@@ -368,7 +368,7 @@ function objectToUrl(object: BodyObject, prefix = "") {
         `ObjectToUrlStringError: Encounter not allowed value at: ${prefix}`
       );
     } else if (isBasicType(object[key])) {
-      result += prefix + `[${key}]=${object[key]}&`;
+      result += prefix + `[${key}]=${encodeURIComponent(object[key])}&`;
     } else if (Array.isArray(object[key])) {
       result += arrayToUrl(object[key] as BodyObject[], prefix + `[${key}]`);
     } else {
