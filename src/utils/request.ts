@@ -20,12 +20,18 @@ export type RequestOptions = RequestInit & {
 };
 
 // Container for all pending requests.
-const requestQueue = new Map();
+type RequestQueueValue = {
+  requestRef: Promise<any>;
+  controller: AbortController;
+};
+const requestQueue: Map<string, RequestQueueValue> = new Map();
 
 // Container for all cached requests.
-const responseCache = new Map();
+const responseCache: Map<string, any> = new Map();
 
-// Create request fn.
+/**
+ * Main request function with caching and aborting support.
+ */
 export function request<R>(url: string, options?: RequestOptions): Promise<R> {
   const {
     method = "GET",
@@ -74,11 +80,15 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
     return Promise.resolve(responseCache.get(finalRequestHash));
   } else if (IS_PENDING_REQUEST) {
     if (abortable) {
-      requestQueue.get(finalRequestHash).controller.abort();
-      requestQueue.delete(finalRequestHash);
+      const pendingRequest = requestQueue.get(finalRequestHash);
+      if (pendingRequest) {
+        pendingRequest.controller.abort();
+        requestQueue.delete(finalRequestHash);
+      }
       return createNewRequest();
     } else {
-      return requestQueue.get(finalRequestHash).requestRef;
+      const cachedRequest = requestQueue.get(finalRequestHash);
+      return cachedRequest ? cachedRequest.requestRef : createNewRequest();
     }
   } else {
     return createNewRequest();
@@ -91,6 +101,9 @@ type RequestConfiguratorOptions = RequestOptions & {
     | ((globalHeaders: HeadersInit) => HeadersInit);
 };
 
+/**
+ * Returns a configured request function for a specific HTTP method.
+ */
 export function requestConfigurator(
   method: string,
   globalOptions: RequestOptions = {}
@@ -115,7 +128,9 @@ export function requestConfigurator(
   };
 }
 
-// Abort given request.
+/**
+ * Abort a pending request by hash or method/url.
+ */
 export function abortRequest(hashOrMethod: string, url?: string) {
   if (typeof hashOrMethod !== "string") {
     throw new Error(`RequestHelperError: RequestHash need to be a string`);
@@ -127,17 +142,22 @@ export function abortRequest(hashOrMethod: string, url?: string) {
   );
 
   if (requestQueue.has(requestHash)) {
-    requestQueue.get(requestHash).controller.abort("Aborted by user");
+    requestQueue.get(requestHash)?.controller.abort();
     requestQueue.delete(requestHash);
   }
 }
 
+/**
+ * Debug helper to log current request queue and cache.
+ */
 export function requestDebug() {
   console.log("Request Queue:", requestQueue);
   console.log("Response Cache:", responseCache);
 }
 
-// Clear requestCache.
+/**
+ * Clear request cache by hash, RegExp, or all.
+ */
 export function clearCache(hashOrMethod: string | RegExp, url?: string) {
   // Remove by Request Hash.
   if (typeof hashOrMethod === "string") {
@@ -149,7 +169,7 @@ export function clearCache(hashOrMethod: string | RegExp, url?: string) {
     responseCache.delete(requestHash);
   }
 
-  // Remove by Reular Expression.
+  // Remove by Regular Expression.
   else if (hashOrMethod instanceof RegExp) {
     for (let cacheKey of responseCache.keys()) {
       hashOrMethod.test(cacheKey) && responseCache.delete(cacheKey);
@@ -186,7 +206,7 @@ function createRequestHash(method: string, url?: string, hash?: string) {
     );
   }
 
-  if (typeof method === undefined && typeof url !== "string") {
+  if (hash === undefined && typeof url !== "string") {
     throw new Error(
       `RequestHelperError: URL must be a string. Received: ${typeof url}`
     );
@@ -206,7 +226,7 @@ function cacheResponse(requestHash: string, cacheRequest: boolean) {
   };
 }
 
-// Rremove rejected response from the request queue.
+// Remove rejected response from the request queue.
 function clearRejectedResponse(requestHash: string, cacheRequest: boolean) {
   return (response: Response) => {
     if (cacheRequest) {
@@ -304,8 +324,7 @@ function objectToUrl(object: BodyObject, prefix = "") {
     } else {
       result += objectToUrl(object[key] as BodyObject, prefix + `[${key}]`);
     }
-
-    return result;
+    // Removed unnecessary return statement inside forEach
   });
 
   return result;
@@ -338,7 +357,7 @@ export function objectToDataForm(body: BodyObject) {
 
 // ---- Verifiers ----------------
 
-function isBasicType(value: any) {
+function isBasicType(value: unknown): value is baseType {
   return (
     typeof value === "string" ||
     typeof value === "number" ||
@@ -346,7 +365,7 @@ function isBasicType(value: any) {
   );
 }
 
-function notAllowed(value: any) {
+function notAllowed(value: unknown): boolean {
   return (
     value === null ||
     value === undefined ||
