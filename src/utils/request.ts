@@ -1,5 +1,5 @@
 // USAGE:
-// import { get, post, abortRequest, clearCache } from "@ludekarts/utility-belt;
+// import { request, abortRequest, clearCache, requestConfigurator } from "@ludekarts/utility-belt;
 
 // Types.
 export type baseType = string | number | boolean;
@@ -8,20 +8,15 @@ export type BodyObject = {
   [key: string]: baseType | baseType[] | BodyObject | BodyObject[];
 };
 
-export type RequestBody =
-  | baseType
-  | baseType[]
-  | BodyObject
-  | BodyObject[]
-  | FormData;
+type ResponseProcessor = <R>(response: unknown) => R;
 
 export type RequestOptions = RequestInit & {
-  body?: RequestBody;
   abortable?: boolean;
   requestHash?: string;
   cacheRequest?: boolean;
   fallback?: ResponseFallback;
-  responseProcessor?: (response: Response) => any;
+  responseParser?: (response: Response) => Promise<unknown>;
+  responseProcessor?: ResponseProcessor;
 };
 
 // Container for all pending requests.
@@ -30,96 +25,134 @@ const requestQueue = new Map();
 // Container for all cached requests.
 const responseCache = new Map();
 
-// GET.
-export function get(url: string, options?: RequestOptions) {
+// Create request fn.
+export function request<R>(url: string, options?: RequestOptions): Promise<R> {
   const {
-    body,
-    method,
+    method = "GET",
     fallback,
+    requestHash,
     abortable = false,
     cacheRequest = false,
+    responseParser = parseResponse,
     responseProcessor = (response: Response) => response,
     ...restOptions
   } = options || {};
 
   const finalURL = new URL(url);
+  const finalRequestHash = createRequestHash(
+    method.toLocaleUpperCase(),
+    finalURL.toString(),
+    requestHash
+  );
 
-  const config = {
-    method: "GET",
-  };
-
-  if (body && isBodyObject(body)) {
-    finalURL.search = objectToUrlString(body as BodyObject);
-  }
-
-  const requestHash = finalURL.toString();
   const requestProcessor = (response: Response) =>
     response.status === 200
-      ? parseResponse(response)
+      ? responseParser(response)
           .then(responseProcessor)
-          .then(cacheResponse(requestHash, cacheRequest))
+          .then(cacheResponse(finalRequestHash, cacheRequest))
       : fallback
       ? fallback(response)
-      : parseResponse(response)
+      : responseParser(response)
           .then(Promise.reject)
-          .catch(clearRejectedResponse(requestHash, cacheRequest));
+          .catch(clearRejectedResponse(finalRequestHash, cacheRequest));
 
-  const IS_PENDING_REQUEST = cacheRequest && requestQueue.has(requestHash);
-  const HAS_CACHED_RESPONSE = cacheRequest && responseCache.has(requestHash);
+  const IS_PENDING_REQUEST = cacheRequest && requestQueue.has(finalRequestHash);
+  const HAS_CACHED_RESPONSE =
+    cacheRequest && responseCache.has(finalRequestHash);
 
   const createNewRequest = () => {
     const controller = new AbortController();
     const { signal } = controller;
-    const request = fetch(finalURL, { ...config, ...restOptions, signal }).then(
+    const requestRef = fetch(finalURL, { method, ...restOptions, signal }).then(
       requestProcessor
     );
-    requestQueue.set(requestHash, { request, controller });
-    return request;
+    requestQueue.set(finalRequestHash, { requestRef, controller });
+    return requestRef;
   };
 
   if (HAS_CACHED_RESPONSE) {
-    return Promise.resolve(responseCache.get(requestHash));
+    return Promise.resolve(responseCache.get(finalRequestHash));
   } else if (IS_PENDING_REQUEST) {
     if (abortable) {
-      requestQueue.get(requestHash).controller.abort();
-      requestQueue.delete(requestHash);
+      requestQueue.get(finalRequestHash).controller.abort();
+      requestQueue.delete(finalRequestHash);
       return createNewRequest();
     } else {
-      return requestQueue.get(requestHash).request;
+      return requestQueue.get(finalRequestHash).requestRef;
     }
   } else {
     return createNewRequest();
   }
 }
 
-export function abortRequest(url: string) {
-  if (requestQueue.has(url)) {
-    requestQueue.get(url).controller.abort();
-    requestQueue.delete(url);
+type RequestConfiguratorOptions = RequestOptions & {
+  headers?:
+    | Record<string, string>
+    | ((globalHeaders: HeadersInit) => HeadersInit);
+};
+
+export function requestConfigurator(
+  method: string,
+  globalOptions: RequestOptions = {}
+) {
+  return function <R>(
+    url: string,
+    options: RequestConfiguratorOptions
+  ): Promise<R> {
+    const { headers, ...restOptions } = options || {};
+    const finalOptions = {
+      ...globalOptions,
+      ...restOptions,
+      headers:
+        typeof headers === "function"
+          ? headers(globalOptions.headers || {})
+          : headers
+          ? headers
+          : globalOptions.headers,
+      method: method.toUpperCase(),
+    };
+    return request<R>(url, finalOptions);
+  };
+}
+
+// Abort given request.
+export function abortRequest(hashOrMethod: string, url?: string) {
+  if (typeof hashOrMethod !== "string") {
+    throw new Error(`RequestHelperError: RequestHash need to be a string`);
+  }
+  const requestHash = createRequestHash(
+    hashOrMethod,
+    url,
+    !url ? hashOrMethod : undefined
+  );
+
+  if (requestQueue.has(requestHash)) {
+    requestQueue.get(requestHash).controller.abort("Aborted by user");
+    requestQueue.delete(requestHash);
   }
 }
 
-export function clearCache(url: string | RegExp, requestHash: string = "") {
-  if (typeof requestHash !== "string") {
-    throw new Error(`RequestHelperError: RequestHash need to be a string`);
-  }
+export function requestDebug() {
+  console.log("Request Queue:", requestQueue);
+  console.log("Response Cache:", responseCache);
+}
 
-  const key =
-    url === undefined
-      ? undefined
-      : url instanceof RegExp
-      ? url
-      : `${url}${requestHash}`;
-
-  // Remove by URL + HASH;
-  if (typeof key === "string") {
-    responseCache.delete(key);
+// Clear requestCache.
+export function clearCache(hashOrMethod: string | RegExp, url?: string) {
+  // Remove by Request Hash.
+  if (typeof hashOrMethod === "string") {
+    const requestHash = createRequestHash(
+      hashOrMethod,
+      url,
+      !url ? hashOrMethod : undefined
+    );
+    responseCache.delete(requestHash);
   }
 
   // Remove by Reular Expression.
-  else if (key instanceof RegExp) {
+  else if (hashOrMethod instanceof RegExp) {
     for (let cacheKey of responseCache.keys()) {
-      key.test(cacheKey) && responseCache.delete(cacheKey);
+      hashOrMethod.test(cacheKey) && responseCache.delete(cacheKey);
     }
   }
 
@@ -129,87 +162,40 @@ export function clearCache(url: string | RegExp, requestHash: string = "") {
   }
 }
 
-export async function post(url: string, options?: RequestOptions) {
-  const {
-    body,
-    method,
-    headers,
-    fallback,
-    requestHash = "",
-    abortable = false,
-    cacheRequest = false,
-    responseProcessor = (x: Response) => x,
-    ...restOptions
-  } = options || {};
+// ---- Helpers ----------------
 
-  const finalURL = new URL(url);
+const allowMethods = [
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+  "HEAD",
+  "OPTIONS",
+  "TRACE",
+  "CONNECT",
+];
 
-  if (cacheRequest && typeof requestHash !== "string") {
+// Create a request hash based on method and URL.
+function createRequestHash(method: string, url?: string, hash?: string) {
+  if (hash === undefined && !allowMethods.includes(method.toUpperCase())) {
     throw new Error(
-      "RequestHelperError: RequestHash is required for POST requests with cache enabled."
+      `RequestHelperError: Method "${method}" is not allowed. Allowed methods are: ${allowMethods.join(
+        ", "
+      )}.`
     );
   }
 
-  if (typeof requestHash !== "string") {
-    throw new Error("RequestHelperError: RequestHash need to be a string");
+  if (typeof method === undefined && typeof url !== "string") {
+    throw new Error(
+      `RequestHelperError: URL must be a string. Received: ${typeof url}`
+    );
   }
 
-  const postRequestHash = finalURL.toString() + requestHash;
-  const requestProcessor = (response: Response) =>
-    response.status === 200
-      ? parseResponse(response)
-          .then(responseProcessor)
-          .then(cacheResponse(postRequestHash, cacheRequest))
-      : fallback
-      ? fallback(response)
-      : parseResponse(response)
-          .then(Promise.reject)
-          .catch(clearRejectedResponse(postRequestHash, cacheRequest));
-
-  const IS_PENDING_REQUEST = cacheRequest && requestQueue.has(postRequestHash);
-  const HAS_CACHED_RESPONSE =
-    cacheRequest && responseCache.has(postRequestHash);
-
-  const createNewRequest = () => {
-    const controller = new AbortController();
-    const { signal } = controller;
-    const config: RequestInit = {
-      method: "POST",
-      headers,
-    };
-
-    if (body) {
-      const encoded = encodeBody(body, headers);
-      config.body = encoded.body;
-      config.headers = encoded.headers;
-    }
-
-    const request = fetch(finalURL, {
-      ...config,
-      ...restOptions,
-      signal,
-    } as RequestInit).then(requestProcessor);
-    requestQueue.set(postRequestHash, { request, controller });
-    return request;
-  };
-
-  if (HAS_CACHED_RESPONSE) {
-    return Promise.resolve(responseCache.get(postRequestHash));
-  } else if (IS_PENDING_REQUEST) {
-    if (abortable) {
-      requestQueue.get(postRequestHash).controller.abort();
-      requestQueue.delete(postRequestHash);
-      return createNewRequest();
-    } else {
-      return requestQueue.get(postRequestHash).request;
-    }
-  } else {
-    return createNewRequest();
-  }
+  return hash ? hash : `${method}:${url}`;
 }
 
-// ---- Helpers ----------------
-
+// Cache response in the responseCache.
 function cacheResponse(requestHash: string, cacheRequest: boolean) {
   return (response: Response) => {
     if (cacheRequest) {
@@ -220,6 +206,7 @@ function cacheResponse(requestHash: string, cacheRequest: boolean) {
   };
 }
 
+// Rremove rejected response from the request queue.
 function clearRejectedResponse(requestHash: string, cacheRequest: boolean) {
   return (response: Response) => {
     if (cacheRequest) {
@@ -229,6 +216,7 @@ function clearRejectedResponse(requestHash: string, cacheRequest: boolean) {
   };
 }
 
+// Handle common response types.
 async function parseResponse(response: Response) {
   let result;
 
@@ -248,7 +236,9 @@ async function parseResponse(response: Response) {
     result = await response.formData();
   } else {
     console.warn(
-      `Not recognized content - type: ${response.headers.get("content-type")} `
+      `Not recognized content - type: ${response.headers.get(
+        "content-type"
+      )}. Try to provide your own responseParser.`
     );
     result = response;
   }
@@ -260,67 +250,7 @@ async function parseResponse(response: Response) {
   }
 }
 
-function encodeBody(body: RequestBody, initHeaders: HeadersInit = {}) {
-  const headers = new Headers(initHeaders);
-  const contentType = headers.get("Content-Type");
-
-  // Content-Type auto detection.
-  if (!contentType) {
-    if (isFormElement(body)) {
-      // Not setting Content-Type so the browser can set it automaicaly.
-      return { headers, body: new FormData(body as HTMLFormElement) };
-    } else if (body instanceof FormData) {
-      // Not setting Content-Type so the browser can set it automaicaly.
-      return { headers, body };
-    } else if (isBodyObject(body)) {
-      headers.set("Content-Type", "application/json");
-      return { headers, body: JSON.stringify(body) };
-    } else if (isBasicType(body)) {
-      headers.set("Content-Type", "text/plain");
-      return { headers, body: `${body}` };
-    } else {
-      throw new Error(
-        `RequestHelperError: Cannot handle content type "${contentType}". Try to use different content type or use syntax: post(url, null, { body }) to encode body your way.`
-      );
-    }
-  }
-  // Encode acorrding to Content-Type.
-  else {
-    if (contentType === "application/json") {
-      return { headers, body: JSON.stringify(body) };
-    } else if (contentType === "text/plain") {
-      return {
-        headers,
-        body: typeof body === "string" ? body : JSON.stringify(body),
-      };
-    } else if (contentType === "application/x-www-form-urlencoded") {
-      return {
-        headers,
-        body: isBodyObject(body)
-          ? objectToUrlString(body as BodyObject)
-          : JSON.stringify(body),
-      };
-    } else if (contentType === "multipart/form-data") {
-      headers.delete("Content-Type");
-      if (isFormElement(body)) {
-        return { headers, body: new FormData(body as HTMLFormElement) };
-      } else if (body instanceof FormData) {
-        return { headers, body };
-      } else if (isBodyObject(body)) {
-        return { headers, body: objectToDataForm(body as BodyObject) };
-      } else {
-        throw new Error(
-          `RequestHelperError: Cannot convert body of type "${typeof body}". Try to use different Content-Type or use syntax: post(url, null, { body }) to encode body your way.`
-        );
-      }
-    } else {
-      throw new Error(
-        `RequestHelperError: Cannot handle content type "${contentType}". Try to use different Content-Type or use syntax: post(url, null, { body }) to encode body your way.`
-      );
-    }
-  }
-}
-
+// Convert object to URL string. Allow for nested objects and arrays.
 export function objectToUrlString(json: BodyObject) {
   if (isBasicType(json) || notAllowed(json) || Array.isArray(json)) {
     throw new Error("ObjectToUrlStringError: Given value is not a JSON object");
@@ -385,7 +315,8 @@ function sliceEndAnd(value: string) {
   return value.replace(/&$/g, "");
 }
 
-function objectToDataForm(body: BodyObject) {
+// Convert object to FormData. Allow for nested objects and arrays.
+export function objectToDataForm(body: BodyObject) {
   const formData = new FormData();
   Object.keys(body).forEach((name) => {
     if (Array.isArray(body[name])) {
@@ -407,10 +338,6 @@ function objectToDataForm(body: BodyObject) {
 
 // ---- Verifiers ----------------
 
-function isFormElement(body: any) {
-  return typeof window !== "undefined" && body instanceof HTMLFormElement;
-}
-
 function isBasicType(value: any) {
   return (
     typeof value === "string" ||
@@ -426,13 +353,5 @@ function notAllowed(value: any) {
     typeof value === "symbol" ||
     typeof value === "function" ||
     value instanceof FormData
-  );
-}
-
-function isBodyObject(value: any) {
-  return (
-    typeof value === "object" && // Is an object.
-    !Array.isArray(value) && // Is not array.
-    !notAllowed(value) // Is allowed value.
   );
 }
