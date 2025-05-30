@@ -1,0 +1,11 @@
+(async function UtilityBeltTests() {
+  await import("./fuzzy.test.js");
+  await import("./query.test.js");
+  await import("./forms.test.js");
+  await import("./array.test.js");
+  await import("./pubsub.test.js");
+  await import("./general.test.js");
+  await import("./hashing.test.js");
+  await import("./strings.test.js");
+  // await import("./component.test.js");
+})();
