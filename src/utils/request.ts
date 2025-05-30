@@ -1,14 +1,63 @@
-// USAGE:
-// import { request, abortRequest, clearCache, requestConfigurator } from "@ludekarts/utility-belt;
+/**
+ * Utility for making HTTP requests with caching and aborting support.
+ *
+ * @example
+ *
+ * import { request, abortRequest, clearCache, requestConfigurator } from "@ludekarts/utility-belt";
+ *
+ * // 📝 Making a GET request
+ * request("https://api.example.com/data").then(console.log);
+ *
+ * // 📝 Making a POST request with JSON body
+ * request("https://api.example.com/data", {
+ *   method: "POST",
+ *   headers: { "Content-Type": "application/json" },
+ *   body: JSON.stringify({ key: "value" }),
+ * }).then(console.log);
+ *
+ * // 📝 Making a request with caching
+ * request("https://api.example.com/data", {
+ *  cacheRequest: true,
+ * }).then(console.log);
+ *
+ * // 📝 Aborting a request
+ * const requestHash = "my-request-hash";
+ * request("https://api.example.com/data", {
+ *  requestHash,
+ *  abortable: true,
+ * }).then(console.log);
+ *
+ * // 📝 Aborting a request by hash
+ * abortRequest(requestHash);
+ *
+ * // 📝 Clearing cache by hash
+ * clearCache(requestHash);
+ *
+ * // 📝 Configuring a request function for a specific HTTP method
+ * const post = requestConfigurator("POST", {
+ *  headers: {
+ *   "Content-Type": "application/json",
+ *  },
+ * });
+ *
+ * // 📝 Using the configured request function
+ * post("https://api.example.com/data", {
+ *  body: JSON.stringify({ key: "value" }),
+ *  headers: (globalHeaders) => ({
+ *   ...globalHeaders,
+ *   "X-Custom-Header": "value",
+ *  }),
+ * }).then(console.log);
+ *
+ */
 
 // Types.
 export type baseType = string | number | boolean;
+type ResponseProcessor = <R>(response: unknown) => R;
 export type ResponseFallback = (response: Response) => any;
 export type BodyObject = {
   [key: string]: baseType | baseType[] | BodyObject | BodyObject[];
 };
-
-type ResponseProcessor = <R>(response: unknown) => R;
 
 export type RequestOptions = RequestInit & {
   abortable?: boolean;
@@ -21,16 +70,18 @@ export type RequestOptions = RequestInit & {
 
 // Container for all pending requests.
 type RequestQueueValue = {
-  requestRef: Promise<any>;
+  requestRef: Promise<unknown>;
   controller: AbortController;
 };
 const requestQueue: Map<string, RequestQueueValue> = new Map();
 
 // Container for all cached requests.
-const responseCache: Map<string, any> = new Map();
+const responseCache: Map<string, unknown> = new Map();
 
 /**
  * Main request function with caching and aborting support.
+ * @param url The request URL
+ * @param options Request options
  */
 export function request<R>(url: string, options?: RequestOptions): Promise<R> {
   const {
@@ -77,7 +128,7 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
   };
 
   if (HAS_CACHED_RESPONSE) {
-    return Promise.resolve(responseCache.get(finalRequestHash));
+    return Promise.resolve(responseCache.get(finalRequestHash) as R);
   } else if (IS_PENDING_REQUEST) {
     if (abortable) {
       const pendingRequest = requestQueue.get(finalRequestHash);
@@ -85,13 +136,15 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
         pendingRequest.controller.abort();
         requestQueue.delete(finalRequestHash);
       }
-      return createNewRequest();
+      return createNewRequest() as Promise<R>;
     } else {
       const cachedRequest = requestQueue.get(finalRequestHash);
-      return cachedRequest ? cachedRequest.requestRef : createNewRequest();
+      return (
+        cachedRequest ? cachedRequest.requestRef : createNewRequest()
+      ) as Promise<R>;
     }
   } else {
-    return createNewRequest();
+    return createNewRequest() as Promise<R>;
   }
 }
 
@@ -103,6 +156,8 @@ type RequestConfiguratorOptions = RequestOptions & {
 
 /**
  * Returns a configured request function for a specific HTTP method.
+ * @param method HTTP method
+ * @param globalOptions Global request options
  */
 export function requestConfigurator(
   method: string,
@@ -130,10 +185,12 @@ export function requestConfigurator(
 
 /**
  * Abort a pending request by hash or method/url.
+ * @param hashOrMethod Request hash or HTTP method
+ * @param url Optional URL
  */
 export function abortRequest(hashOrMethod: string, url?: string) {
   if (typeof hashOrMethod !== "string") {
-    throw new Error(`RequestHelperError: RequestHash need to be a string`);
+    throw new Error(`RequestHelperError: RequestHash needs to be a string`);
   }
   const requestHash = createRequestHash(
     hashOrMethod,
@@ -150,13 +207,15 @@ export function abortRequest(hashOrMethod: string, url?: string) {
 /**
  * Debug helper to log current request queue and cache.
  */
-export function requestDebug() {
-  console.log("Request Queue:", requestQueue);
-  console.log("Response Cache:", responseCache);
-}
+// export function requestDebug() {
+//   console.log("Request Queue:", requestQueue);
+//   console.log("Response Cache:", responseCache);
+// }
 
 /**
  * Clear request cache by hash, RegExp, or all.
+ * @param hashOrMethod Request hash, HTTP method, or RegExp
+ * @param url Optional URL
  */
 export function clearCache(hashOrMethod: string | RegExp, url?: string) {
   // Remove by Request Hash.
@@ -186,13 +245,13 @@ export function clearCache(hashOrMethod: string | RegExp, url?: string) {
 
 const allowMethods = [
   "GET",
-  "POST",
   "PUT",
-  "PATCH",
-  "DELETE",
+  "POST",
   "HEAD",
-  "OPTIONS",
+  "PATCH",
   "TRACE",
+  "DELETE",
+  "OPTIONS",
   "CONNECT",
 ];
 
@@ -215,14 +274,14 @@ function createRequestHash(method: string, url?: string, hash?: string) {
   return hash ? hash : `${method}:${url}`;
 }
 
-// Cache response in the responseCache.
+// Cache parsed response in the responseCache.
 function cacheResponse(requestHash: string, cacheRequest: boolean) {
-  return (response: Response) => {
+  return (parsed: unknown) => {
     if (cacheRequest) {
-      responseCache.set(requestHash, response);
+      responseCache.set(requestHash, parsed);
       requestQueue.delete(requestHash);
     }
-    return response;
+    return parsed;
   };
 }
 
@@ -270,7 +329,10 @@ async function parseResponse(response: Response) {
   }
 }
 
-// Convert object to URL string. Allow for nested objects and arrays.
+/**
+ * Converts a JSON object to a URL query string, supporting nested objects and arrays.
+ * @param json The object to convert
+ */
 export function objectToUrlString(json: BodyObject) {
   if (isBasicType(json) || notAllowed(json) || Array.isArray(json)) {
     throw new Error("ObjectToUrlStringError: Given value is not a JSON object");
@@ -278,7 +340,7 @@ export function objectToUrlString(json: BodyObject) {
 
   return Object.keys(json)
     .map((key) => {
-      return sliceEndAnd(
+      return removeTrailingAmpersand(
         isBasicType(json[key])
           ? `${key}=${encodeURIComponent(json[key])}`
           : Array.isArray(json[key])
@@ -289,52 +351,50 @@ export function objectToUrlString(json: BodyObject) {
     .join("&");
 }
 
-function arrayToUrl(array: BodyObject[], prefix = "") {
-  let result = "";
-
-  array.forEach((item, index) => {
-    if (notAllowed(item)) {
-      throw new Error(
-        `ObjectToUrlStringError: Encounter not allowed value at: ${prefix} index: ${index}`
-      );
-    } else if (isBasicType(item)) {
-      result += `${prefix}=${encodeURIComponent(item)}&`;
-    } else if (Array.isArray(item)) {
-      result += arrayToUrl(item, prefix + `[${index}]`);
-    } else {
-      result += objectToUrl(item, prefix + `[${index}]`);
-    }
-  });
-
-  return result;
+function arrayToUrl(array: BodyObject[], prefix = ""): string {
+  return array
+    .map((item, index): string => {
+      if (notAllowed(item)) {
+        throw new Error(
+          `ObjectToUrlStringError: Encounter not allowed value at: ${prefix} index: ${index}`
+        );
+      } else if (isBasicType(item)) {
+        return `${prefix}=${encodeURIComponent(item)}&`;
+      } else if (Array.isArray(item)) {
+        return arrayToUrl(item, prefix + `[${index}]`);
+      } else {
+        return objectToUrl(item, prefix + `[${index}]`);
+      }
+    })
+    .join("");
 }
 
-function objectToUrl(object: BodyObject, prefix = "") {
-  let result = "";
-
-  Object.keys(object).forEach((key) => {
-    if (notAllowed(object[key])) {
-      throw new Error(
-        `ObjectToUrlStringError: Encounter not allowed value at: ${prefix}`
-      );
-    } else if (isBasicType(object[key])) {
-      result += prefix + `[${key}]=${encodeURIComponent(object[key])}&`;
-    } else if (Array.isArray(object[key])) {
-      result += arrayToUrl(object[key] as BodyObject[], prefix + `[${key}]`);
-    } else {
-      result += objectToUrl(object[key] as BodyObject, prefix + `[${key}]`);
-    }
-    // Removed unnecessary return statement inside forEach
-  });
-
-  return result;
+function objectToUrl(object: BodyObject, prefix = ""): string {
+  return Object.keys(object)
+    .map((key): string => {
+      if (notAllowed(object[key])) {
+        throw new Error(
+          `ObjectToUrlStringError: Encounter not allowed value at: ${prefix}`
+        );
+      } else if (isBasicType(object[key])) {
+        return prefix + `[${key}]=${encodeURIComponent(object[key])}&`;
+      } else if (Array.isArray(object[key])) {
+        return arrayToUrl(object[key] as BodyObject[], prefix + `[${key}]`);
+      } else {
+        return objectToUrl(object[key] as BodyObject, prefix + `[${key}]`);
+      }
+    })
+    .join("");
 }
 
-function sliceEndAnd(value: string) {
+function removeTrailingAmpersand(value: string) {
   return value.replace(/&$/g, "");
 }
 
-// Convert object to FormData. Allow for nested objects and arrays.
+/**
+ * Converts a JSON object to FormData, supporting nested objects and arrays.
+ * @param body The object to convert
+ */
 export function objectToDataForm(body: BodyObject) {
   const formData = new FormData();
   Object.keys(body).forEach((name) => {
