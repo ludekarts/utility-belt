@@ -148,10 +148,8 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
   }
 }
 
-type RequestConfiguratorOptions = RequestOptions & {
-  headers?:
-    | Record<string, string>
-    | ((globalHeaders: HeadersInit) => HeadersInit);
+export type RequestConfiguratorOptions = RequestOptions & {
+  headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
 };
 
 /**

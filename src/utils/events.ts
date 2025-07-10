@@ -9,7 +9,7 @@
  * <button class="menu-item" data-utb-action="action-name">My Action</button>
  *
  * JS:
- * document.querySelector("#menu-bar").onclick = catchAction("button.menu-item")
+ * document.querySelector("#menu-bar").onclick = catchAction()
  *  .addAction("action-name", ({action, event, dataset}) => {})
  *  .addAction("action-name-2", ({action, event, dataset}) => {})
  *  .addDefaultAction(({action, event, dataset}) => {})           // Callback runs only if no other action matches.
@@ -72,9 +72,10 @@ export function catchAction() {
 }
 
 /**
- * Creates handlers for keyboard events. It recognizes keyboard key by "event.code" value,
- * so pressing "Z" key should be setup by set "KeyZ" as key.
+ * Creates handlers for keyboard events. It recognizes keyboard key by "event.code" value.
+ * So for example pressing "Z" key should be setup by useing "KeyZ" string as a key.
  *
+ * @example
  *
  * document.querySelector("input").onkeydown = keyboard(onlyMyInput)
  *   .key("Ctrl+Z", customUndo, true)                        // String notation.
@@ -199,22 +200,23 @@ function notActionKey(key: string) {
 }
 
 /**
- *
+ * Allows to catch events on the given root element and register handlers for specific actions.
  *
  * @example
  *
  * JS:
- * const handlers = catchEvents(document.body, "click", "dblclick", ...);
  *
+ * // Attach click and double click event handlers to the document body.
+ * const handlers = catchEvents(document.body, "click", "dblclick", ...);
  * ...
  *
+ * // Registering handlers for give actions.
  * handlers.add("actionAname", event => {...});
  * handlers.add("dbClickAction", event => {...});
- *
  * ...
  *
+ * // Imperative handler call
  * handlers.callHandler("actionAname");
- *
  *
  * HTML:
  * <button data-click="clickAction">OK</button>

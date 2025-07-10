@@ -42,7 +42,7 @@
 
 export type CheckboxValue = { value?: string; checked: boolean };
 export type FormValue = string | boolean | CheckboxValue;
-type FormFieldsOptions = {
+export type FormFieldsOptions = {
   onlySelectedCheckboxes?: boolean;
   includeCheckboxState?: boolean;
   onlyCheckboxState?: boolean;
