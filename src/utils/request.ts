@@ -3,60 +3,68 @@
  *
  * @example
  *
- * import { request, abortRequest, clearCache, requestConfigurator } from "@ludekarts/utility-belt";
+ * import { request, abortRequest, clearCache, requestConfigurator, objectToUrlString, objectToDataForm } from "@ludekarts/utility-belt";
+ * import type { RequestOptions, ResponseProcessor, BaseType, BodyObject, ResponseFallback, RequestConfiguratorOptions } from "@ludekarts/utility-belt";
  *
- * // 📝 Making a GET request
+ * // 📝 Making a GET request:
+ *
  * request("https://api.example.com/data").then(console.log);
  *
- * // 📝 Making a POST request with JSON body
+ * // 📝 Making a POST request with JSON body:
+ *
  * request("https://api.example.com/data", {
  *   method: "POST",
  *   headers: { "Content-Type": "application/json" },
  *   body: JSON.stringify({ key: "value" }),
  * }).then(console.log);
  *
- * // 📝 Making a request with caching
+ * // 📝 Making a request with caching:
+ *
  * request("https://api.example.com/data", {
  *  cacheRequest: true,
  * }).then(console.log);
  *
- * // 📝 Aborting a request
+ * // 📝 Setup aborting a request:
+ *
  * const requestHash = "my-request-hash";
  * request("https://api.example.com/data", {
  *  requestHash,
  *  abortable: true,
  * }).then(console.log);
  *
- * // 📝 Aborting a request by hash
+ * // 📝 Aborting a request by hash:
+ *
  * abortRequest(requestHash);
  *
- * // 📝 Clearing cache by hash
+ * // 📝 Clearing cache by hash:
  * clearCache(requestHash);
  *
- * // 📝 Configuring a request function for a specific HTTP method
+ * // 📝 Configuring a request function for a specific HTTP method:
+ *
  * const post = requestConfigurator("POST", {
  *  headers: {
  *   "Content-Type": "application/json",
  *  },
  * });
  *
- * // 📝 Using the configured request function
+ * // 📝 Using the configured request function:
+ *
  * post("https://api.example.com/data", {
  *  body: JSON.stringify({ key: "value" }),
  *  headers: (globalHeaders) => ({
  *   ...globalHeaders,
- *   "X-Custom-Header": "value",
+ *   "X-Custom-Header": "this-is-a-custom-header",
  *  }),
  * }).then(console.log);
  *
  */
 
 // Types.
-export type baseType = string | number | boolean;
-type ResponseProcessor = <R>(response: unknown) => R;
+export type BaseType = string | number | boolean | null;
+export type ResponseProcessor = (response: unknown) => any;
 export type ResponseFallback = (response: Response) => any;
 export type BodyObject = {
-  [key: string]: baseType | baseType[] | BodyObject | BodyObject[];
+  [key: string]: BaseType | BaseType[] | BodyObject | BodyObject[];
 };
 
 export type RequestOptions = RequestInit & {
@@ -91,7 +99,7 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
     abortable = false,
     cacheRequest = false,
     responseParser = parseResponse,
-    responseProcessor = (response: Response) => response,
+    responseProcessor = (response: unknown) => response as R,
     ...restOptions
   } = options || {};
 
@@ -103,11 +111,11 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
   );
 
   const requestProcessor = (response: Response) =>
-    response.status === 200
+    response.ok === true
       ? responseParser(response)
           .then(responseProcessor)
           .then(cacheResponse(finalRequestHash, cacheRequest))
-      : fallback
+      : typeof fallback === "function"
       ? fallback(response)
       : responseParser(response)
           .then(Promise.reject)
@@ -163,7 +171,7 @@ export function requestConfigurator(
 ) {
   return function <R>(
     url: string,
-    options: RequestConfiguratorOptions
+    options?: RequestConfiguratorOptions
   ): Promise<R> {
     const { headers, ...restOptions } = options || {};
     const finalOptions = {
@@ -294,12 +302,12 @@ function clearRejectedResponse(requestHash: string, cacheRequest: boolean) {
 }
 
 // Handle common response types.
-async function parseResponse(response: Response) {
+async function parseResponse<R>(response: Response): Promise<R> {
   let result;
 
   // Get Content Type.
   const contentType =
-    response.headers?.get("content-type")?.split(";")[0] || "";
+    response.headers?.get("content-type")?.split(";")[0] || "none";
 
   // Handle various content types.
 
@@ -311,6 +319,8 @@ async function parseResponse(response: Response) {
     result = await response.json();
   } else if (contentType === "multipart/form-data") {
     result = await response.formData();
+  } else if (contentType === "none") {
+    result = null;
   } else {
     console.warn(
       `Not recognized content - type: ${response.headers.get(
@@ -340,7 +350,7 @@ export function objectToUrlString(json: BodyObject) {
     .map((key) => {
       return removeTrailingAmpersand(
         isBasicType(json[key])
-          ? `${key}=${encodeURIComponent(json[key])}`
+          ? `${key}=${encodeURIComponent(json[key] || "null")}`
           : Array.isArray(json[key])
           ? arrayToUrl(json[key] as BodyObject[], key)
           : objectToUrl(json[key] as BodyObject, key)
@@ -375,7 +385,9 @@ function objectToUrl(object: BodyObject, prefix = ""): string {
           `ObjectToUrlStringError: Encounter not allowed value at: ${prefix}`
         );
       } else if (isBasicType(object[key])) {
-        return prefix + `[${key}]=${encodeURIComponent(object[key])}&`;
+        return (
+          prefix + `[${key}]=${encodeURIComponent(object[key] || "null")}&`
+        );
       } else if (Array.isArray(object[key])) {
         return arrayToUrl(object[key] as BodyObject[], prefix + `[${key}]`);
       } else {
@@ -415,7 +427,7 @@ export function objectToDataForm(body: BodyObject) {
 
 // ---- Verifiers ----------------
 
-function isBasicType(value: unknown): value is baseType {
+function isBasicType(value: unknown): value is BaseType {
   return (
     typeof value === "string" ||
     typeof value === "number" ||

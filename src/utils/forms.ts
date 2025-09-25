@@ -28,7 +28,7 @@
  * const { name, age, mood, element } = getFormFields("#myForm",  { onlyCheckboxState: true });
  * // element => [true, false]
  *
- * -> onlyRecentValues: true - only include the most recent (last in the DOM tree) value for each "name" field
+ * -> onlyRecentValues: true - include only the most recent (last in the DOM tree) value for each "name" field
  *
  * const { name, age, mood, element } = getFormFields("#myForm",  { onlyRecentValues: true });
  * // element => ["💧"]
@@ -49,10 +49,10 @@ export type FormFieldsOptions = {
   onlyRecentValues?: boolean;
 };
 
-export function getFormFields(
+export function getFormFields<R>(
   form: HTMLFormElement,
   options: FormFieldsOptions = {}
-) {
+): R {
   const {
     onlySelectedCheckboxes = false,
     includeCheckboxState = false,
@@ -92,18 +92,26 @@ export function getFormFields(
     const values = v as FormValue[];
     const recentValue = (values as FormValue[])[values.length - 1];
 
+    // Set only the most recent value.
     if (onlyRecentValues && Array.isArray(values)) {
       fields.set(name, recentValue);
     }
 
-    if (values.length === 1) {
+    // Remove empty fields.
+    if (values.length === 0) {
+      fields.delete(name);
+    }
+    // If only one value then set it as a single value not an array.
+    else if (values.length === 1) {
       fields.set(name, recentValue);
-    } else if (!onlyRecentValues) {
+    }
+    // Keep multiple values if not requires only recent value.
+    else if (!onlyRecentValues) {
       fields.set(name, values);
     }
   }
 
-  return Object.fromEntries(fields.entries());
+  return Object.fromEntries(fields.entries()) as R;
 }
 
 /**
@@ -112,7 +120,7 @@ export function getFormFields(
  *
  *
  * @example
- *
+ *`
  *💡HINT:
  * If you wnant to update other properties on the input e.g. "checked" field then use object notation
  * instead a plain value like so:

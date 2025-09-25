@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "JavaScript Utilities Collection",
   "files": [
     "dist"
@@ -23,7 +23,8 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "npm:publish": "pnpm build && npm publish --access public"
   },
   "devDependencies": {
     "typescript": "^5.5.3",

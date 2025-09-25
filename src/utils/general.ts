@@ -5,10 +5,11 @@
  * @example
  *
  * hyphenate("Łódź na tafli jeziora!") // => "lodz-na-tafli-jeziora"
+ * hyphenate("Łódź na tafli jeziora!", "_") // => "lodz_na_tafli_jeziora"
  *
  */
 
-export function hyphenate(value: string) {
+export function hyphenate(value: string, connector: string) {
   const dict: { [key: string]: string } = {
     ą: "a",
     ć: "c",
@@ -21,10 +22,14 @@ export function hyphenate(value: string) {
     ź: "z",
     " ": "-",
   };
-  return value
+  const hyphenatedValue = value
     .toLowerCase()
     .replace(/[\Wąćęłńóśżź_ ]/g, (match: string) => dict[match] || "")
     .replace(/-{2,}/, "-");
+
+  return typeof connector === "string"
+    ? hyphenatedValue
+    : hyphenatedValue.replace("-", connector);
 }
 
 /**
