@@ -13,7 +13,7 @@ type LoggerEvent = {
 type PubSubAPI = {
   on(n: string, e: string, o: ObserverCallback): PubSubAPI;
   off(n: string, e: string, o: ObserverCallback): PubSubAPI;
-  emmit(n: string, e: string, p: any): PubSubAPI;
+  emit(n: string, e: string, p: any): PubSubAPI;
   __namespace(
     namespace: string,
     options?: { remove: boolean }
@@ -91,7 +91,7 @@ export function PubSub(logger?: (event: LoggerEvent) => void) {
       return API;
     },
 
-    emmit(n: string, e: string, p: any) {
+    emit(n: string, e: string, p: any) {
       const { namespace, event, payload } = getPublishParams(n, e, p);
 
       if (namespaces.has(namespace)) {
@@ -111,8 +111,8 @@ export function PubSub(logger?: (event: LoggerEvent) => void) {
           }
 
           logger?.({
-            type: "EMMIT",
-            message: `Event "${event}" was emmited in "${namespace}" namespace.`,
+            type: "emit",
+            message: `Event "${event}" was emited in "${namespace}" namespace.`,
             data: { namespace, event, payload, observersList },
           });
         } else {

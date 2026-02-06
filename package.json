@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "JavaScript Utilities Collection",
   "files": [
     "dist"
@@ -30,8 +30,5 @@
     "typescript": "^5.5.3",
     "vite": "^5.4.1",
     "vite-plugin-dts": "^4.2.1"
-  },
-  "dependencies": {
-    "dashboard": "link:C:/xampp/htdocs/dashboard"
   }
 }

@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      dashboard:
-        specifier: link:C:/xampp/htdocs/dashboard
-        version: link:C:/xampp/htdocs/dashboard
     devDependencies:
       typescript:
         specifier: ^5.5.3
