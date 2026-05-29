@@ -61,7 +61,6 @@
 
 // Types.
 export type BaseType = string | number | boolean | null;
-export type ResponseProcessor = (response: unknown) => any;
 export type ResponseFallback = (response: Response) => any;
 export type BodyObject = {
   [key: string]: BaseType | BaseType[] | BodyObject | BodyObject[];
@@ -73,7 +72,7 @@ export type RequestOptions = RequestInit & {
   cacheRequest?: boolean;
   fallback?: ResponseFallback;
   responseParser?: (response: Response) => Promise<unknown>;
-  responseProcessor?: ResponseProcessor;
+  responseProcessor?: <R, RP>(response: R) => RP;
 };
 
 // Container for all pending requests.
@@ -107,7 +106,7 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
   const finalRequestHash = createRequestHash(
     method.toLocaleUpperCase(),
     finalURL.toString(),
-    requestHash
+    requestHash,
   );
 
   const requestProcessor = (response: Response) =>
@@ -116,10 +115,10 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
           .then(responseProcessor)
           .then(cacheResponse(finalRequestHash, cacheRequest))
       : typeof fallback === "function"
-      ? fallback(response)
-      : responseParser(response)
-          .then(Promise.reject)
-          .catch(clearRejectedResponse(finalRequestHash, cacheRequest));
+        ? fallback(response)
+        : responseParser(response)
+            .then(Promise.reject)
+            .catch(clearRejectedResponse(finalRequestHash, cacheRequest));
 
   const IS_PENDING_REQUEST = cacheRequest && requestQueue.has(finalRequestHash);
   const HAS_CACHED_RESPONSE =
@@ -129,7 +128,7 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
     const controller = new AbortController();
     const { signal } = controller;
     const requestRef = fetch(finalURL, { method, ...restOptions, signal }).then(
-      requestProcessor
+      requestProcessor,
     );
     requestQueue.set(finalRequestHash, { requestRef, controller });
     return requestRef;
@@ -162,18 +161,21 @@ export type RequestConfiguratorOptions = RequestOptions & {
 
 /**
  * Returns a configured request function for a specific HTTP method.
+ * Additional features:
+ * - headers can be provided as a function to merge with global headers.
+ * - apply global responseProcessor for each request.
  * @param method HTTP method
  * @param globalOptions Global request options
  */
 export function requestConfigurator(
   method: string,
-  globalOptions: RequestOptions = {}
+  globalOptions: RequestOptions = {},
 ) {
   return function <R>(
     url: string,
-    options?: RequestConfiguratorOptions
+    options?: RequestConfiguratorOptions,
   ): Promise<R> {
-    const { headers, ...restOptions } = options || {};
+    const { headers, responseProcessor, ...restOptions } = options || {};
     const finalOptions = {
       ...globalOptions,
       ...restOptions,
@@ -181,10 +183,21 @@ export function requestConfigurator(
         typeof headers === "function"
           ? headers(globalOptions.headers || {})
           : headers
-          ? headers
-          : globalOptions.headers,
+            ? headers
+            : globalOptions.headers,
       method: method.toUpperCase(),
     };
+
+    // Apply global responseProcessor and chain it with request-specific responseProcessor.
+    if (typeof globalOptions.responseProcessor === "function") {
+      const globalResponseProcessor = globalOptions.responseProcessor;
+
+      finalOptions.responseProcessor = (response: unknown) =>
+        typeof responseProcessor === "function"
+          ? responseProcessor(globalResponseProcessor(response))
+          : globalResponseProcessor(response);
+    }
+
     return request<R>(url, finalOptions);
   };
 }
@@ -201,7 +214,7 @@ export function abortRequest(hashOrMethod: string, url?: string) {
   const requestHash = createRequestHash(
     hashOrMethod,
     url,
-    !url ? hashOrMethod : undefined
+    !url ? hashOrMethod : undefined,
   );
 
   if (requestQueue.has(requestHash)) {
@@ -229,7 +242,7 @@ export function clearCache(hashOrMethod: string | RegExp, url?: string) {
     const requestHash = createRequestHash(
       hashOrMethod,
       url,
-      !url ? hashOrMethod : undefined
+      !url ? hashOrMethod : undefined,
     );
     responseCache.delete(requestHash);
   }
@@ -266,14 +279,14 @@ function createRequestHash(method: string, url?: string, hash?: string) {
   if (hash === undefined && !allowMethods.includes(method.toUpperCase())) {
     throw new Error(
       `RequestHelperError: Method "${method}" is not allowed. Allowed methods are: ${allowMethods.join(
-        ", "
-      )}.`
+        ", ",
+      )}.`,
     );
   }
 
   if (hash === undefined && typeof url !== "string") {
     throw new Error(
-      `RequestHelperError: URL must be a string. Received: ${typeof url}`
+      `RequestHelperError: URL must be a string. Received: ${typeof url}`,
     );
   }
 
@@ -323,9 +336,9 @@ async function parseResponse<R>(response: Response): Promise<R> {
     result = null;
   } else {
     console.warn(
-      `Not recognized content - type: ${response.headers.get(
-        "content-type"
-      )}. Try to provide your own responseParser.`
+      `Not recognized content-type: ${response.headers.get(
+        "content-type",
+      )}. Try to provide your own responseParser.`,
     );
     result = response;
   }
@@ -352,8 +365,8 @@ export function objectToUrlString(json: BodyObject) {
         isBasicType(json[key])
           ? `${key}=${encodeURIComponent(json[key] || "null")}`
           : Array.isArray(json[key])
-          ? arrayToUrl(json[key] as BodyObject[], key)
-          : objectToUrl(json[key] as BodyObject, key)
+            ? arrayToUrl(json[key] as BodyObject[], key)
+            : objectToUrl(json[key] as BodyObject, key),
       );
     })
     .join("&");
@@ -364,7 +377,7 @@ function arrayToUrl(array: BodyObject[], prefix = ""): string {
     .map((item, index): string => {
       if (notAllowed(item)) {
         throw new Error(
-          `ObjectToUrlStringError: Encounter not allowed value at: ${prefix} index: ${index}`
+          `ObjectToUrlStringError: Encounter not allowed value at: ${prefix} index: ${index}`,
         );
       } else if (isBasicType(item)) {
         return `${prefix}=${encodeURIComponent(item)}&`;
@@ -382,7 +395,7 @@ function objectToUrl(object: BodyObject, prefix = ""): string {
     .map((key): string => {
       if (notAllowed(object[key])) {
         throw new Error(
-          `ObjectToUrlStringError: Encounter not allowed value at: ${prefix}`
+          `ObjectToUrlStringError: Encounter not allowed value at: ${prefix}`,
         );
       } else if (isBasicType(object[key])) {
         return (
@@ -412,13 +425,13 @@ export function objectToDataForm(body: BodyObject) {
       (body[name] as BodyObject[]).forEach((item) => {
         formData.append(
           name,
-          isBasicType(item) ? `${item}` : JSON.stringify(item)
+          isBasicType(item) ? `${item}` : JSON.stringify(item),
         );
       });
     } else {
       formData.append(
         name,
-        isBasicType(body[name]) ? `${body[name]}` : JSON.stringify(body[name])
+        isBasicType(body[name]) ? `${body[name]}` : JSON.stringify(body[name]),
       );
     }
   });
