@@ -62,6 +62,7 @@
 // Types.
 export type BaseType = string | number | boolean | null;
 export type ResponseFallback = (response: Response) => any;
+
 type NestedObject<V> = {
   [key: string]: V | NestedObject<V> | Array<V | NestedObject<V>>;
 };
@@ -69,6 +70,7 @@ type NestedObject<V> = {
 export type BodyObject = NestedObject<BaseType>;
 export type FormDataValue = BaseType | Blob | File | Date;
 export type FormDataObject = NestedObject<FormDataValue>;
+interface UrlArray extends Array<BaseType | BodyObject | UrlArray> {}
 
 export type RequestOptions = RequestInit & {
   abortable?: boolean;
@@ -234,7 +236,6 @@ export function abortRequest(hashOrMethod: string, url?: string) {
 //   console.log("Request Queue:", requestQueue);
 //   console.log("Response Cache:", responseCache);
 // }
-
 /**
  * Clear request cache by hash, RegExp, or all.
  * @param hashOrMethod Request hash, HTTP method, or RegExp
@@ -358,25 +359,27 @@ async function parseResponse<R>(response: Response): Promise<R> {
  * Converts a JSON object to a URL query string, supporting nested objects and arrays.
  * @param json The object to convert
  */
-export function objectToUrlString<T extends BodyObject>(json: T): string {
+export function objectToUrlString(json: BodyObject): string {
   if (isBasicType(json) || notAllowed(json) || Array.isArray(json)) {
     throw new Error("ObjectToUrlStringError: Given value is not a JSON object");
   }
 
   return Object.keys(json)
     .map((key) => {
+      const value = json[key];
+
       return removeTrailingAmpersand(
-        isBasicType(json[key])
-          ? `${key}=${encodeURIComponent(json[key] || "null")}`
-          : Array.isArray(json[key])
-            ? arrayToUrl(json[key] as BodyObject[], key)
-            : objectToUrl(json[key] as BodyObject, key),
+        isBasicType(value)
+          ? `${key}=${encodeURIComponent(value || "null")}`
+          : Array.isArray(value)
+            ? arrayToUrl(value, key)
+            : objectToUrl(value, key),
       );
     })
     .join("&");
 }
 
-function arrayToUrl(array: BodyObject[], prefix = ""): string {
+function arrayToUrl(array: UrlArray, prefix = ""): string {
   return array
     .map((item, index): string => {
       if (notAllowed(item)) {
@@ -384,7 +387,7 @@ function arrayToUrl(array: BodyObject[], prefix = ""): string {
           `ObjectToUrlStringError: Encounter not allowed value at: ${prefix} index: ${index}`,
         );
       } else if (isBasicType(item)) {
-        return `${prefix}=${encodeURIComponent(item)}&`;
+        return `${prefix}=${encodeURIComponent(`${item}`)}&`;
       } else if (Array.isArray(item)) {
         return arrayToUrl(item, prefix + `[${index}]`);
       } else {
@@ -397,18 +400,18 @@ function arrayToUrl(array: BodyObject[], prefix = ""): string {
 function objectToUrl(object: BodyObject, prefix = ""): string {
   return Object.keys(object)
     .map((key): string => {
-      if (notAllowed(object[key])) {
+      const value = object[key];
+
+      if (notAllowed(value)) {
         throw new Error(
           `ObjectToUrlStringError: Encounter not allowed value at: ${prefix}`,
         );
-      } else if (isBasicType(object[key])) {
-        return (
-          prefix + `[${key}]=${encodeURIComponent(object[key] || "null")}&`
-        );
-      } else if (Array.isArray(object[key])) {
-        return arrayToUrl(object[key] as BodyObject[], prefix + `[${key}]`);
+      } else if (isBasicType(value)) {
+        return `${prefix}[${key}]=${encodeURIComponent(value || "null")}&`;
+      } else if (Array.isArray(value)) {
+        return arrayToUrl(value, prefix + `[${key}]`);
       } else {
-        return objectToUrl(object[key] as BodyObject, prefix + `[${key}]`);
+        return objectToUrl(value, prefix + `[${key}]`);
       }
     })
     .join("");
