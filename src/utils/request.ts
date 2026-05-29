@@ -62,9 +62,13 @@
 // Types.
 export type BaseType = string | number | boolean | null;
 export type ResponseFallback = (response: Response) => any;
-export type BodyObject = {
-  [key: string]: BaseType | BaseType[] | BodyObject | BodyObject[];
+type NestedObject<V> = {
+  [key: string]: V | NestedObject<V> | Array<V | NestedObject<V>>;
 };
+
+export type BodyObject = NestedObject<BaseType>;
+export type FormDataValue = BaseType | Blob | File | Date;
+export type FormDataObject = NestedObject<FormDataValue>;
 
 export type RequestOptions = RequestInit & {
   abortable?: boolean;
@@ -354,7 +358,7 @@ async function parseResponse<R>(response: Response): Promise<R> {
  * Converts a JSON object to a URL query string, supporting nested objects and arrays.
  * @param json The object to convert
  */
-export function objectToUrlString(json: BodyObject) {
+export function objectToUrlString<T extends BodyObject>(json: T): string {
   if (isBasicType(json) || notAllowed(json) || Array.isArray(json)) {
     throw new Error("ObjectToUrlStringError: Given value is not a JSON object");
   }
@@ -418,24 +422,38 @@ function removeTrailingAmpersand(value: string) {
  * Converts a JSON object to FormData, supporting nested objects and arrays.
  * @param body The object to convert
  */
-export function objectToDataForm(body: BodyObject) {
+export function objectToDataForm<T extends FormDataObject>(body: T): FormData {
   const formData = new FormData();
   Object.keys(body).forEach((name) => {
     if (Array.isArray(body[name])) {
-      (body[name] as BodyObject[]).forEach((item) => {
-        formData.append(
-          name,
-          isBasicType(item) ? `${item}` : JSON.stringify(item),
-        );
+      (body[name] as Array<FormDataValue | FormDataObject>).forEach((item) => {
+        appendFormDataValue(formData, name, item);
       });
     } else {
-      formData.append(
-        name,
-        isBasicType(body[name]) ? `${body[name]}` : JSON.stringify(body[name]),
-      );
+      appendFormDataValue(formData, name, body[name]);
     }
   });
   return formData;
+}
+
+function appendFormDataValue(
+  formData: FormData,
+  name: string,
+  value: FormDataValue | FormDataObject,
+) {
+  if (value instanceof Blob) {
+    console.log("parse blob", name, value);
+    formData.append(name, value);
+  } else if (value instanceof Date) {
+    console.log("parse date", name, value);
+    formData.append(name, value.toISOString());
+  } else if (isBasicType(value)) {
+    console.log("parse basic type", name, value);
+    formData.append(name, `${value}`);
+  } else {
+    console.log("parse object", name, value);
+    formData.append(name, JSON.stringify(value));
+  }
 }
 
 // ---- Verifiers ----------------
