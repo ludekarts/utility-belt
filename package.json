@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "JavaScript Utilities Collection",
   "files": [
     "dist"

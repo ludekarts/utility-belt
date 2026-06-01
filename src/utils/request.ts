@@ -4,7 +4,7 @@
  * @example
  *
  * import { request, abortRequest, clearCache, requestConfigurator, objectToUrlString, objectToDataForm } from "@ludekarts/utility-belt";
- * import type { RequestOptions, ResponseProcessor, BaseType, BodyObject, ResponseFallback, RequestConfiguratorOptions } from "@ludekarts/utility-belt";
+ * import type { RequestOptions, BaseType, BodyObject, ResponseFallback, RequestConfiguratorOptions } from "@ludekarts/utility-belt";
  *
  * // 📝 Making a GET request:
  *
@@ -63,6 +63,14 @@
 export type BaseType = string | number | boolean | null;
 export type ResponseFallback = (response: Response) => any;
 
+type MaybePromise<T> = T | Promise<T>;
+type ResponseParser<TResponse> = (
+  response: Response,
+) => MaybePromise<TResponse>;
+type ResponseProcessor<TInput, TOutput = TInput> = (
+  response: TInput,
+) => MaybePromise<TOutput>;
+
 type NestedObject<V> = {
   [key: string]: V | NestedObject<V> | Array<V | NestedObject<V>>;
 };
@@ -72,13 +80,16 @@ export type FormDataValue = BaseType | Blob | File | Date;
 export type FormDataObject = NestedObject<FormDataValue>;
 interface UrlArray extends Array<BaseType | BodyObject | UrlArray> {}
 
-export type RequestOptions = RequestInit & {
+export type RequestOptions<
+  ParsedResponse = Response,
+  FinalResponse = ParsedResponse,
+> = RequestInit & {
   abortable?: boolean;
   requestHash?: string;
   cacheRequest?: boolean;
   fallback?: ResponseFallback;
-  responseParser?: (response: Response) => Promise<unknown>;
-  responseProcessor?: <R, RP>(response: R) => RP;
+  responseParser?: ResponseParser<ParsedResponse>;
+  responseProcessor?: ResponseProcessor<ParsedResponse, FinalResponse>;
 };
 
 // Container for all pending requests.
@@ -96,15 +107,22 @@ const responseCache: Map<string, unknown> = new Map();
  * @param url The request URL
  * @param options Request options
  */
-export function request<R>(url: string, options?: RequestOptions): Promise<R> {
+export function request<
+  ParsedResponse = Response,
+  FinalResponse = ParsedResponse,
+>(
+  url: string,
+  options?: RequestOptions<ParsedResponse, FinalResponse>,
+): Promise<FinalResponse> {
   const {
     method = "GET",
     fallback,
     requestHash,
     abortable = false,
     cacheRequest = false,
-    responseParser = parseResponse,
-    responseProcessor = (response: unknown) => response as R,
+    responseParser = parseResponse as ResponseParser<ParsedResponse>,
+    responseProcessor = (response: ParsedResponse) =>
+      response as unknown as FinalResponse,
     ...restOptions
   } = options || {};
 
@@ -117,12 +135,12 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
 
   const requestProcessor = (response: Response) =>
     response.ok === true
-      ? responseParser(response)
+      ? Promise.resolve(responseParser(response))
           .then(responseProcessor)
           .then(cacheResponse(finalRequestHash, cacheRequest))
       : typeof fallback === "function"
         ? fallback(response)
-        : responseParser(response)
+        : Promise.resolve(responseParser(response))
             .then(Promise.reject)
             .catch(clearRejectedResponse(finalRequestHash, cacheRequest));
 
@@ -141,7 +159,9 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
   };
 
   if (HAS_CACHED_RESPONSE) {
-    return Promise.resolve(responseCache.get(finalRequestHash) as R);
+    return Promise.resolve(
+      responseCache.get(finalRequestHash) as FinalResponse,
+    );
   } else if (IS_PENDING_REQUEST) {
     if (abortable) {
       const pendingRequest = requestQueue.get(finalRequestHash);
@@ -149,19 +169,22 @@ export function request<R>(url: string, options?: RequestOptions): Promise<R> {
         pendingRequest.controller.abort();
         requestQueue.delete(finalRequestHash);
       }
-      return createNewRequest() as Promise<R>;
+      return createNewRequest() as Promise<FinalResponse>;
     } else {
       const cachedRequest = requestQueue.get(finalRequestHash);
       return (
         cachedRequest ? cachedRequest.requestRef : createNewRequest()
-      ) as Promise<R>;
+      ) as Promise<FinalResponse>;
     }
   } else {
-    return createNewRequest() as Promise<R>;
+    return createNewRequest() as Promise<FinalResponse>;
   }
 }
 
-export type RequestConfiguratorOptions = RequestOptions & {
+export type RequestConfiguratorOptions<
+  ParsedResponse = Response,
+  FinalResponse = ParsedResponse,
+> = RequestOptions<ParsedResponse, FinalResponse> & {
   headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
 };
 
@@ -175,14 +198,14 @@ export type RequestConfiguratorOptions = RequestOptions & {
  */
 export function requestConfigurator(
   method: string,
-  globalOptions: RequestOptions = {},
+  globalOptions: RequestOptions<any, any> = {},
 ) {
-  return function <R>(
+  return function <ParsedResponse = Response, FinalResponse = ParsedResponse>(
     url: string,
-    options?: RequestConfiguratorOptions,
-  ): Promise<R> {
+    options?: RequestConfiguratorOptions<ParsedResponse, FinalResponse>,
+  ): Promise<FinalResponse> {
     const { headers, responseProcessor, ...restOptions } = options || {};
-    const finalOptions = {
+    const finalOptions: RequestOptions<any, any> = {
       ...globalOptions,
       ...restOptions,
       headers:
@@ -196,15 +219,18 @@ export function requestConfigurator(
 
     // Apply global responseProcessor and chain it with request-specific responseProcessor.
     if (typeof globalOptions.responseProcessor === "function") {
-      const globalResponseProcessor = globalOptions.responseProcessor;
+      const globalResponseProcessor =
+        globalOptions.responseProcessor as ResponseProcessor<unknown, unknown>;
 
-      finalOptions.responseProcessor = (response: unknown) =>
+      finalOptions.responseProcessor = (response: any) =>
         typeof responseProcessor === "function"
-          ? responseProcessor(globalResponseProcessor(response))
+          ? responseProcessor(
+              globalResponseProcessor(response) as ParsedResponse,
+            )
           : globalResponseProcessor(response);
     }
 
-    return request<R>(url, finalOptions);
+    return request<ParsedResponse, FinalResponse>(url, finalOptions);
   };
 }
 
@@ -445,16 +471,12 @@ function appendFormDataValue(
   value: FormDataValue | FormDataObject,
 ) {
   if (value instanceof Blob) {
-    console.log("parse blob", name, value);
     formData.append(name, value);
   } else if (value instanceof Date) {
-    console.log("parse date", name, value);
     formData.append(name, value.toISOString());
   } else if (isBasicType(value)) {
-    console.log("parse basic type", name, value);
     formData.append(name, `${value}`);
   } else {
-    console.log("parse object", name, value);
     formData.append(name, JSON.stringify(value));
   }
 }
