@@ -61,7 +61,9 @@
 
 // Types.
 export type BaseType = string | number | boolean | null;
-export type ResponseFallback = (response: Response) => any;
+export type ResponseFallback<TResponse = unknown> = (
+  response: Response,
+) => MaybePromise<TResponse>;
 
 type MaybePromise<T> = T | Promise<T>;
 type ResponseParser<TResponse> = (
@@ -86,9 +88,9 @@ type RequestOptionsWithoutProcessor<ParsedResponse = unknown> =
 
 type RequestOptionsWithProcessor<ParsedResponse, FinalResponse> =
   RequestBaseOptions & {
-  responseParser?: ResponseParser<ParsedResponse>;
-  responseProcessor: ResponseProcessor<ParsedResponse, FinalResponse>;
-};
+    responseParser?: ResponseParser<ParsedResponse>;
+    responseProcessor: ResponseProcessor<ParsedResponse, FinalResponse>;
+  };
 
 export type RequestOptions<
   ParsedResponse = unknown,
@@ -100,22 +102,19 @@ export type RequestOptions<
 export type RequestConfiguratorOptions<
   ParsedResponse = unknown,
   FinalResponse = ParsedResponse,
-> =
-  RequestOptions<ParsedResponse, FinalResponse> & {
-    headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
-  };
+> = RequestOptions<ParsedResponse, FinalResponse> & {
+  headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
+};
 
 type RequestConfiguratorOptionsWithoutProcessor<ParsedResponse = unknown> =
   RequestOptionsWithoutProcessor<ParsedResponse> & {
     headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
   };
 
-type RequestConfiguratorOptionsWithProcessor<
-  ParsedResponse,
-  FinalResponse,
-> = RequestOptionsWithProcessor<ParsedResponse, FinalResponse> & {
-  headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
-};
+type RequestConfiguratorOptionsWithProcessor<ParsedResponse, FinalResponse> =
+  RequestOptionsWithProcessor<ParsedResponse, FinalResponse> & {
+    headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
+  };
 
 type ConfiguredRequest<DefaultParsedResponse> = {
   <ParsedResponse = DefaultParsedResponse>(
@@ -184,27 +183,22 @@ const responseCache: Map<string, unknown> = new Map();
  * @param url The request URL
  * @param options Request options
  */
-export function request<
-  ParsedResponse = unknown,
->(
+export function request<ParsedResponse = unknown>(
   url: string,
   options?: RequestOptionsWithoutProcessor<ParsedResponse>,
 ): Promise<ParsedResponse>;
-export function request<
-  ParsedResponse,
-  FinalResponse,
->(
+export function request<ParsedResponse, FinalResponse>(
   url: string,
   options: RequestOptionsWithProcessor<ParsedResponse, FinalResponse>,
 ): Promise<Awaited<FinalResponse>>;
 export function request<ParsedResponse>(
   url: string,
-  options: RequestOptionsWithProcessor<
-    ParsedResponse,
-    unknown
-  >,
+  options: RequestOptionsWithProcessor<ParsedResponse, unknown>,
 ): Promise<unknown>;
-export function request<ParsedResponse = unknown, FinalResponse = ParsedResponse>(
+export function request<
+  ParsedResponse = unknown,
+  FinalResponse = ParsedResponse,
+>(
   url: string,
   options?: RequestOptions<ParsedResponse, FinalResponse>,
 ): Promise<ParsedResponse | FinalResponse> {
@@ -226,20 +220,38 @@ export function request<ParsedResponse = unknown, FinalResponse = ParsedResponse
     requestHash,
   );
 
-  const requestProcessor = (response: Response) =>
-    response.ok === true
-      ? Promise.resolve(responseParser(response))
-          .then((parsedResponse) =>
-            typeof responseProcessor === "function"
-              ? responseProcessor(parsedResponse)
-              : parsedResponse,
-          )
-          .then(cacheResponse(finalRequestHash, cacheRequest))
-      : typeof fallback === "function"
-        ? fallback(response)
-        : Promise.resolve(responseParser(response))
-            .then(Promise.reject)
-            .catch(clearRejectedResponse(finalRequestHash, cacheRequest));
+  const clearPendingRequest = () => {
+    requestQueue.delete(finalRequestHash);
+  };
+
+  const requestProcessor = (response: Response) => {
+    const SUCCESS_RESPONSE = response.ok === true;
+    const HAS_FALLBACK_CALLBACK = typeof fallback === "function";
+
+    // Process response.
+    if (SUCCESS_RESPONSE) {
+      return Promise.resolve(responseParser(response))
+        .then((parsedResponse) =>
+          typeof responseProcessor === "function"
+            ? responseProcessor(parsedResponse)
+            : parsedResponse,
+        )
+        .then(cacheResolvedResponse(finalRequestHash, cacheRequest))
+        .finally(clearPendingRequest);
+    }
+
+    // Apply fallback.
+    else if (HAS_FALLBACK_CALLBACK) {
+      return Promise.resolve(fallback(response)).finally(clearPendingRequest);
+    }
+
+    // Fail.
+    else {
+      return Promise.resolve(responseParser(response))
+        .then(Promise.reject)
+        .catch(rethrowAfter(clearPendingRequest));
+    }
+  };
 
   const IS_PENDING_REQUEST = cacheRequest && requestQueue.has(finalRequestHash);
   const HAS_CACHED_RESPONSE =
@@ -255,11 +267,16 @@ export function request<ParsedResponse = unknown, FinalResponse = ParsedResponse
     return requestRef;
   };
 
+  // Cache.
   if (HAS_CACHED_RESPONSE) {
     return Promise.resolve(
       responseCache.get(finalRequestHash) as ParsedResponse | FinalResponse,
     );
-  } else if (IS_PENDING_REQUEST) {
+  }
+
+  // Deduplication.
+  else if (IS_PENDING_REQUEST) {
+    // Abort and start a new request.
     if (abortable) {
       const pendingRequest = requestQueue.get(finalRequestHash);
       if (pendingRequest) {
@@ -267,13 +284,18 @@ export function request<ParsedResponse = unknown, FinalResponse = ParsedResponse
         requestQueue.delete(finalRequestHash);
       }
       return createNewRequest() as Promise<ParsedResponse | FinalResponse>;
-    } else {
+    }
+
+    // Return pending request reference.
+    else {
       const cachedRequest = requestQueue.get(finalRequestHash);
       return (
         cachedRequest ? cachedRequest.requestRef : createNewRequest()
       ) as Promise<ParsedResponse | FinalResponse>;
     }
-  } else {
+  }
+  // New Request.
+  else {
     return createNewRequest() as Promise<ParsedResponse | FinalResponse>;
   }
 }
@@ -290,10 +312,7 @@ export function requestConfigurator<DefaultParsedResponse = unknown>(
   method: string,
   globalOptions?: RequestConfiguratorOptionsWithoutProcessor<DefaultParsedResponse>,
 ): ConfiguredRequest<DefaultParsedResponse>;
-export function requestConfigurator<
-  ParsedResponse,
-  GlobalProcessedResponse,
->(
+export function requestConfigurator<ParsedResponse, GlobalProcessedResponse>(
   method: string,
   globalOptions: RequestConfiguratorOptionsWithProcessor<
     ParsedResponse,
@@ -345,7 +364,10 @@ export function requestConfigurator(
       );
     }
 
-    return request(url, finalOptions as RequestOptionsWithoutProcessor<unknown>);
+    return request(
+      url,
+      finalOptions as RequestOptionsWithoutProcessor<unknown>,
+    );
   };
 }
 
@@ -439,24 +461,20 @@ function createRequestHash(method: string, url?: string, hash?: string) {
   return hash ? hash : `${method}:${url}`;
 }
 
-// Cache parsed response in the responseCache.
-function cacheResponse(requestHash: string, cacheRequest: boolean) {
+// Cache a resolved response in the responseCache.
+function cacheResolvedResponse(requestHash: string, cacheRequest: boolean) {
   return (parsed: unknown) => {
     if (cacheRequest) {
       responseCache.set(requestHash, parsed);
-      requestQueue.delete(requestHash);
     }
     return parsed;
   };
 }
 
-// Remove rejected response from the request queue.
-function clearRejectedResponse(requestHash: string, cacheRequest: boolean) {
-  return (response: Response) => {
-    if (cacheRequest) {
-      requestQueue.delete(requestHash);
-    }
-    return Promise.reject(response);
+function rethrowAfter(onSettled: () => void) {
+  return (error: unknown) => {
+    onSettled();
+    return Promise.reject(error);
   };
 }
 
