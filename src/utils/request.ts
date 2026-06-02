@@ -71,6 +71,95 @@ type ResponseProcessor<TInput, TOutput = TInput> = (
   response: TInput,
 ) => MaybePromise<TOutput>;
 
+type RequestBaseOptions = RequestInit & {
+  abortable?: boolean;
+  requestHash?: string;
+  cacheRequest?: boolean;
+  fallback?: ResponseFallback;
+};
+
+type RequestOptionsWithoutProcessor<ParsedResponse = unknown> =
+  RequestBaseOptions & {
+    responseParser?: ResponseParser<ParsedResponse>;
+    responseProcessor?: undefined;
+  };
+
+type RequestOptionsWithProcessor<ParsedResponse, FinalResponse> =
+  RequestBaseOptions & {
+  responseParser?: ResponseParser<ParsedResponse>;
+  responseProcessor: ResponseProcessor<ParsedResponse, FinalResponse>;
+};
+
+export type RequestOptions<
+  ParsedResponse = unknown,
+  FinalResponse = ParsedResponse,
+> =
+  | RequestOptionsWithoutProcessor<ParsedResponse>
+  | RequestOptionsWithProcessor<ParsedResponse, FinalResponse>;
+
+export type RequestConfiguratorOptions<
+  ParsedResponse = unknown,
+  FinalResponse = ParsedResponse,
+> =
+  RequestOptions<ParsedResponse, FinalResponse> & {
+    headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
+  };
+
+type RequestConfiguratorOptionsWithoutProcessor<ParsedResponse = unknown> =
+  RequestOptionsWithoutProcessor<ParsedResponse> & {
+    headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
+  };
+
+type RequestConfiguratorOptionsWithProcessor<
+  ParsedResponse,
+  FinalResponse,
+> = RequestOptionsWithProcessor<ParsedResponse, FinalResponse> & {
+  headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
+};
+
+type ConfiguredRequest<DefaultParsedResponse> = {
+  <ParsedResponse = DefaultParsedResponse>(
+    url: string,
+    options?: RequestConfiguratorOptionsWithoutProcessor<ParsedResponse>,
+  ): Promise<ParsedResponse>;
+  <ParsedResponse, FinalResponse>(
+    url: string,
+    options: RequestConfiguratorOptionsWithProcessor<
+      ParsedResponse,
+      FinalResponse
+    >,
+  ): Promise<Awaited<FinalResponse>>;
+  <FinalResponse>(
+    url: string,
+    options: RequestConfiguratorOptionsWithProcessor<
+      DefaultParsedResponse,
+      FinalResponse
+    >,
+  ): Promise<Awaited<FinalResponse>>;
+};
+
+type ConfiguredRequestWithGlobalProcessor<
+  ParsedResponse,
+  GlobalProcessedResponse,
+> = {
+  (
+    url: string,
+    options?: RequestConfiguratorOptionsWithoutProcessor<ParsedResponse>,
+  ): Promise<GlobalProcessedResponse>;
+  <FinalResponse>(
+    url: string,
+    options: Omit<
+      RequestConfiguratorOptionsWithoutProcessor<ParsedResponse>,
+      "responseProcessor"
+    > & {
+      responseProcessor: ResponseProcessor<
+        GlobalProcessedResponse,
+        FinalResponse
+      >;
+    },
+  ): Promise<Awaited<FinalResponse>>;
+};
+
 type NestedObject<V> = {
   [key: string]: V | NestedObject<V> | Array<V | NestedObject<V>>;
 };
@@ -79,18 +168,6 @@ export type BodyObject = NestedObject<BaseType>;
 export type FormDataValue = BaseType | Blob | File | Date;
 export type FormDataObject = NestedObject<FormDataValue>;
 interface UrlArray extends Array<BaseType | BodyObject | UrlArray> {}
-
-export type RequestOptions<
-  ParsedResponse = Response,
-  FinalResponse = ParsedResponse,
-> = RequestInit & {
-  abortable?: boolean;
-  requestHash?: string;
-  cacheRequest?: boolean;
-  fallback?: ResponseFallback;
-  responseParser?: ResponseParser<ParsedResponse>;
-  responseProcessor?: ResponseProcessor<ParsedResponse, FinalResponse>;
-};
 
 // Container for all pending requests.
 type RequestQueueValue = {
@@ -108,12 +185,29 @@ const responseCache: Map<string, unknown> = new Map();
  * @param options Request options
  */
 export function request<
-  ParsedResponse = Response,
-  FinalResponse = ParsedResponse,
+  ParsedResponse = unknown,
 >(
   url: string,
+  options?: RequestOptionsWithoutProcessor<ParsedResponse>,
+): Promise<ParsedResponse>;
+export function request<
+  ParsedResponse,
+  FinalResponse,
+>(
+  url: string,
+  options: RequestOptionsWithProcessor<ParsedResponse, FinalResponse>,
+): Promise<Awaited<FinalResponse>>;
+export function request<ParsedResponse>(
+  url: string,
+  options: RequestOptionsWithProcessor<
+    ParsedResponse,
+    unknown
+  >,
+): Promise<unknown>;
+export function request<ParsedResponse = unknown, FinalResponse = ParsedResponse>(
+  url: string,
   options?: RequestOptions<ParsedResponse, FinalResponse>,
-): Promise<FinalResponse> {
+): Promise<ParsedResponse | FinalResponse> {
   const {
     method = "GET",
     fallback,
@@ -121,8 +215,7 @@ export function request<
     abortable = false,
     cacheRequest = false,
     responseParser = parseResponse as ResponseParser<ParsedResponse>,
-    responseProcessor = (response: ParsedResponse) =>
-      response as unknown as FinalResponse,
+    responseProcessor,
     ...restOptions
   } = options || {};
 
@@ -136,7 +229,11 @@ export function request<
   const requestProcessor = (response: Response) =>
     response.ok === true
       ? Promise.resolve(responseParser(response))
-          .then(responseProcessor)
+          .then((parsedResponse) =>
+            typeof responseProcessor === "function"
+              ? responseProcessor(parsedResponse)
+              : parsedResponse,
+          )
           .then(cacheResponse(finalRequestHash, cacheRequest))
       : typeof fallback === "function"
         ? fallback(response)
@@ -160,7 +257,7 @@ export function request<
 
   if (HAS_CACHED_RESPONSE) {
     return Promise.resolve(
-      responseCache.get(finalRequestHash) as FinalResponse,
+      responseCache.get(finalRequestHash) as ParsedResponse | FinalResponse,
     );
   } else if (IS_PENDING_REQUEST) {
     if (abortable) {
@@ -169,24 +266,17 @@ export function request<
         pendingRequest.controller.abort();
         requestQueue.delete(finalRequestHash);
       }
-      return createNewRequest() as Promise<FinalResponse>;
+      return createNewRequest() as Promise<ParsedResponse | FinalResponse>;
     } else {
       const cachedRequest = requestQueue.get(finalRequestHash);
       return (
         cachedRequest ? cachedRequest.requestRef : createNewRequest()
-      ) as Promise<FinalResponse>;
+      ) as Promise<ParsedResponse | FinalResponse>;
     }
   } else {
-    return createNewRequest() as Promise<FinalResponse>;
+    return createNewRequest() as Promise<ParsedResponse | FinalResponse>;
   }
 }
-
-export type RequestConfiguratorOptions<
-  ParsedResponse = Response,
-  FinalResponse = ParsedResponse,
-> = RequestOptions<ParsedResponse, FinalResponse> & {
-  headers?: HeadersInit | ((globalHeaders: HeadersInit) => HeadersInit);
-};
 
 /**
  * Returns a configured request function for a specific HTTP method.
@@ -196,16 +286,38 @@ export type RequestConfiguratorOptions<
  * @param method HTTP method
  * @param globalOptions Global request options
  */
+export function requestConfigurator<DefaultParsedResponse = unknown>(
+  method: string,
+  globalOptions?: RequestConfiguratorOptionsWithoutProcessor<DefaultParsedResponse>,
+): ConfiguredRequest<DefaultParsedResponse>;
+export function requestConfigurator<
+  ParsedResponse,
+  GlobalProcessedResponse,
+>(
+  method: string,
+  globalOptions: RequestConfiguratorOptionsWithProcessor<
+    ParsedResponse,
+    GlobalProcessedResponse
+  >,
+): ConfiguredRequestWithGlobalProcessor<
+  ParsedResponse,
+  Awaited<GlobalProcessedResponse>
+>;
 export function requestConfigurator(
   method: string,
-  globalOptions: RequestOptions<any, any> = {},
+  globalOptions: RequestConfiguratorOptions<unknown, unknown> = {},
 ) {
-  return function <ParsedResponse = Response, FinalResponse = ParsedResponse>(
+  return function (
     url: string,
-    options?: RequestConfiguratorOptions<ParsedResponse, FinalResponse>,
-  ): Promise<FinalResponse> {
-    const { headers, responseProcessor, ...restOptions } = options || {};
-    const finalOptions: RequestOptions<any, any> = {
+    options?: RequestConfiguratorOptions<unknown, unknown>,
+  ) {
+    const {
+      headers,
+      responseProcessor: localResponseProcessor,
+      ...restOptions
+    } = options || {};
+    const globalResponseProcessor = globalOptions.responseProcessor;
+    const finalOptions = {
       ...globalOptions,
       ...restOptions,
       headers:
@@ -215,22 +327,25 @@ export function requestConfigurator(
             ? headers
             : globalOptions.headers,
       method: method.toUpperCase(),
+      responseProcessor:
+        typeof globalResponseProcessor === "function"
+          ? typeof localResponseProcessor === "function"
+            ? (response: unknown) =>
+                Promise.resolve(globalResponseProcessor(response)).then(
+                  localResponseProcessor,
+                )
+            : globalResponseProcessor
+          : localResponseProcessor,
     };
 
-    // Apply global responseProcessor and chain it with request-specific responseProcessor.
-    if (typeof globalOptions.responseProcessor === "function") {
-      const globalResponseProcessor =
-        globalOptions.responseProcessor as ResponseProcessor<unknown, unknown>;
-
-      finalOptions.responseProcessor = (response: any) =>
-        typeof responseProcessor === "function"
-          ? responseProcessor(
-              globalResponseProcessor(response) as ParsedResponse,
-            )
-          : globalResponseProcessor(response);
+    if (typeof finalOptions.responseProcessor === "function") {
+      return request(
+        url,
+        finalOptions as RequestOptionsWithProcessor<unknown, unknown>,
+      );
     }
 
-    return request<ParsedResponse, FinalResponse>(url, finalOptions);
+    return request(url, finalOptions as RequestOptionsWithoutProcessor<unknown>);
   };
 }
 
