@@ -29,7 +29,7 @@
  * const requestHash = "my-request-hash";
  * request("https://api.example.com/data", {
  *  requestHash,
- *  abortable: true,
+ *  deduplicate: true,
  * }).then(console.log);
  *
  * // 📝 Aborting a request by hash:
@@ -74,7 +74,7 @@ type ResponseProcessor<TInput, TOutput = TInput> = (
 ) => MaybePromise<TOutput>;
 
 type RequestBaseOptions = RequestInit & {
-  abortable?: boolean;
+  deduplicate?: boolean;
   requestHash?: string;
   cacheRequest?: boolean;
   fallback?: ResponseFallback;
@@ -206,7 +206,7 @@ export function request<
     method = "GET",
     fallback,
     requestHash,
-    abortable = false,
+    deduplicate = false,
     cacheRequest = false,
     responseParser = parseResponse as ResponseParser<ParsedResponse>,
     responseProcessor,
@@ -277,7 +277,7 @@ export function request<
   // Deduplication.
   else if (IS_PENDING_REQUEST) {
     // Abort and start a new request.
-    if (abortable) {
+    if (deduplicate) {
       const pendingRequest = requestQueue.get(finalRequestHash);
       if (pendingRequest) {
         pendingRequest.controller.abort();
