@@ -9,7 +9,7 @@
  *
  */
 
-export function hyphenate(value: string, connector: string) {
+export function hyphenate(value: string, connector: string = "-") {
   const dict: { [key: string]: string } = {
     ą: "a",
     ć: "c",
@@ -23,6 +23,7 @@ export function hyphenate(value: string, connector: string) {
     " ": "-",
   };
   const hyphenatedValue = value
+    .trim()
     .toLowerCase()
     .replace(/[\Wąćęłńóśżź_ ]/g, (match: string) => dict[match] || "")
     .replace(/-{2,}/, "-");
@@ -86,7 +87,7 @@ export function isPromise(value: any) {
  */
 export function inPolygon(
   point: [number, number],
-  vs: Array<[number, number]>
+  vs: Array<[number, number]>,
 ) {
   let [x, y] = point;
   let inside = false;
@@ -134,8 +135,8 @@ export function plPlurals(settings: plPluralsSettings = {}) {
     return value === 1
       ? one
       : !moduloCases.includes(mod10) || manyCases.includes(value)
-      ? many
-      : few;
+        ? many
+        : few;
   };
 }
 
