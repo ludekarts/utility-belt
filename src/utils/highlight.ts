@@ -4,7 +4,7 @@
  * @example
  *
  * const result = highlight("Good and goofy", "go, fy");
- * console.log(result); // <strong>Go</strong>od and <strong>go</strong>o<em>fy</em>
+ * console.log(result); // <strong>Go</strong>od and <strong>go</strong>o<strong>fy</strong>
  */
 
 export function highlight(text: string, phrases: string) {

@@ -4,7 +4,7 @@ describe("Generla helpers tests", () => {
   const {
     uid,
     isObject,
-    wordCase,
+    plPlurals,
     hyphenate,
     isPromise,
     inPolygon,
@@ -62,16 +62,17 @@ describe("Generla helpers tests", () => {
     ).to.be.false;
   });
 
-  it("Should apply proper word case", () => {
-    const getCase = wordCase({
+  it("Should apply proper Polish plural form", () => {
+    const getCase = plPlurals({
       one: "produkt",
-      some: "produkty",
-      multiple: "produktów",
+      few: "produkty",
+      many: "produktów",
     });
     expect(getCase(1)).to.equal("produkt");
     expect(getCase(2)).to.equal("produkty");
     expect(getCase(3)).to.equal("produkty");
     expect(getCase(5)).to.equal("produktów");
+    expect(getCase(12)).to.equal("produktów");
   });
 
   it("Should give a randomnumber", () => {

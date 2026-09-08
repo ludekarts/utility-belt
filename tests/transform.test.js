@@ -38,4 +38,18 @@ describe("transformObject tests", () => {
     expect(result.map).to.equal(map);
     expect(result.instance).to.equal(instance);
   });
+
+  it("traverses null-prototype objects and preserves custom-prototype objects", () => {
+    const specialObject = Object.assign(Object.create({ inherited: 1 }), {
+      own: 2,
+    });
+    const nullPrototype = Object.assign(Object.create(null), { value: 3 });
+    const result = transformObject(
+      { specialObject, nullPrototype },
+      (_key, value) => (typeof value === "number" ? value * 2 : undefined),
+    );
+
+    expect(result.specialObject).to.equal(specialObject);
+    expect(result.nullPrototype).to.deep.equal({ value: 6 });
+  });
 });

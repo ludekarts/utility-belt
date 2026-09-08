@@ -97,4 +97,30 @@ describe("Query helpers", () => {
       "https://example.com?id=123&user=admin"
     );
   });
+
+  it("Should support relative URLs and preserve fragments", () => {
+    const query = updateQueryParams("/items#results", "page", "2");
+
+    expect(query).to.be.equal("/items?page=2#results");
+  });
+
+  it("Should return duplicate values predictably", () => {
+    const [firstFilter, allFilters] = getQueryParams(
+      "filter",
+      "filter[]",
+      "/items?filter=age&filter=address&filter=status"
+    );
+
+    expect(firstFilter).to.be.equal("age");
+    expect(allFilters).to.deep.equal(["age", "address", "status"]);
+  });
+
+  it("Should keep existing key order and append replacement arrays in order", () => {
+    const query = updateQueryParams("/items?a=1&filter=old&z=3", {
+      a: "2",
+      filter: ["age", "status"],
+    });
+
+    expect(query).to.be.equal("/items?a=2&z=3&filter=age&filter=status");
+  });
 });

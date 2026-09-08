@@ -41,10 +41,10 @@ Work one item at a time. Update its status and notes before starting the next it
 
 ## P3 - API and Documentation Cleanup
 
-- [ ] `TODO` Clarify query API ordering, relative URL support, and duplicate-key behavior.
-- [ ] `TODO` Add boundary regression tests for arrays, delay helpers, transforms, and DOM helpers.
-- [ ] `TODO` Correct documentation/test mismatches for `highlight`, `plPlurals`, and `decompressJson`.
-- [ ] `TODO` Standardize error/result conventions by utility category.
+- [x] `DONE` Clarify query API ordering, relative URL support, and duplicate-key behavior.
+- [x] `DONE` Add boundary regression tests for arrays, delay helpers, transforms, and DOM helpers.
+- [x] `DONE` Correct documentation/test mismatches for `highlight`, `plPlurals`, and `decompressJson`.
+- [x] `DONE` Standardize error/result conventions by utility category.
 
 ## Release and CI
 
@@ -78,3 +78,7 @@ Work one item at a time. Update its status and notes before starting the next it
 | P2 checkbox state option naming           | `DONE`    | Browser tests use the public `includeCheckboxState` option and cover both checkbox states.                     |
 | P2 transformObject semantics              | `DONE`    | Plain objects and arrays are traversed; special objects are preserved as transformer leaf values.              |
 | P2 transform and form type contracts      | `DONE`    | Public form and transformer types now describe actual values; DOM controls are narrowed safely.                |
+| P3 query API contract                     | `DONE`    | Query helpers now support relative URLs, preserve fragments, and document duplicate-key and ordering behavior. |
+| P3 boundary regressions                   | `DONE`    | Added browser regressions for array, delay, transform, and DOM helper boundaries; invalid chunk sizes reject.  |
+| P3 documentation and test mismatches      | `DONE`    | Corrected `highlight` output docs, `plPlurals` test usage, and the `decompressJson` parameter name.            |
+| P3 error/result conventions               | `DONE`    | README documents synchronous, promise, callback, and legacy clipboard failure behavior by utility category.    |

@@ -34,10 +34,10 @@ export async function compressJson(json: any) {
  * Decompress a Base64 JSON string.
  * Requires `Blob`, `DecompressionStream`, `Response`, and `atob` support.
  */
-export async function decompressJson(comporessedJson: string) {
+export async function decompressJson(compressedJson: string) {
   requireCapabilities(["Blob", "DecompressionStream", "Response", "atob"]);
 
-  const binaryString = globalThis.atob(comporessedJson);
+  const binaryString = globalThis.atob(compressedJson);
   const length = binaryString.length;
   const bytes = new Uint8Array(new ArrayBuffer(length));
   for (let i = 0; i < length; i++) {

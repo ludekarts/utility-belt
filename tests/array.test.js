@@ -19,6 +19,16 @@ describe("Array tests", () => {
     expect(chunked).eql([[1, 2], [3, 4], [5]]);
   });
 
+  it("Should handle empty arrays and reject invalid chunk sizes", () => {
+    expect(UtilityBelt.chunkArray([], 2)).to.deep.equal([]);
+    expect(() => UtilityBelt.chunkArray([1, 2], 0)).to.throw(
+      "ChunkArrayError: size must be a positive integer",
+    );
+    expect(() => UtilityBelt.chunkArray([1, 2], 1.5)).to.throw(
+      "ChunkArrayError: size must be a positive integer",
+    );
+  });
+
   it("Should compare arrays", () => {
     const arrayA = [1, 2, 3, 4, 5];
     const arrayB = [3, 4, 5, 6, 7];
@@ -61,6 +71,14 @@ describe("Array tests", () => {
     const array = [1, 2, 3, 4, 5];
     const removed = UtilityBelt.removeByInstance(array, 3);
     expect(removed).eql([1, 2, 4, 5]);
+  });
+
+  it("Should preserve the original array when removing a missing instance", () => {
+    const array = [1, 2, 3];
+    const result = UtilityBelt.removeByInstance(array, 4);
+
+    expect(result).to.equal(array);
+    expect(array).to.deep.equal([1, 2, 3]);
   });
 
   it("Should replace item on index", () => {

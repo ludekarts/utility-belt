@@ -19,7 +19,7 @@ export function arrayToObject(
 }
 
 /**
- * Slice array in chunks with given size. Returns new array.
+ * Slice array in chunks with a positive size. Returns a new array.
  *
  * @example
  *
@@ -28,6 +28,10 @@ export function arrayToObject(
  */
 
 export function chunkArray<T>(array: T[], size: number) {
+  if (!Number.isInteger(size) || size <= 0) {
+    throw new Error("ChunkArrayError: size must be a positive integer");
+  }
+
   let index = 0;
   const arrayLength = array.length;
   const chunks = [];

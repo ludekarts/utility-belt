@@ -52,7 +52,7 @@ function traverseUnique(
   } else if (isPlainObject(input)) {
     result = {};
     for (const k in input) {
-      if (input.hasOwnProperty(k)) {
+      if (Object.prototype.hasOwnProperty.call(input, k)) {
         const transformed = traverseUnique(input[k], transformer, visited, k);
         if (transformed !== undefined) {
           result[k] = transformed;

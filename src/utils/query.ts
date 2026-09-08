@@ -1,5 +1,9 @@
 /**
- * Get query parameters from URL.
+ * Get query parameters from a relative or absolute URL.
+ *
+ * Requested values are returned in the same order as their requested names.
+ * A plain name returns its first value when a key is duplicated; append `[]` to
+ * the name to return every value in URL order.
  *
  * @example
  *
@@ -10,7 +14,7 @@
  * console.log(id, filter); // 123, ["age", "addres"]
  *
  */
-export function getQueryParams(...params: string[]) {
+export function getQueryParams(...params: string[]): Array<string | string[] | undefined> {
   if (params.length === 0) {
     throw new Error("GetQueryParamsError: No query parameters provided");
   }
@@ -34,7 +38,11 @@ export function getQueryParams(...params: string[]) {
 }
 
 /**
- * Update query parameters in URL.
+ * Update query parameters in a relative or absolute URL.
+ *
+ * Existing keys retain their order when updated. Array values replace all
+ * existing values and are appended in array order. A value of `undefined`
+ * removes all occurrences of its key. URL fragments are preserved.
  *
  * @example
  *
@@ -50,25 +58,28 @@ export function getQueryParams(...params: string[]) {
  *
  */
 
-type QueryParam = string | { [key: string]: string | string[] };
+type QueryParamValue = string | string[] | undefined;
+type QueryParam = string | Record<string, QueryParamValue>;
 
 export function updateQueryParams(
   query: string,
   name: QueryParam,
-  value: string
+  value?: string
 ) {
-  const head = query.slice(0, query.indexOf("?") + 1);
-  const tail = !head
-    ? query
-    : query.slice(query.indexOf("?") + 1, query.length);
-  const UPDATE_SINLGE_PARAM = typeof name === "string";
-  const UPDATE_MULTIPLE_PARAM =
+  const hashIndex = query.indexOf("#");
+  const fragment = hashIndex === -1 ? "" : query.slice(hashIndex);
+  const url = hashIndex === -1 ? query : query.slice(0, hashIndex);
+  const queryIndex = url.indexOf("?");
+  const head = queryIndex === -1 ? `${url}?` : url.slice(0, queryIndex + 1);
+  const tail = queryIndex === -1 ? "" : url.slice(queryIndex + 1);
+  const UPDATE_SINGLE_PARAM = typeof name === "string";
+  const UPDATE_MULTIPLE_PARAMS =
     typeof name === "object" && typeof value === "undefined";
   const searchParams = new URLSearchParams(tail);
 
-  if (UPDATE_SINLGE_PARAM) {
+  if (UPDATE_SINGLE_PARAM) {
     updateParam(searchParams, name, value);
-  } else if (UPDATE_MULTIPLE_PARAM) {
+  } else if (UPDATE_MULTIPLE_PARAMS) {
     Object.keys(name).forEach((key) => {
       const propValue = name[key];
 
@@ -83,13 +94,13 @@ export function updateQueryParams(
     throw new Error("UpdateQueryParamsError: Invalid arguments");
   }
 
-  return head + searchParams.toString();
+  return head + searchParams.toString() + fragment;
 }
 
 function updateParam(
   searchParams: URLSearchParams,
   name: string,
-  value: string
+  value: string | undefined
 ) {
   const removeExistingKey = value === undefined;
   if (removeExistingKey) {
