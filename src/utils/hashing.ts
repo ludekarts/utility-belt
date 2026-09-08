@@ -1,4 +1,8 @@
-// Create hashCode from string.
+/**
+ * Creates a deterministic signed 32-bit hash from a string.
+ * This is non-cryptographic and must not be used for passwords, signatures,
+ * integrity checks, authentication, or collision-sensitive identifiers.
+ */
 export function hashCode(source: string) {
   return source.split("").reduce((a, b) => {
     a = (a << 5) - a + b.charCodeAt(0);

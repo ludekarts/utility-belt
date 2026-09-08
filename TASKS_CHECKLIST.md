@@ -17,13 +17,18 @@ Work one item at a time. Update its status and notes before starting the next it
 - [x] `DONE` Add a browser-capable test runner and a `pnpm test` script.
 - [ ] `SKIPPED` Modernize `copyToClipboard` with `navigator.clipboard.writeText` and a cleaned-up fallback.
 - [ ] `SKIPPED` Define and test clipboard success/failure behavior.
-- [ ] `TODO` Add capability checks and documented failures for browser-only APIs.
+- [x] `DONE` Add capability checks and documented failures for browser-only APIs.
   - [x] `DONE` Guard `uid()` when `crypto.randomUUID` is unavailable.
   - [x] `DONE` Guard compression helpers when required Web APIs are unavailable.
   - [x] `DONE` Guard requests when `fetch` or `AbortController` is unavailable.
-- [ ] `TODO` Resolve the component-test mismatch: test public APIs or deliberately export supported wrappers.
-- [ ] `TODO` Document `hashCode` as non-cryptographic.
-- [ ] `TODO` Define the trusted-origin contract for `includeScriptTag`.
+  - [x] `DONE` Guard `fragment()` when `document` is unavailable.
+  - [x] `DONE` Guard `attachStyle()` when `document` is unavailable.
+  - [x] `DONE` Guard `includeScriptTag()` when `document` is unavailable.
+  - [x] `DONE` Guard `importHtml()` when its required browser APIs are unavailable.
+  - [x] `DONE` Guard `moveNodes()` when `Element` is unavailable.
+- [x] `DONE` Resolve the component-test mismatch: test public APIs or deliberately export supported wrappers.
+- [x] `DONE` Document `hashCode` as non-cryptographic.
+- [x] `DONE` Define the trusted-origin contract for `includeScriptTag`.
 
 ## P2 - Behavior, Lifecycle, and Types
 
@@ -51,14 +56,22 @@ Work one item at a time. Update its status and notes before starting the next it
 
 ## Decision Log
 
-| Item                                      | Decision  | Notes                                                                                                    |
-| ----------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------- |
-| Initial setup                             | `DONE`    | Checklist created from `UTILITIES_AUDIT.md` on 2026-09-08.                                               |
-| P0 HTML boundary                          | `DONE`    | `$innerhtml` now accepts only `unsafeHtml(trustedMarkup)`.                                               |
-| P0 interpolation and trusted-content docs | `DONE`    | Interpolation uses DOM text nodes; raw markup and script APIs document their trust boundary.             |
-| P0 XSS regressions                        | `DONE`    | Browser-harness tests cover safe creation/update, rejection of raw strings, and explicit trusted markup. |
-| P1 clipboard work                         | `SKIPPED` | Deferred at user request; retain the current clipboard implementation.                                   |
-| P1 browser tests                          | `DONE`    | `pnpm test` builds, opens `/tests/`, and keeps the browser harness available for visible results.        |
-| P1 UUID capability check                  | `DONE`    | `uid()` now throws an actionable error when `crypto.randomUUID` is unavailable.                          |
-| P1 compression capability check           | `DONE`    | Compression helpers now validate Web API support and throw actionable errors.                            |
-| P1 request capability check               | `DONE`    | `request()` now validates `fetch` and `AbortController` support before making a request.                 |
+| Item                                      | Decision  | Notes                                                                                                          |
+| ----------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------- |
+| Initial setup                             | `DONE`    | Checklist created from `UTILITIES_AUDIT.md` on 2026-09-08.                                                     |
+| P0 HTML boundary                          | `DONE`    | `$innerhtml` now accepts only `unsafeHtml(trustedMarkup)`.                                                     |
+| P0 interpolation and trusted-content docs | `DONE`    | Interpolation uses DOM text nodes; raw markup and script APIs document their trust boundary.                   |
+| P0 XSS regressions                        | `DONE`    | Browser-harness tests cover safe creation/update, rejection of raw strings, and explicit trusted markup.       |
+| P1 clipboard work                         | `SKIPPED` | Deferred at user request; retain the current clipboard implementation.                                         |
+| P1 browser tests                          | `DONE`    | `pnpm test` builds, opens `/tests/`, and keeps the browser harness available for visible results.              |
+| P1 UUID capability check                  | `DONE`    | `uid()` now throws an actionable error when `crypto.randomUUID` is unavailable.                                |
+| P1 compression capability check           | `DONE`    | Compression helpers now validate Web API support and throw actionable errors.                                  |
+| P1 request capability check               | `DONE`    | `request()` now validates `fetch` and `AbortController` support before making a request.                       |
+| P1 fragment capability check              | `DONE`    | `fragment()` now throws an actionable error outside browser document environments.                             |
+| P1 style capability check                 | `DONE`    | `attachStyle()` now validates browser document support before mutating the page head.                          |
+| P1 script capability check                | `DONE`    | `includeScriptTag()` now validates browser document support before creating a script element.                  |
+| P1 HTML import capability check           | `DONE`    | `importHtml()` now validates `document`, `fetch`, and `CustomEvent` support before importing markup.           |
+| P1 DOM movement capability check          | `DONE`    | `moveNodes()` now validates browser `Element` support before checking its inputs.                              |
+| P1 component test contract                | `DONE`    | The browser suite now tests only the public `html` and `component` APIs.                                       |
+| P1 hashCode contract                      | `DONE`    | `hashCode` is documented as a non-cryptographic 32-bit hash unsuitable for security uses.                      |
+| P1 script trust contract                  | `DONE`    | Callers must allowlist same-origin or approved HTTPS scripts; the helper performs no URL or policy validation. |

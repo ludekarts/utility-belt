@@ -1,6 +1,7 @@
 /**
  * Create a DOM element from trusted markup or Fragment if there are multiple elements.
  * Do not pass untrusted content: `source` is parsed as HTML.
+ * Requires a browser `document`.
  *
  * @example
  *
@@ -11,6 +12,7 @@
  */
 export function fragment(source: string, domWrapper: string | undefined) {
   if (!source) throw new Error("FragmentError: source is required");
+  requireDocument("fragment");
 
   const fragment = document.createRange().createContextualFragment(source);
 
@@ -25,6 +27,14 @@ export function fragment(source: string, domWrapper: string | undefined) {
     return wrapper;
   } else {
     throw new Error("FragmentError: domWrapper must be a string or undefined");
+  }
+}
+
+function requireDocument(apiName: string) {
+  if (typeof globalThis.document === "undefined") {
+    throw new Error(
+      `UtilityBeltError: ${apiName} requires a browser document.`,
+    );
   }
 }
 
@@ -51,6 +61,7 @@ export function getNodesPath(stopSelector: string) {
 
 /**
  * Add styles tag into <head/> element. When the "name" is the same, the styles will be appended.
+ * Requires a browser `document`.
  *
  * @example
  *
@@ -58,6 +69,8 @@ export function getNodesPath(stopSelector: string) {
  *
  */
 export function attachStyle(style: string, name: string) {
+  requireDocument("attachStyle");
+
   const element: HTMLStyleElement =
     document.querySelector(`style[data-style-name="${name}"]`) ||
     document.createElement("style");
@@ -72,7 +85,10 @@ export function attachStyle(style: string, name: string) {
 
 /**
  * Inject a script tag into the page from a trusted URL.
- * Do not pass user-controlled URLs, which can execute arbitrary code.
+ * This helper does not validate the URL's origin, scheme, integrity, or CSP
+ * policy. Callers must allowlist the URL and use only same-origin or approved
+ * HTTPS hosts; do not pass user-controlled URLs.
+ * Requires a browser `document`.
  *
  * @example
  *
@@ -89,8 +105,10 @@ interface IncludeScriptTagConfig {
 }
 export function includeScriptTag(
   path: string,
-  config = {} as IncludeScriptTagConfig
+  config = {} as IncludeScriptTagConfig,
 ) {
+  requireDocument("includeScriptTag");
+
   const { isModule, onComplete } = config;
   const script = document.createElement("script");
   script.setAttribute("type", isModule ? "module" : "text/javascript");
@@ -110,6 +128,7 @@ export function includeScriptTag(
  * Imports trusted HTML and renders it into a DOM element, then triggers a custom
  * "htmlLoaded" event on the container node. Do not load user-controlled content:
  * fetched HTML is assigned to `innerHTML`.
+ * Requires `document`, `fetch`, and `CustomEvent` support.
  *
  * @example
  *
@@ -121,6 +140,16 @@ export function includeScriptTag(
  */
 
 export default function importHtml(doneCallback: () => void) {
+  requireDocument("importHtml");
+  if (
+    typeof globalThis.fetch !== "function" ||
+    typeof globalThis.CustomEvent !== "function"
+  ) {
+    throw new Error(
+      "UtilityBeltError: importHtml requires fetch and CustomEvent support.",
+    );
+  }
+
   const entry = document.querySelector("*[data-import]") as HTMLElement;
   if (!entry) return doneCallback && doneCallback();
 
@@ -140,7 +169,7 @@ export default function importHtml(doneCallback: () => void) {
           detail: {
             file: importFile,
           },
-        })
+        }),
       );
       importHtml(doneCallback);
     })
@@ -160,12 +189,13 @@ export default function importHtml(doneCallback: () => void) {
 export function copyAttrs(from: Element, to: Element, excluded: string[] = []) {
   Array.from(from.attributes || []).forEach(
     (attr) =>
-      !excluded.includes(attr.name) && to.setAttribute(attr.name, attr.value)
+      !excluded.includes(attr.name) && to.setAttribute(attr.name, attr.value),
   );
 }
 
 /**
  * Move nodes from @source node to @target node base on given options.
+ * Requires browser `Element` support.
  *
  * @example
  *
@@ -179,8 +209,14 @@ type MoveNodesOptions = "--into" | "--after" | "--before" | "--rm-source";
 export function moveNodes(
   source: Element,
   target: Element,
-  options: MoveNodesOptions = "--into"
+  options: MoveNodesOptions = "--into",
 ) {
+  if (typeof globalThis.Element === "undefined") {
+    throw new Error(
+      "UtilityBeltError: moveNodes requires browser Element support.",
+    );
+  }
+
   if (!(source instanceof Element) || !(target instanceof Element)) {
     throw new Error("moveNodes error: source and target must be DOM elements");
   }

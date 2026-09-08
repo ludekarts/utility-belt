@@ -7,4 +7,4 @@ import "./general.test.js";
 import "./hashing.test.js";
 import "./strings.test.js";
 import "./xss.test.js";
-import "./component.test.js";
+import "./component-public.test.js";
