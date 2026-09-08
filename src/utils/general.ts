@@ -164,7 +164,16 @@ export function getRandomNumber(min: number, max: number) {
  *
  */
 export function uid(config = "") {
-  return config.includes("--short")
-    ? Math.floor(Math.random() * Date.now()).toString(36)
-    : crypto.randomUUID();
+  if (config.includes("--short")) {
+    return Math.floor(Math.random() * Date.now()).toString(36);
+  }
+
+  const randomUUID = globalThis.crypto?.randomUUID;
+  if (typeof randomUUID !== "function") {
+    throw new Error(
+      "UtilityBeltError: uid requires crypto.randomUUID in this environment.",
+    );
+  }
+
+  return randomUUID.call(globalThis.crypto);
 }

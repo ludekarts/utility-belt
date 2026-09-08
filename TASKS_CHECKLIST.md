@@ -14,10 +14,13 @@ Work one item at a time. Update its status and notes before starting the next it
 
 ## P1 - Reliability and Public API
 
-- [ ] `TODO` Add a browser-capable test runner and a `pnpm test` script.
-- [ ] `TODO` Modernize `copyToClipboard` with `navigator.clipboard.writeText` and a cleaned-up fallback.
-- [ ] `TODO` Define and test clipboard success/failure behavior.
+- [x] `DONE` Add a browser-capable test runner and a `pnpm test` script.
+- [ ] `SKIPPED` Modernize `copyToClipboard` with `navigator.clipboard.writeText` and a cleaned-up fallback.
+- [ ] `SKIPPED` Define and test clipboard success/failure behavior.
 - [ ] `TODO` Add capability checks and documented failures for browser-only APIs.
+  - [x] `DONE` Guard `uid()` when `crypto.randomUUID` is unavailable.
+  - [x] `DONE` Guard compression helpers when required Web APIs are unavailable.
+  - [x] `DONE` Guard requests when `fetch` or `AbortController` is unavailable.
 - [ ] `TODO` Resolve the component-test mismatch: test public APIs or deliberately export supported wrappers.
 - [ ] `TODO` Document `hashCode` as non-cryptographic.
 - [ ] `TODO` Define the trusted-origin contract for `includeScriptTag`.
@@ -48,9 +51,14 @@ Work one item at a time. Update its status and notes before starting the next it
 
 ## Decision Log
 
-| Item                                      | Decision | Notes                                                                                                    |
-| ----------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------- |
-| Initial setup                             | `DONE`   | Checklist created from `UTILITIES_AUDIT.md` on 2026-09-08.                                               |
-| P0 HTML boundary                          | `DONE`   | `$innerhtml` now accepts only `unsafeHtml(trustedMarkup)`.                                               |
-| P0 interpolation and trusted-content docs | `DONE`   | Interpolation uses DOM text nodes; raw markup and script APIs document their trust boundary.             |
-| P0 XSS regressions                        | `DONE`   | Browser-harness tests cover safe creation/update, rejection of raw strings, and explicit trusted markup. |
+| Item                                      | Decision  | Notes                                                                                                    |
+| ----------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------- |
+| Initial setup                             | `DONE`    | Checklist created from `UTILITIES_AUDIT.md` on 2026-09-08.                                               |
+| P0 HTML boundary                          | `DONE`    | `$innerhtml` now accepts only `unsafeHtml(trustedMarkup)`.                                               |
+| P0 interpolation and trusted-content docs | `DONE`    | Interpolation uses DOM text nodes; raw markup and script APIs document their trust boundary.             |
+| P0 XSS regressions                        | `DONE`    | Browser-harness tests cover safe creation/update, rejection of raw strings, and explicit trusted markup. |
+| P1 clipboard work                         | `SKIPPED` | Deferred at user request; retain the current clipboard implementation.                                   |
+| P1 browser tests                          | `DONE`    | `pnpm test` builds, opens `/tests/`, and keeps the browser harness available for visible results.        |
+| P1 UUID capability check                  | `DONE`    | `uid()` now throws an actionable error when `crypto.randomUUID` is unavailable.                          |
+| P1 compression capability check           | `DONE`    | Compression helpers now validate Web API support and throw actionable errors.                            |
+| P1 request capability check               | `DONE`    | `request()` now validates `fetch` and `AbortController` support before making a request.                 |

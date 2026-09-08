@@ -6,8 +6,13 @@ export function hashCode(source: string) {
   }, 0);
 }
 
-// Compress JSON object into Base64 string.
+/**
+ * Compress a JSON value into a Base64 string.
+ * Requires `Blob`, `CompressionStream`, `Response`, and `btoa` support.
+ */
 export async function compressJson(json: any) {
+  requireCapabilities(["Blob", "CompressionStream", "Response", "btoa"]);
+
   const stream = new Blob([JSON.stringify(json)], {
     type: "application/json",
   }).stream();
@@ -15,15 +20,20 @@ export async function compressJson(json: any) {
   const response = await new Response(compressedStream);
   const blob = await response.blob();
   const buffer = await blob.arrayBuffer();
-  const base64Encoded = window.btoa(
-    String.fromCharCode(...new Uint8Array(buffer))
+  const base64Encoded = globalThis.btoa(
+    String.fromCharCode(...new Uint8Array(buffer)),
   );
   return base64Encoded;
 }
 
-// Decompress JSON-base64 string back into JSOM object.
+/**
+ * Decompress a Base64 JSON string.
+ * Requires `Blob`, `DecompressionStream`, `Response`, and `atob` support.
+ */
 export async function decompressJson(comporessedJson: string) {
-  const binaryString = window.atob(comporessedJson);
+  requireCapabilities(["Blob", "DecompressionStream", "Response", "atob"]);
+
+  const binaryString = globalThis.atob(comporessedJson);
   const length = binaryString.length;
   const bytes = new Uint8Array(new ArrayBuffer(length));
   for (let i = 0; i < length; i++) {
@@ -32,9 +42,24 @@ export async function decompressJson(comporessedJson: string) {
 
   const stream = new Blob([bytes], { type: "text/plain" }).stream();
   const decompressedStream = await stream.pipeThrough(
-    new DecompressionStream("gzip")
+    new DecompressionStream("gzip"),
   );
   const response = new Response(decompressedStream);
   const blob = await response.blob();
   return JSON.parse(await blob.text());
+}
+
+function requireCapabilities(capabilities: string[]) {
+  const missing = capabilities.filter(
+    (capability) =>
+      typeof (globalThis as Record<string, unknown>)[capability] !== "function",
+  );
+
+  if (missing.length > 0) {
+    throw new Error(
+      `UtilityBeltError: Compression is unavailable because ${missing.join(
+        ", ",
+      )} is not supported in this environment.`,
+    );
+  }
 }

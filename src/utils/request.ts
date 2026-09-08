@@ -180,6 +180,7 @@ const responseCache: Map<string, unknown> = new Map();
 
 /**
  * Main request function with caching and aborting support.
+ * Requires `fetch` and `AbortController` support.
  * @param url The request URL
  * @param options Request options
  */
@@ -202,6 +203,8 @@ export function request<
   url: string,
   options?: RequestOptions<ParsedResponse, FinalResponse>,
 ): Promise<ParsedResponse | FinalResponse> {
+  requireRequestCapabilities();
+
   const {
     method = "GET",
     fallback,
@@ -297,6 +300,21 @@ export function request<
   // New Request.
   else {
     return createNewRequest() as Promise<ParsedResponse | FinalResponse>;
+  }
+}
+
+function requireRequestCapabilities() {
+  const missing = ["fetch", "AbortController"].filter(
+    (capability) =>
+      typeof (globalThis as Record<string, unknown>)[capability] !== "function",
+  );
+
+  if (missing.length > 0) {
+    throw new Error(
+      `UtilityBeltError: request is unavailable because ${missing.join(
+        ", ",
+      )} is not supported in this environment.`,
+    );
   }
 }
 
