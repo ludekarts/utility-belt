@@ -15,3 +15,4 @@ export * from "./utils/highlight";
 export * from "./utils/components";
 export * from "./utils/clipboard";
 export * from "./utils/transform";
+export * from "./utils/crawler";

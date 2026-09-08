@@ -1,6 +1,6 @@
 {
   "name": "@ludekarts/utility-belt",
-  "version": "0.8.7",
+  "version": "0.9.0",
   "description": "JavaScript Utilities Collection",
   "files": [
     "dist"
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@ludekarts/latte": "^1.0.4",
+    "@types/node": "^26.5.0",
     "typescript": "^5.9.3",
     "vite": "^6.4.3",
     "vite-plugin-dts": "^4.5.4"

@@ -111,3 +111,47 @@ function updateParam(
     searchParams.set(name, value);
   }
 }
+
+/**
+ * Parse CLI parameters.
+ *
+ * Existing keys retain their order when updated. Array values replace all
+ * existing values and are appended in array order. A value of `undefined`
+ * removes all occurrences of its key. URL fragments are preserved.
+ *
+ * @param params - Array of CLI parameters (typically `process.argv.slice(2)`).
+ * @param flags - List of flags to parse from the CLI parameters.
+ * @returns An array of values corresponding to the provided flags.
+ *
+ * @example
+ *
+ * import { parseCliParams } from "@ludekarts/utility-belt";
+ *
+ * $ node my_script.js -a 1 -b -d
+ *
+ * const [a, b, c, d] = parseCliParams(process.argv.slice(2), "-a", "-b", "-c", "-d");
+ *
+ * console.log(a, b, c, d); // 1 true undefined true
+ *
+ */
+
+export function parseCliParams(
+  params: Array<string | undefined>,
+  ...flags: string[]
+): Array<string | boolean | undefined> {
+  if (!Array.isArray(params)) {
+    throw new Error("Cannot parse params. Params must be an array");
+  }
+  params.unshift(undefined);
+  return flags.map((flag) => {
+    const index = params.indexOf(flag);
+    const value = params[index + 1];
+    return index < 0
+      ? undefined
+      : value
+        ? flags.includes(value)
+          ? true
+          : value
+        : true;
+  });
+}
