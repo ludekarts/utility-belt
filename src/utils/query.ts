@@ -14,7 +14,9 @@
  * console.log(id, filter); // 123, ["age", "addres"]
  *
  */
-export function getQueryParams(...params: string[]): Array<string | string[] | undefined> {
+export function getQueryParams(
+  ...params: string[]
+): Array<string | string[] | undefined> {
   if (params.length === 0) {
     throw new Error("GetQueryParamsError: No query parameters provided");
   }
@@ -64,7 +66,7 @@ type QueryParam = string | Record<string, QueryParamValue>;
 export function updateQueryParams(
   query: string,
   name: QueryParam,
-  value?: string
+  value?: string,
 ) {
   const hashIndex = query.indexOf("#");
   const fragment = hashIndex === -1 ? "" : query.slice(hashIndex);
@@ -100,7 +102,7 @@ export function updateQueryParams(
 function updateParam(
   searchParams: URLSearchParams,
   name: string,
-  value: string | undefined
+  value: string | undefined,
 ) {
   const removeExistingKey = value === undefined;
   if (removeExistingKey) {

@@ -7,7 +7,7 @@ describe("Query helpers", () => {
     const [id, user] = getQueryParams(
       "id",
       "user",
-      "https://example.com?id=123&user=admin&filter=age&filter=address"
+      "https://example.com?id=123&user=admin&filter=age&filter=address",
     );
     expect(id).to.be.equal("123");
     expect(user).to.be.equal("admin");
@@ -17,7 +17,7 @@ describe("Query helpers", () => {
     const [id, filter] = getQueryParams(
       "id",
       "filter[]",
-      "https://example.com?id=123&user=admin&filter=age&filter=address"
+      "https://example.com?id=123&user=admin&filter=age&filter=address",
     );
     expect(id).to.be.equal("123");
     expect(filter).to.be.an("array");
@@ -29,11 +29,11 @@ describe("Query helpers", () => {
     const query = updateQueryParams(
       "https://example.com?id=123&user=admin&filter=age&filter=address",
       "id",
-      "456"
+      "456",
     );
 
     expect(decodeURIComponent(query)).to.be.equal(
-      "https://example.com?id=456&user=admin&filter=age&filter=address"
+      "https://example.com?id=456&user=admin&filter=age&filter=address",
     );
   });
 
@@ -43,10 +43,10 @@ describe("Query helpers", () => {
       {
         id: "789",
         user: "editor",
-      }
+      },
     );
     expect(decodeURIComponent(query)).to.be.equal(
-      "https://example.com?id=789&user=editor&filter=age&filter=address"
+      "https://example.com?id=789&user=editor&filter=age&filter=address",
     );
   });
 
@@ -56,10 +56,10 @@ describe("Query helpers", () => {
       {
         id: "789",
         filter: ["gender", "status", "height"],
-      }
+      },
     );
     expect(decodeURIComponent(query)).to.be.equal(
-      "https://example.com?id=789&user=admin&filter=gender&filter=status&filter=height"
+      "https://example.com?id=789&user=admin&filter=gender&filter=status&filter=height",
     );
   });
 
@@ -69,10 +69,10 @@ describe("Query helpers", () => {
       {
         id: undefined,
         user: "editor",
-      }
+      },
     );
     expect(decodeURIComponent(query)).to.be.equal(
-      "https://example.com?user=editor&filter=age&filter=address"
+      "https://example.com?user=editor&filter=age&filter=address",
     );
   });
 
@@ -81,20 +81,20 @@ describe("Query helpers", () => {
       "https://example.com?id=123&user=admin&filter=age&filter=address",
       {
         filter: undefined,
-      }
+      },
     );
 
     expect(decodeURIComponent(query)).to.be.equal(
-      "https://example.com?id=123&user=admin"
+      "https://example.com?id=123&user=admin",
     );
 
     const query2 = updateQueryParams(
       "https://example.com?id=123&user=admin&filter=age&filter=address",
-      "filter"
+      "filter",
     );
 
     expect(decodeURIComponent(query2)).to.be.equal(
-      "https://example.com?id=123&user=admin"
+      "https://example.com?id=123&user=admin",
     );
   });
 
@@ -108,7 +108,7 @@ describe("Query helpers", () => {
     const [firstFilter, allFilters] = getQueryParams(
       "filter",
       "filter[]",
-      "/items?filter=age&filter=address&filter=status"
+      "/items?filter=age&filter=address&filter=status",
     );
 
     expect(firstFilter).to.be.equal("age");

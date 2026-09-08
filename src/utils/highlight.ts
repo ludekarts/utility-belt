@@ -25,9 +25,9 @@ export function highlight(text: string, phrases: string) {
       (acc, [start, end]) =>
         `${acc.slice(0, start)}<strong>${acc.slice(
           start,
-          end
+          end,
         )}</strong>${acc.slice(end)}`,
-      text
+      text,
     );
 
   return hlight;

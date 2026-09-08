@@ -14,7 +14,7 @@ describe("Generla helpers tests", () => {
   it("Should hyphenate phrase", () => {
     expect(hyphenate("Hello World")).to.equal("hello-world");
     expect(hyphenate("Łódź na tafli jeziora!")).to.equal(
-      "lodz-na-tafli-jeziora"
+      "lodz-na-tafli-jeziora",
     );
   });
 
@@ -46,8 +46,8 @@ describe("Generla helpers tests", () => {
           [2, 0],
           [2, 2],
           [0, 2],
-        ]
-      )
+        ],
+      ),
     ).to.be.true;
     expect(
       inPolygon(
@@ -57,8 +57,8 @@ describe("Generla helpers tests", () => {
           [2, 0],
           [2, 2],
           [0, 2],
-        ]
-      )
+        ],
+      ),
     ).to.be.false;
   });
 

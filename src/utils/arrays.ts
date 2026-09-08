@@ -10,7 +10,7 @@
 
 export function arrayToObject(
   array: Array<{ [key: string]: any }>,
-  key: string
+  key: string,
 ) {
   return array.reduce((result, object) => {
     result[object[key]] = object;
@@ -96,7 +96,7 @@ export function getRandomSubarray<T>(array: T[], size: number) {
 export function reduce<T>(
   array: T[],
   reducer: (acc: any, item: any, index: number, isLast: boolean) => any,
-  results: any
+  results: any,
 ) {
   let index = -1;
   const length = array.length;
@@ -119,7 +119,7 @@ export function reduce<T>(
 
 export function loop<T>(
   array: T[],
-  callback: (item: T, index: number, array: T[]) => void
+  callback: (item: T, index: number, array: T[]) => void,
 ) {
   let index = 0;
   let stop = array.length;
@@ -298,14 +298,14 @@ export function uniqueArray<T>(...arrays: Array<T[]>) {
 
 export function sortOutArray<T>(
   array: T[],
-  predicate: (item: T, index: number) => boolean
+  predicate: (item: T, index: number) => boolean,
 ): [T[], T[]] {
   return array.reduce(
     (acc, item, index) =>
       predicate(item, index)
         ? [[...acc[0], item], acc[1]]
         : [acc[0], [...acc[1], item]],
-    [[], []] as [T[], T[]]
+    [[], []] as [T[], T[]],
   );
 }
 
