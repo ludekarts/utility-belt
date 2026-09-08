@@ -60,8 +60,8 @@ export function catchAction() {
           typeof fn === "function"
             ? fn(actionObject)
             : defaultAction
-            ? defaultAction(actionObject)
-            : undefined;
+              ? defaultAction(actionObject)
+              : undefined;
           typeof doneCallback === "function" && doneCallback(actionObject);
         }
       };
@@ -130,7 +130,7 @@ export function keyboard(filterFn?: (event: KeyboardEvent) => boolean) {
     key(
       config: KeyConfig,
       callback: (event: KeyboardEvent) => void,
-      preventDefault = false
+      preventDefault = false,
     ) {
       const keyHash = parseConfig(config);
       keyCombos.set(keyHash, [callback, preventDefault]);
@@ -235,13 +235,18 @@ export function catchEvents(root: HTMLElement, ...events: string[]) {
     }
   };
 
-  events.forEach((eventName) => {
-    root.addEventListener(eventName, globalCallback(eventName));
+  const eventListeners = events.map((eventName) => ({
+    eventName,
+    listener: globalCallback(eventName),
+  }));
+
+  eventListeners.forEach(({ eventName, listener }) => {
+    root.addEventListener(eventName, listener);
   });
 
   const addHandler = (
     handlerName: string,
-    callback: (event: Event) => void
+    callback: (event: Event) => void,
   ) => {
     !registerHandlers.has(handlerName) &&
       registerHandlers.set(handlerName, callback);
@@ -251,9 +256,17 @@ export function catchEvents(root: HTMLElement, ...events: string[]) {
     registerHandlers.get(name)?.(event);
   };
 
+  const destroy = () => {
+    eventListeners.forEach(({ eventName, listener }) => {
+      root.removeEventListener(eventName, listener);
+    });
+    registerHandlers.clear();
+  };
+
   return Object.freeze({
     add: addHandler,
     callHandler: runRegisterHandler,
+    destroy,
   });
 }
 
@@ -277,7 +290,7 @@ export function createEventHandler(
   element: HTMLElement,
   eventName: string,
   callback: (event: Event) => void,
-  useCapture = false
+  useCapture = false,
 ) {
   element.addEventListener(eventName, callback, useCapture);
   return () => element.removeEventListener(eventName, callback, useCapture);

@@ -2,7 +2,7 @@ import "../dist/utility-belt.umd.js";
 const { getFormFields, updateForm } = UtilityBelt;
 
 describe("Forms helpers", () => {
-  it("Should get form fields", () => {
+  it("Should get enabled form fields with supported control semantics", () => {
     const form = createForm();
     const { name, email, age, gender, subscribe, country, comments } =
       getFormFields(form);
@@ -11,26 +11,39 @@ describe("Forms helpers", () => {
     expect(email).to.be.equal("john@example.com");
     expect(age).to.be.equal("30");
     expect(gender).to.be.equal("male");
-    expect(subscribe).to.be.equal(true);
+    expect(subscribe).to.be.eql(["subscribe", "updates"]);
     expect(country).to.be.equal("ca");
     expect(comments).to.be.equal("Hello test");
 
     form.remove();
   });
 
-  it("Should get form fields including checkbox values", () => {
+  it("Should exclude disabled controls", () => {
+    const form = createForm();
+    form.elements.name.disabled = true;
+    form.elements.subscribe[1].disabled = true;
+
+    const fields = getFormFields(form);
+
+    expect(fields.name).to.be.undefined;
+    expect(fields.subscribe).to.be.equal("subscribe");
+
+    form.remove();
+  });
+
+  it("Should get form fields including checkbox state", () => {
     const form = createForm();
     const { name, email, age, gender, subscribe, country, comments } =
-      getFormFields(form, { includeCheckboxValues: true });
+      getFormFields(form, { includeCheckboxState: true });
 
     expect(name).to.be.equal("John");
     expect(email).to.be.equal("john@example.com");
     expect(age).to.be.equal("30");
     expect(gender).to.be.equal("male");
-    expect(subscribe).to.be.eql({
-      value: "subscribe",
-      checked: true,
-    });
+    expect(subscribe).to.be.eql([
+      { value: "subscribe", checked: true },
+      { value: "updates", checked: false },
+    ]);
     expect(country).to.be.equal("ca");
     expect(comments).to.be.equal("Hello test");
 
@@ -74,6 +87,7 @@ function createForm() {
   <input type="radio" name="gender" value="male" checked>
   <input type="radio" name="gender" value="female">
   <input type="checkbox" name="subscribe" value="subscribe" checked>
+  <input type="checkbox" name="subscribe" value="updates">
   <select name="country">
     <option value="us">United States</option>
     <option value="uk">United Kingdom</option>

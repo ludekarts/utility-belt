@@ -6,5 +6,7 @@ import "./pubsub.test.js";
 import "./general.test.js";
 import "./hashing.test.js";
 import "./strings.test.js";
+import "./events.test.js";
+import "./transform.test.js";
 import "./xss.test.js";
 import "./component-public.test.js";

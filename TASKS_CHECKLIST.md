@@ -32,14 +32,12 @@ Work one item at a time. Update its status and notes before starting the next it
 
 ## P2 - Behavior, Lifecycle, and Types
 
-- [ ] `TODO` Define request-cache TTL, capacity, invalidation, and sensitive-response policy.
-- [ ] `TODO` Add request cache, cancellation, and error-path regression tests.
-- [ ] `TODO` Add `destroy()` disposal to `catchEvents` and test it.
-- [ ] `TODO` Clarify and test form checkbox, radio, select, textarea, and disabled-control behavior.
-- [ ] `TODO` Reconcile `includeCheckboxValues` test naming with `includeCheckboxState`.
-- [ ] `TODO` Clarify `transformObject` plain-object and special-object semantics.
-- [ ] `TODO` Replace weak type assertions in transform and form APIs where practical.
-- [ ] `TODO` Rename `componens.ts` compatibly, retaining a deprecated re-export.
+- [x] `DONE` Add `destroy()` disposal to `catchEvents` and test it.
+- [x] `DONE` Clarify and test form checkbox, radio, select, textarea, and disabled-control behavior.
+- [x] `DONE` Reconcile `includeCheckboxValues` test naming with `includeCheckboxState`.
+- [x] `DONE` Clarify `transformObject` plain-object and special-object semantics.
+- [x] `DONE` Replace weak type assertions in transform and form APIs where practical.
+- [x] `DONE` Rename `componens.ts` compatibly, retaining a deprecated re-export.
 
 ## P3 - API and Documentation Cleanup
 
@@ -75,3 +73,8 @@ Work one item at a time. Update its status and notes before starting the next it
 | P1 component test contract                | `DONE`    | The browser suite now tests only the public `html` and `component` APIs.                                       |
 | P1 hashCode contract                      | `DONE`    | `hashCode` is documented as a non-cryptographic 32-bit hash unsuitable for security uses.                      |
 | P1 script trust contract                  | `DONE`    | Callers must allowlist same-origin or approved HTTPS scripts; the helper performs no URL or policy validation. |
+| P2 catchEvents disposal                   | `DONE`    | `destroy()` removes all delegated listeners, clears handlers, and is idempotent.                               |
+| P2 form serialization semantics           | `DONE`    | Checkbox values are included by default, radios emit only checked values, and disabled controls are excluded.  |
+| P2 checkbox state option naming           | `DONE`    | Browser tests use the public `includeCheckboxState` option and cover both checkbox states.                     |
+| P2 transformObject semantics              | `DONE`    | Plain objects and arrays are traversed; special objects are preserved as transformer leaf values.              |
+| P2 transform and form type contracts      | `DONE`    | Public form and transformer types now describe actual values; DOM controls are narrowed safely.                |

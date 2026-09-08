@@ -16,6 +16,9 @@
  * const { name, age, mood, element } = getFormFields("#myForm");
  * // element => ["🔥", "💧"]
  *
+ * Checkbox values are included whether checked or not. Radio groups include
+ * only their checked value. Disabled form controls are excluded.
+ *
  * OR w/ options:
  *
  * -> includeCheckboxState: true - include the checkbox state in the result (checked/unchecked)
@@ -42,6 +45,8 @@
 
 export type CheckboxValue = { value?: string; checked: boolean };
 export type FormValue = string | boolean | CheckboxValue;
+export type FormFields = Record<string, FormValue | FormValue[]>;
+export type FormUpdateValue = FormValue | number | null;
 export type FormFieldsOptions = {
   onlySelectedCheckboxes?: boolean;
   includeCheckboxState?: boolean;
@@ -49,69 +54,78 @@ export type FormFieldsOptions = {
   onlyRecentValues?: boolean;
 };
 
-export function getFormFields<R>(
+export function getFormFields(
   form: HTMLFormElement,
-  options: FormFieldsOptions = {}
-): R {
+  options: FormFieldsOptions = {},
+): FormFields {
   const {
     onlySelectedCheckboxes = false,
     includeCheckboxState = false,
     onlyCheckboxState = false,
     onlyRecentValues = false,
   } = options;
-  const fields: Map<string, FormValue | FormValue[]> = new Map();
+  const fields = new Map<string, FormValue[]>();
 
   for (const element of form.elements) {
-    const { name, type, value, checked } = element as HTMLInputElement;
-    if (name) {
-      !fields.has(name) && fields.set(name, []);
+    if (!isFormControl(element) || !element.name || element.disabled) {
+      continue;
+    }
 
-      if (type === "checkbox") {
-        if (onlySelectedCheckboxes && !checked) {
-          continue;
-        }
+    const { name, value } = element;
 
-        let pushValue: FormValue = onlyCheckboxState ? checked : value;
+    // Add new name.
+    if (!fields.has(name)) {
+      fields.set(name, []);
+    }
 
-        if (includeCheckboxState) {
-          pushValue = onlyCheckboxState ? { checked } : { value, checked };
-        }
-
-        (fields.get(name) as FormValue[]).push(pushValue);
-      } else if (type === "radio") {
-        checked && fields.set(name, [value]);
-      } else {
-        (fields.get(name) as FormValue[]).push(value);
+    // Handle checkboxes.
+    if (element instanceof HTMLInputElement && element.type === "checkbox") {
+      if (onlySelectedCheckboxes && !element.checked) {
+        continue;
       }
+
+      let pushValue: FormValue = onlyCheckboxState ? element.checked : value;
+
+      if (includeCheckboxState) {
+        pushValue = onlyCheckboxState
+          ? { checked: element.checked }
+          : { value, checked: element.checked };
+      }
+      fields.get(name)?.push(pushValue);
+    }
+
+    // Handle radio buttons.
+    else if (element instanceof HTMLInputElement && element.type === "radio") {
+      element.checked && fields.set(name, [value]);
+    }
+
+    // Handle other input types.
+    else {
+      fields.get(name)?.push(value);
     }
   }
 
   // Cleanup.
 
-  for (const [name, v] of fields.entries()) {
-    const values = v as FormValue[];
-    const recentValue = (values as FormValue[])[values.length - 1];
+  const result: FormFields = {};
+  for (const [name, values] of fields.entries()) {
+    const recentValue = values[values.length - 1];
 
     // Set only the most recent value.
-    if (onlyRecentValues && Array.isArray(values)) {
-      fields.set(name, recentValue);
-    }
-
-    // Remove empty fields.
     if (values.length === 0) {
-      fields.delete(name);
+      continue;
     }
     // If only one value then set it as a single value not an array.
-    else if (values.length === 1) {
-      fields.set(name, recentValue);
+    if (onlyRecentValues || values.length === 1) {
+      result[name] = recentValue;
     }
     // Keep multiple values if not requires only recent value.
-    else if (!onlyRecentValues) {
-      fields.set(name, values);
+    else {
+      result[name] = values;
     }
   }
 
-  return Object.fromEntries(fields.entries()) as R;
+  return result;
 }
 
 /**
@@ -155,7 +169,7 @@ export function getFormFields<R>(
  **/
 export function updateForm(
   selector: HTMLFormElement | string,
-  source: Record<string, FormValue>
+  source: Record<string, FormUpdateValue>,
 ) {
   const form =
     selector instanceof HTMLFormElement
@@ -163,16 +177,19 @@ export function updateForm(
       : document.querySelector(selector);
 
   if (form instanceof HTMLFormElement) {
-    (Array.from(form.elements) as HTMLFormElement[]).forEach((element) => {
-      if (element.name) {
+    Array.from(form.elements).forEach((element) => {
+      if (isFormControl(element) && element.name) {
         const value = source[element.name];
         if (value !== undefined) {
           if (isSimpleValue(value)) {
-            element.value = value;
-          } else if (typeof value === "object" && value !== null) {
-            Object.keys(value as object).forEach(
-              (key) => (element[key] = value[key as keyof typeof value])
-            );
+            element.value = value === null ? "" : String(value);
+          } else {
+            if (value.value !== undefined) {
+              element.value = value.value;
+            }
+            if (element instanceof HTMLInputElement) {
+              element.checked = value.checked;
+            }
           }
         }
       }
@@ -182,11 +199,28 @@ export function updateForm(
   }
 }
 
-function isSimpleValue(value: any) {
+function isFormControl(
+  element: Element,
+): element is
+  | HTMLInputElement
+  | HTMLSelectElement
+  | HTMLButtonElement
+  | HTMLTextAreaElement {
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLSelectElement ||
+    element instanceof HTMLButtonElement ||
+    element instanceof HTMLTextAreaElement
+  );
+}
+
+function isSimpleValue(
+  value: unknown,
+): value is string | boolean | number | null {
   return (
     value === null ||
     typeof value === "string" ||
-    typeof value === "boolean" ||
-    typeof value === "number"
+    typeof value === "number" ||
+    typeof value === "boolean"
   );
 }
