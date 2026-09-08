@@ -1,5 +1,6 @@
 /**
- * Create a DOM element from string or Fragment if there are multiple elements.
+ * Create a DOM element from trusted markup or Fragment if there are multiple elements.
+ * Do not pass untrusted content: `source` is parsed as HTML.
  *
  * @example
  *
@@ -70,7 +71,8 @@ export function attachStyle(style: string, name: string) {
 }
 
 /**
- * Inject <script> tag into page.
+ * Inject a script tag into the page from a trusted URL.
+ * Do not pass user-controlled URLs, which can execute arbitrary code.
  *
  * @example
  *
@@ -105,7 +107,9 @@ export function includeScriptTag(
 }
 
 /**
- * Imports HTML file and renders it content into DOM element, then triggers custom "htmlLoaded" event on containder node.
+ * Imports trusted HTML and renders it into a DOM element, then triggers a custom
+ * "htmlLoaded" event on the container node. Do not load user-controlled content:
+ * fetched HTML is assigned to `innerHTML`.
  *
  * @example
  *

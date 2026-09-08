@@ -23,12 +23,12 @@ describe("PubSub tests", () => {
 
   it("Should publish message in 'hello' subject in default namespace", () => {
     pubsub.on("hello", (m) => expect(m).to.equal("This is message"));
-    pubsub.emmit("hello", "This is message");
+    pubsub.emit("hello", "This is message");
   });
 
   it("Should publish message in 'hello' subject in 'custom' namespace", () => {
     pubsub.on("custom", "hello", (m) => expect(m).to.equal("This is message"));
-    pubsub.emmit("custom", "hello", "This is message");
+    pubsub.emit("custom", "hello", "This is message");
   });
 
   it("Should not be able to remove default namespace", () => {
@@ -59,19 +59,19 @@ describe("PubSub tests", () => {
   it("Should subscribe to all events in default namespasce", () => {
     const spy = chai.spy();
     pubsub.on("*", spy);
-    pubsub.emmit("hi", "This is HI message!");
-    pubsub.emmit("ho", "This is HO message!");
-    pubsub.emmit("he", "This is HE message!");
+    pubsub.emit("hi", "This is HI message!");
+    pubsub.emit("ho", "This is HO message!");
+    pubsub.emit("he", "This is HE message!");
     expect(spy).to.have.been.called(3);
   });
 
   it("Should subscribe to all events in 'custom' namespasce", () => {
     const spy = chai.spy();
     pubsub.on("custom", "*", spy);
-    pubsub.emmit("custom", "hi", "This is HI message!");
-    pubsub.emmit("custom", "ho", "This is HO message!");
-    pubsub.emmit("custom", "he", "This is HE message!");
-    pubsub.emmit("other", "er", "This should not be registered!");
+    pubsub.emit("custom", "hi", "This is HI message!");
+    pubsub.emit("custom", "ho", "This is HO message!");
+    pubsub.emit("custom", "he", "This is HE message!");
+    pubsub.emit("other", "er", "This should not be registered!");
     expect(spy).to.have.been.called(3);
   });
 });

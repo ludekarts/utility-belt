@@ -43,6 +43,25 @@ type DynamicElement = HTMLElement & DynamicInterface;
 type MarkupObject = { markup: string[]; values: any[]; id?: string };
 type RenderFunction = (state: any, ...rest: any[]) => MarkupObject;
 
+const unsafeHtmlMarker = Symbol("unsafeHtml");
+
+export type UnsafeHtml = Readonly<{
+  value: string;
+  [unsafeHtmlMarker]: true;
+}>;
+
+/**
+ * Marks markup from a trusted source for use with `$innerhtml`.
+ * Do not pass user-controlled content without sanitizing it first.
+ */
+export function unsafeHtml(value: string): UnsafeHtml {
+  if (typeof value !== "string") {
+    throw new TypeError("UTBComponentError: unsafeHtml expects a string.");
+  }
+
+  return Object.freeze<UnsafeHtml>({ value, [unsafeHtmlMarker]: true });
+}
+
 type AttibuteName =
   | keyof HTMLElement
   | "value"
@@ -50,7 +69,8 @@ type AttibuteName =
   | "$ref"
   | "$key"
   | "$items"
-  | "$props";
+  | "$props"
+  | "$innerhtml";
 
 type Attribute = {
   name: AttibuteName; // Attribute name.
@@ -106,7 +126,7 @@ type ComponentProps<T> = {
       prevState: T | undefined,
       newState: T | undefined,
       ...args: any[]
-    ) => () => void
+    ) => () => void,
   ) => void;
 };
 
@@ -114,6 +134,10 @@ type ComponentFunction<T> = (props: ComponentProps<T>) => RenderFunction;
 
 // ----  API ---------------------------
 
+/**
+ * Creates a component template. String and number interpolations are rendered
+ * as text, not HTML. Use `unsafeHtml()` only with trusted, sanitized markup.
+ */
 export function html(markup: TemplateStringsArray, ...values: any[]) {
   // Run as generic template.
   if (markup && Boolean(markup.raw)) {
@@ -132,12 +156,12 @@ export function html(markup: TemplateStringsArray, ...values: any[]) {
         });
       }
       throw new Error(
-        `UTBComponentError: Invalid usage of html helper. Try html("id")\`\` instead.`
+        `UTBComponentError: Invalid usage of html helper. Try html("id")\`\` instead.`,
       );
     };
   }
   throw new Error(
-    `UTBComponentError: Invalid usage of html helper. Try html\`\` or html("id")\`\` instead.`
+    `UTBComponentError: Invalid usage of html helper. Try html\`\` or html("id")\`\` instead.`,
   );
 }
 
@@ -217,7 +241,7 @@ export function component<T>(componentFn: ComponentFunction<T>) {
       const upState = onUpdateHandler?.(prevState, prevState, ...restArgs);
       element.d.update(
         upState !== undefined ? upState : prevState,
-        ...restArgs
+        ...restArgs,
       );
     }
 
@@ -227,7 +251,7 @@ export function component<T>(componentFn: ComponentFunction<T>) {
       prevState = finalState;
       element.d.update(
         upState !== undefined ? upState : finalState,
-        ...restArgs
+        ...restArgs,
       );
     }
 
@@ -277,7 +301,7 @@ function createDynamicElement(
   const { markup, values } = renderFn(initState, ...rest);
   if (!markup || !values) {
     throw new Error(
-      "UTBComponentError: Invalid render function. Expected: (state) => html`...`."
+      "UTBComponentError: Invalid render function. Expected: (state) => html`...`.",
     );
   }
   return dynamicElement(markup, values, renderFn);
@@ -287,7 +311,7 @@ function createDynamicElement(
 function dynamicElement(
   markup: string[],
   values: any[],
-  renderFn?: RenderFunction
+  renderFn?: RenderFunction,
 ) {
   const { element, bindings, attributes } = elementFromTemplate(markup, values);
   (element as any).d = Object.freeze({
@@ -382,7 +406,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
 
       return html;
     },
-    ""
+    "",
   );
 
   // Parese HTML template into DOM elements.
@@ -390,12 +414,12 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
   // that will be used to map external values into the template.
   wrapper.insertAdjacentHTML(
     "beforeend",
-    preInsertProcessing(componentHtml, bindings)
+    preInsertProcessing(componentHtml, bindings),
   );
 
   // Map data-hook-index elements and attributes into their external values.
   const dataHooks: HTMLElement[] = Array.from(
-    wrapper.querySelectorAll("[data-hook-index]")
+    wrapper.querySelectorAll("[data-hook-index]"),
   );
 
   // Complete bindings configuration (assign node references and containers).
@@ -455,7 +479,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
             // Make sure that $props value is fresh when $items are updated.
             if (reperaterMarkers.hasItems) {
               throw new Error(
-                `UTBComponentError: Repeater $props must be defined before $items.`
+                `UTBComponentError: Repeater $props must be defined before $items.`,
               );
             }
             binding.type = "attribute:repeaterProps";
@@ -477,10 +501,15 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
         }
 
         // Hendle innerHTML attributes.
-        else if (isInnerHtmlAttribute(attribute.name, binding.value)) {
+        else if (attribute.name === "$innerhtml") {
+          if (!isUnsafeHtml(binding.value)) {
+            throw new TypeError(
+              "UTBComponentError: $innerhtml requires unsafeHtml(trustedMarkup).",
+            );
+          }
           binding.type = "attribute:html";
           hook.removeAttribute(attribute.name);
-          binding.ref.innerHTML = binding.value || "";
+          binding.ref.innerHTML = binding.value.value;
         }
 
         // Hendle defaultValue attributes.
@@ -504,7 +533,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
           updateAttributesTemplate(hook, attribute, bindings);
         } else {
           throw new Error(
-            `UTBComponentError: Only String, Numbers, Undefined or False can be passed as attributes. Got: "${typeof binding.value}" at "${index}" value.`
+            `UTBComponentError: Only String, Numbers, Undefined or False can be passed as attributes. Got: "${typeof binding.value}" at "${index}" value.`,
           );
         }
       });
@@ -522,7 +551,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
       if (type === "text") {
         binding.type = "text";
         binding.ref = document.createTextNode(
-          isEmpty(binding.value) ? "" : binding.value
+          isEmpty(binding.value) ? "" : binding.value,
         );
         binding.container = createContainer(hook);
         binding.container.ref.replaceChild(binding.ref, hook);
@@ -549,7 +578,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
         binding.type = "partial";
         binding.ref = dynamicElement(
           (binding.value as MarkupObject).markup,
-          (binding.value as MarkupObject).values
+          (binding.value as MarkupObject).values,
         );
         binding.container = createContainer(hook);
         binding.container.ref.replaceChild(binding.ref, hook);
@@ -569,7 +598,7 @@ function elementFromTemplate(markup: string[], values: any[] = []) {
           renderFn,
           items,
           keySelector,
-          props
+          props,
         );
 
         binding.value = elements;
@@ -602,13 +631,13 @@ function updateDynamicElement(
   element: HTMLElement,
   bindings: Binding[],
   attributes: AttributeList,
-  renderFn?: RenderFunction
+  renderFn?: RenderFunction,
 ) {
   return (state: any, ...rest: any[]) => {
     const values = renderFn ? renderFn(state, ...rest).values : state;
     if (!values)
       throw new Error(
-        "UTBComponentError: Cannot update element. Invalid input"
+        "UTBComponentError: Cannot update element. Invalid input",
       );
     loop(values, updateElementValues(bindings, attributes));
     return element;
@@ -631,7 +660,7 @@ function updateReference(
   index: number,
   bindings: Binding[],
   attributes: AttributeList,
-  newValue: any
+  newValue: any,
 ) {
   const binding = bindings[index];
 
@@ -647,7 +676,7 @@ function updateReference(
 
   if (!binding.ref || !binding.container) {
     throw new Error(
-      `UTBComponentError: Missing references on binding: "${index}".`
+      `UTBComponentError: Missing references on binding: "${index}".`,
     );
   }
 
@@ -677,7 +706,7 @@ function updateReference(
       const { sourceIndex, propsIndex, update } = binding.repeater;
       const repeaterValue = update(
         newValue,
-        typeof propsIndex === "number" ? bindings[propsIndex].value : undefined
+        typeof propsIndex === "number" ? bindings[propsIndex].value : undefined,
       );
       updateArrayOfNodes(bindings[sourceIndex], repeaterValue);
       bindings[sourceIndex].value = repeaterValue;
@@ -695,7 +724,12 @@ function updateReference(
 
   // Update innerHtml.
   else if (binding.type === "attribute:html") {
-    (binding.ref as HTMLElement).innerHTML = newValue || "";
+    if (!isUnsafeHtml(newValue)) {
+      throw new TypeError(
+        "UTBComponentError: $innerhtml requires unsafeHtml(trustedMarkup).",
+      );
+    }
+    (binding.ref as HTMLElement).innerHTML = newValue.value;
     binding.value = newValue;
   }
 
@@ -708,13 +742,13 @@ function updateReference(
       updateAttributesTemplate(
         binding.ref as HTMLElement,
         attributes[binding.index],
-        bindings
+        bindings,
       );
     } else {
       throw new Error(
         `UTBComponentError: Only String, Numbers, Undefined or False can be passed as attributes. Got: "${typeof newValue}" at value of index: "${
           binding.index
-        }".`
+        }".`,
       );
     }
   }
@@ -742,7 +776,7 @@ function updateReference(
     else if (isMarkupObject(newValue)) {
       const partialNode = dynamicElement(
         (newValue as MarkupObject).markup,
-        (newValue as MarkupObject).values
+        (newValue as MarkupObject).values,
       );
       binding.type = "partial";
       binding.container.ref.replaceChild(partialNode, binding.ref as Text);
@@ -793,11 +827,11 @@ function updateReference(
     else if (isMarkupObject(newValue)) {
       const partialNode = dynamicElement(
         (newValue as MarkupObject).markup,
-        (newValue as MarkupObject).values
+        (newValue as MarkupObject).values,
       );
       binding.container.ref.replaceChild(
         partialNode,
-        binding.ref as HTMLElement
+        binding.ref as HTMLElement,
       );
       binding.type = "partial";
       binding.ref = partialNode;
@@ -822,7 +856,7 @@ function updateReference(
       insertNodeAtIndex(
         binding.container.childIndex,
         textNode,
-        binding.container.ref
+        binding.container.ref,
       );
       removeNodes(binding.value, binding.container.ref);
       binding.type = "text";
@@ -835,7 +869,7 @@ function updateReference(
       insertNodeAtIndex(
         binding.container.childIndex,
         textNode,
-        binding.container.ref
+        binding.container.ref,
       );
       removeNodes(binding.value, binding.container.ref);
       binding.type = "text";
@@ -847,7 +881,7 @@ function updateReference(
       insertNodeAtIndex(
         binding.container.childIndex,
         newValue,
-        binding.container.ref
+        binding.container.ref,
       );
       removeNodes(binding.value, binding.container.ref);
       binding.type = "node";
@@ -858,12 +892,12 @@ function updateReference(
     else if (isMarkupObject(newValue)) {
       const partialNode = dynamicElement(
         (newValue as MarkupObject).markup,
-        (newValue as MarkupObject).values
+        (newValue as MarkupObject).values,
       );
       insertNodeAtIndex(
         binding.container.childIndex,
         partialNode,
-        binding.container.ref
+        binding.container.ref,
       );
       removeNodes(binding.value, binding.container.ref);
       binding.type = "partial";
@@ -886,7 +920,7 @@ function updateReference(
       const textNode = document.createTextNode("");
       binding.container.ref.replaceChild(
         textNode,
-        binding.ref as DynamicElement
+        binding.ref as DynamicElement,
       );
       binding.type = "text";
       binding.ref = textNode;
@@ -897,7 +931,7 @@ function updateReference(
       const textNode = document.createTextNode(newValue);
       binding.container.ref.replaceChild(
         textNode,
-        binding.ref as DynamicElement
+        binding.ref as DynamicElement,
       );
       binding.type = "text";
       binding.ref = textNode;
@@ -907,7 +941,7 @@ function updateReference(
     else if (isDomNode(newValue)) {
       binding.container.ref.replaceChild(
         newValue,
-        binding.ref as DynamicElement
+        binding.ref as DynamicElement,
       );
       binding.type = "node";
       binding.ref = newValue;
@@ -918,7 +952,7 @@ function updateReference(
       // Partial -> Partial with same ID.
       if (isSameDymaicId(binding.value, newValue)) {
         (binding.ref as DynamicElement).d.update(
-          (newValue as MarkupObject).values
+          (newValue as MarkupObject).values,
         );
       }
 
@@ -926,11 +960,11 @@ function updateReference(
       else {
         const partialNode = dynamicElement(
           (newValue as MarkupObject).markup,
-          (newValue as MarkupObject).values
+          (newValue as MarkupObject).values,
         );
         binding.container.ref.replaceChild(
           partialNode,
-          binding.ref as DynamicElement
+          binding.ref as DynamicElement,
         );
         binding.type = "partial";
         binding.ref = partialNode;
@@ -965,7 +999,7 @@ function preInsertProcessing(componentHtml: string, bindings: Binding[]) {
 
   return processors.reduce(
     (acc, processor) => processor(acc, bindings),
-    componentHtml
+    componentHtml,
   );
 }
 
@@ -1003,7 +1037,7 @@ function createRepeater(
   renderFn: RenderFunction,
   collection: any[],
   keySelector: RepeaterKeySelector,
-  props: any
+  props: any,
 ) {
   repeatersPool.push({});
 
@@ -1013,14 +1047,14 @@ function createRepeater(
     const element = renderFn(
       item,
       props !== undefined ? props : index,
-      props !== undefined ? index : undefined
+      props !== undefined ? index : undefined,
     );
 
     if (isMarkupObject(element)) {
       const partialNode = dynamicElement(
         element.markup,
         element.values,
-        renderFn
+        renderFn,
       );
       repeatersPool[repeaterIndex][keySelector(item)] = partialNode;
       return partialNode;
@@ -1029,7 +1063,7 @@ function createRepeater(
       return element;
     } else {
       throw new Error(
-        "UTBComponentError: Invalid element type in repeater. Only HTMLElement or Partial can be used in repeater."
+        "UTBComponentError: Invalid element type in repeater. Only HTMLElement or Partial can be used in repeater.",
       );
     }
   });
@@ -1042,7 +1076,7 @@ function createRepeater(
         const node = renderFn(
           item,
           props !== undefined ? props : index,
-          props !== undefined ? index : undefined
+          props !== undefined ? index : undefined,
         );
 
         if (node instanceof HTMLElement) {
@@ -1058,7 +1092,7 @@ function createRepeater(
         ? (element as DynamicElement).d.update(
             item,
             props !== undefined ? props : index,
-            props !== undefined ? index : undefined
+            props !== undefined ? index : undefined,
           )
         : element;
     });
@@ -1116,7 +1150,7 @@ function addHookIndexAttribute(head: string, element: string, index: number) {
     insertStringAtIndex(
       element,
       ` data-hook-index="${index}"`,
-      element.indexOf(" ")
+      element.indexOf(" "),
     )
   );
 }
@@ -1125,13 +1159,13 @@ function addHookIndexAttribute(head: string, element: string, index: number) {
 function updateHookIndexAttribute(
   head: string,
   element: string,
-  index: number
+  index: number,
 ) {
   return (
     head +
     element.replace(
       /data-hook-index="(.+?)"/,
-      (_, refs) => `data-hook-index="${refs} ${index}"`
+      (_, refs) => `data-hook-index="${refs} ${index}"`,
     )
   );
 }
@@ -1144,7 +1178,7 @@ function getAllAttributes(node: HTMLElement) {
       if (new RegExp("%#\\d+#%", "g").test(attr.value)) {
         // match[1] is reference to the first capturing group of the RegExp.
         const foundIndexes = Array.from(
-          attr.value.matchAll(new RegExp("%#(\\d+)#%", "g"))
+          attr.value.matchAll(new RegExp("%#(\\d+)#%", "g")),
         ).map((match) => match[1]);
 
         const attributeBinding: Attribute = {
@@ -1158,7 +1192,7 @@ function getAllAttributes(node: HTMLElement) {
         if (attributeBinding.name.endsWith("?")) {
           attributeBinding.name = attributeBinding.name.slice(
             0,
-            -1
+            -1,
           ) as AttibuteName;
           attributeBinding.isBoolean = true;
         }
@@ -1170,7 +1204,7 @@ function getAllAttributes(node: HTMLElement) {
 
       return acc;
     },
-    {}
+    {},
   );
 }
 
@@ -1178,7 +1212,7 @@ function getAllAttributes(node: HTMLElement) {
 function updateAttributesTemplate(
   node: HTMLElement,
   attribute: Attribute,
-  bindings: Binding[]
+  bindings: Binding[],
 ) {
   const attributeValue = attribute.template.replace(
     /%#(\d+)#%/g,
@@ -1187,7 +1221,7 @@ function updateAttributesTemplate(
       return value === undefined || value === false
         ? ""
         : escapeHtml(String(value));
-    }
+    },
   );
 
   node.setAttribute(attribute.name, attributeValue);
@@ -1234,7 +1268,7 @@ function updateArrayOfNodes(binding: Binding, newValue: any[]) {
       ) {
         binding.value = removeByInstance(binding.value, node);
         markForDeletion.push(
-          binding.container.ref.childNodes[childIndex] as ArrayNode
+          binding.container.ref.childNodes[childIndex] as ArrayNode,
         );
       }
     }
@@ -1256,9 +1290,9 @@ function updateArrayOfNodes(binding: Binding, newValue: any[]) {
               insertIndex,
               dynamicElement(
                 (newNode as MarkupObject).markup,
-                (newNode as MarkupObject).values
+                (newNode as MarkupObject).values,
               ),
-              binding.container.ref
+              binding.container.ref,
             )
           : insertNodeAtIndex(insertIndex, newNode, binding.container.ref);
       }
@@ -1274,7 +1308,7 @@ function updateArrayOfNodes(binding: Binding, newValue: any[]) {
       }
     } else {
       throw new Error(
-        `UTBComponentError: Cannot update nodes. Missing container reference.`
+        `UTBComponentError: Cannot update nodes. Missing container reference.`,
       );
     }
   });
@@ -1289,7 +1323,7 @@ function updateArrayOfNodes(binding: Binding, newValue: any[]) {
 // Finds repeater properties in bindings - allow mappinig repeater to proper values.
 function findRepeaterPropertiesInBindings(
   hook: HTMLElement,
-  bindings: Binding[]
+  bindings: Binding[],
 ) {
   // Current Binding Index - 1;
   let index = Number(hook.dataset.hookIndex) - 1;
@@ -1342,19 +1376,19 @@ function getNodeIndex(node: Node | null) {
 // Insert only DOM nodes, Text nodes, and Partials.
 function insetrNodesBefore(
   nodes: Array<HTMLElement | Text | MarkupObject>,
-  pointer: HTMLElement | Text
+  pointer: HTMLElement | Text,
 ) {
   loop(nodes, (node) => {
     isDomNode(node)
       ? pointer.before(node)
       : isMarkupObject(node)
-      ? pointer.before(
-          dynamicElement(
-            (node as MarkupObject).markup,
-            (node as MarkupObject).values
+        ? pointer.before(
+            dynamicElement(
+              (node as MarkupObject).markup,
+              (node as MarkupObject).values,
+            ),
           )
-        )
-      : null;
+        : null;
   });
   pointer.remove();
 }
@@ -1363,7 +1397,7 @@ function insetrNodesBefore(
 function insertNodeAtIndex(
   index: number,
   node: HTMLElement | Text,
-  parent: HTMLElement
+  parent: HTMLElement,
 ) {
   node !== parent.childNodes[index]
     ? index === 0
@@ -1388,7 +1422,7 @@ function removeNodes(nodes: DynamicElement[], container: HTMLElement) {
 function getReferences(element: HTMLElement) {
   const refs: { [key: string]: HTMLElement } = {};
   const refsElements: HTMLElement[] = Array.from(
-    element.querySelectorAll("[\\$ref]")
+    element.querySelectorAll("[\\$ref]"),
   );
 
   loop(refsElements, (refNode) => {
@@ -1465,9 +1499,9 @@ function isDomNode(node: any) {
 function isMarkupObject(node: any) {
   return Boolean(
     node.hasOwnProperty("markup") &&
-      node.hasOwnProperty("values") &&
-      Array.isArray(node.values) &&
-      Array.isArray(node.markup)
+    node.hasOwnProperty("values") &&
+    Array.isArray(node.values) &&
+    Array.isArray(node.markup),
   );
 }
 
@@ -1495,10 +1529,11 @@ function isCallbackAttribute(name: string, value: Function) {
   return name.startsWith("on") && typeof value === "function";
 }
 
-// Verify attribute is a innerHTML.
-function isInnerHtmlAttribute(name: string, value: string) {
+function isUnsafeHtml(value: unknown): value is UnsafeHtml {
   return (
-    name === "$innerhtml" && (typeof value === "string" || value === undefined)
+    typeof value === "object" &&
+    value !== null &&
+    (value as UnsafeHtml)[unsafeHtmlMarker] === true
   );
 }
 
