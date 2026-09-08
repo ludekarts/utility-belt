@@ -1,8 +1,7 @@
 import "../dist/utility-belt.umd.js";
+const { getFormFields, updateForm } = UtilityBelt;
 
 describe("Forms helpers", () => {
-  const { getFormFields, updateForm } = window.UtilityBelt;
-
   it("Should get form fields", () => {
     const form = createForm();
     const { name, email, age, gender, subscribe, country, comments } =

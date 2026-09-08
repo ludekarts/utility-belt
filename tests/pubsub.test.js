@@ -1,5 +1,7 @@
+import "../dist/utility-belt.umd.js";
+const { PubSub } = UtilityBelt;
+
 describe("PubSub tests", () => {
-  const { PubSub } = window.UtilityBelt;
   const pubsub = PubSub();
 
   it("Should have default namespace", () => {

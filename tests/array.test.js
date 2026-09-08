@@ -107,7 +107,7 @@ describe("Array tests", () => {
   it("Should sort out array", () => {
     const [even, odd] = UtilityBelt.sortOutArray(
       [1, 2, 3, 4, 5],
-      (x) => x % 2 === 0
+      (x) => x % 2 === 0,
     );
     expect(even).eql([2, 4]);
     expect(odd).eql([1, 3, 5]);
