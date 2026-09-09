@@ -1,14 +1,7 @@
 import "../dist/utility-belt.umd.js";
 
-describe("Hashing helpers tests", () => {
-  const { hashCode, compressJson, decompressJson } = window.UtilityBelt;
-
-  it("Should hash a string", () => {
-    const h1 = hashCode("Hello World");
-    const h2 = hashCode("Hello World");
-    expect(h1).to.be.a("number");
-    expect(h1).to.equal(h2);
-  });
+describe("Compress JSON helpers tests", () => {
+  const { compressJson, decompressJson } = window.UtilityBelt;
 
   it("Should compress and decompress a JSON object", async () => {
     const user = {

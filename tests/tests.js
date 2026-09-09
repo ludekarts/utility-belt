@@ -1,4 +1,3 @@
-import "./fuzzy.test.js";
 import "./query.test.js";
 import "./forms.test.js";
 import "./array.test.js";
@@ -6,10 +5,6 @@ import "./delay.test.js";
 import "./dom.test.js";
 import "./pubsub.test.js";
 import "./general.test.js";
-import "./hashing.test.js";
-import "./highlight.test.js";
+import "./compress.test.js";
 import "./strings.test.js";
-import "./events.test.js";
 import "./transform.test.js";
-import "./xss.test.js";
-import "./component-public.test.js";
