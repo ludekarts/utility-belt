@@ -1,16 +1,4 @@
 /**
- * Creates a deterministic signed 32-bit hash from a string.
- * This is non-cryptographic and must not be used for passwords, signatures,
- * integrity checks, authentication, or collision-sensitive identifiers.
- */
-export function hashCode(source: string) {
-  return source.split("").reduce((a, b) => {
-    a = (a << 5) - a + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-}
-
-/**
  * Compress a JSON value into a Base64 string.
  * Requires `Blob`, `CompressionStream`, `Response`, and `btoa` support.
  */

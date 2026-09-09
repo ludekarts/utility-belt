@@ -236,3 +236,29 @@ export function moveNodes(
 
   return target;
 }
+
+/**
+ * Create EventListener with destroy function at return.
+ *
+ * @example
+ *
+ * const removeHandler = createEventHandler(
+ *  document.querySelector("#send"),
+ *  "click",
+ *  () => console.log("button clicked"),
+ *  false
+ * );
+ *
+ * removeHandler();
+ *
+ */
+
+export function createEventHandler(
+  element: HTMLElement,
+  eventName: string,
+  callback: (event: Event) => void,
+  useCapture = false,
+) {
+  element.addEventListener(eventName, callback, useCapture);
+  return () => element.removeEventListener(eventName, callback, useCapture);
+}

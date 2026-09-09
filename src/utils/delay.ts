@@ -7,9 +7,9 @@
  */
 export function debounce<T extends (...args: any[]) => void>(
   callback: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
-  let timeout: number;
+  let timeout: ReturnType<typeof setTimeout>;
   return (...args) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => callback(...args), delay);
@@ -25,7 +25,7 @@ export function debounce<T extends (...args: any[]) => void>(
  */
 export function triggerIfRapid<T extends (...args: any[]) => void>(
   callback: T,
-  delta: number
+  delta: number,
 ): (...args: Parameters<T>) => void {
   let lastTime = 0;
   return (...args: Parameters<T>) => {
@@ -48,7 +48,7 @@ export function triggerIfRapid<T extends (...args: any[]) => void>(
 
 export function throttle<T extends (...args: any[]) => void>(
   callback: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let isThrottled = false;
   return (...args: Parameters<T>) => {
