@@ -1,4 +1,4 @@
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
-  - "@ludekarts/latte@1.0.4"
+  - '@ludekarts/latte@1.0.4'

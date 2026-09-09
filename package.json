@@ -28,7 +28,7 @@
     "npm:publish": "pnpm build && npm publish --access public"
   },
   "devDependencies": {
-    "@ludekarts/latte": "^1.0.4",
+    "@ludekarts/latte": "1.0.4",
     "@types/node": "^26.5.0",
     "typescript": "^5.9.3",
     "vite": "^6.4.3",
