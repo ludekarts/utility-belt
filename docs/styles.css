@@ -9,11 +9,6 @@
   margin: 0;
 }
 
-body {
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
 img,
 svg,
 video,
@@ -40,7 +35,173 @@ h6 {
   overflow-wrap: break-word;
 }
 
-#root,
-#__next {
-  isolation: isolate;
+:root {
+  --node-color: #84ba64;
+  --browser-color: #ffc107;
+  --akcent-color: lightgray;
+}
+
+html {
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI";
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.utb {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+input[type="search"] {
+  border: none;
+  min-width: 300px;
+  margin-left: 1em;
+  border-radius: 2em;
+  padding: 0.5em 1em;
+  background-color: whitesmoke;
+}
+
+h2 {
+  font-size: 2em;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 1em;
+  min-height: 5em;
+
+  color: whitesmoke;
+  background-color: black;
+}
+
+main {
+  color: whitesmoke;
+  background-color: black;
+
+  display: flex;
+  gap: 1em;
+}
+
+aside {
+  min-width: 10em;
+  padding: 1em;
+  & > nav {
+    top: 1em;
+    position: sticky;
+
+    gap: 0.4em;
+    display: grid;
+    margin-top: 1em;
+    font-family: monospace;
+  }
+}
+
+section.display {
+  flex-grow: 1;
+  color: black;
+  border-top-left-radius: 1.6em;
+  background-color: whitesmoke;
+  overflow: hidden;
+}
+
+section.module {
+  padding: 1em;
+  border-bottom: 1px solid black;
+}
+
+footer {
+  padding: 0.3em;
+  color: whitesmoke;
+  font-family: monospace;
+  background-color: black;
+}
+
+.browser {
+  --akcent-color: var(--browser-color);
+}
+
+.node {
+  --akcent-color: var(--node-color);
+}
+
+.badge {
+  padding: 0.2em 0.5em;
+  border-radius: 0.3em;
+  font-family: monospace;
+  background-color: var(--akcent-color);
+}
+/* MODULE */
+
+.module-heading {
+  padding: 1em;
+  margin: -1em -1em 1em -1em;
+  background-color: #dddddd;
+}
+
+.module-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.utility-list {
+  gap: 1em;
+  display: grid;
+
+  & article.utility {
+    gap: 1em;
+    display: grid;
+    grid-template-columns: 30% 1fr;
+
+    padding-bottom: 1em;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid lightgray;
+    }
+
+    & .utility-signature {
+      display: block;
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 0.5em;
+    }
+
+    & .utility-example {
+      background-color: #101010;
+      border-radius: 1em;
+      color: whitesmoke;
+      padding: 1em;
+    }
+
+    & .utility-options {
+      display: block;
+      margin-top: 1em;
+
+      margin-bottom: 0.2em;
+    }
+  }
+}
+
+.empty {
+  padding: 1.5em;
 }

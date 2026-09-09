@@ -1,15 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Utility Belt</title>
+    <title>Utility Belt API Reference</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <h1>Hello Utility Belt 🧰</h1>
-    <main id="main"></main>
-    <a href="../tests/index.html">🛡️ TESTS</a>
+    <header>
+      <div>
+        <a class="utb" href="#top" aria-label="Utility Belt documentation">
+          ◉ UtilityBelt
+        </a>
+
+        <input
+          type="search"
+          id="utility-search"
+          autocomplete="off"
+          placeholder="Try request, debounce, form..."
+        />
+      </div>
+      <a href="../tests/index.html">Run browser tests</a>
+    </header>
+
+    <main id="top">
+      <aside aria-label="Utility modules">
+        <p>Modules</p>
+        <nav id="module-nav"></nav>
+      </aside>
+      <section id="main" class="display" aria-live="polite"></section>
+    </main>
+    <footer>created by @ludekarts</footer>
   </body>
   <script type="module" src="./docs.js"></script>
 </html>
