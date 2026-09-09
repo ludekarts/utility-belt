@@ -54,10 +54,10 @@ export type FormFieldsOptions = {
   onlyRecentValues?: boolean;
 };
 
-export function getFormFields(
+export function getFormFields<R extends FormFields = FormFields>(
   form: HTMLFormElement,
   options: FormFieldsOptions = {},
-): FormFields {
+): R {
   const {
     onlySelectedCheckboxes = false,
     includeCheckboxState = false,
@@ -125,7 +125,7 @@ export function getFormFields(
     }
   }
 
-  return result;
+  return result as R;
 }
 
 /**

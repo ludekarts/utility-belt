@@ -10,7 +10,7 @@
  * const section = fragment(`<p>Hello</p><p>World</p>`, `section`);
  *
  */
-export function fragment(source: string, domWrapper: string | undefined) {
+export function fragment(source: string, domWrapper?: string) {
   if (!source) throw new Error("FragmentError: source is required");
   requireDocument("fragment");
 
@@ -68,7 +68,7 @@ export function getNodesPath(stopSelector: string) {
  * attachStyle("body { background: red; }", "my-style");
  *
  */
-export function attachStyle(style: string, name: string) {
+export function attachStyle(style: string, name?: string) {
   requireDocument("attachStyle");
 
   const element: HTMLStyleElement =
