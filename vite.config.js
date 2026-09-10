@@ -10,6 +10,9 @@ export default defineConfig({
     }),
   ],
   build: {
+    rollupOptions: {
+      external: [/^node:/],
+    },
     lib: {
       name: "UtilityBelt",
       formats: ["es", "cjs", "umd"],
