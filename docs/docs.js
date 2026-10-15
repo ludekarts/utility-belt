@@ -53,7 +53,9 @@ function render(query = "") {
             src/utils/${module.file}
           </span>
         </div>
-        <h2>${module.file.replace(".ts", "")}</h2>
+        <h2>
+          <a href="#${module.file}">${module.file.replace(".ts", "")}</a>
+        </h2>
       </div>
 			<div class="utility-list">${module.utilities
         .map(
